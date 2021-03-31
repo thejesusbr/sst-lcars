@@ -1,0 +1,95 @@
+html,
+body {
+  font-size: 16px;
+}
+body {
+  padding: .25rem;
+}
+
+.block,
+.button {
+  min-width: 7.5rem;
+  min-height: 3rem;
+  text-align: right;
+}
+.cap {
+  min-width: 3rem;
+  min-height: 3rem;
+}
+
+.bar,
+.cap.small {
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+}
+
+.row,
+.column,
+.complex-button {
+  min-height: 3rem;
+}
+.row.frame {
+  min-height: 1.5rem;
+}
+
+.complex-button .block {
+  min-width: 1rem;
+}
+
+.complex-button .text {
+  font-size: 2.9rem;
+  margin-left: .5rem;
+  min-width: 7.5rem;
+}
+
+.button:hover, 
+.endcap:hover > .cap, 
+.elbow:hover,
+.complexButton:hover > *:not(.text) {
+-webkit-animation:none !important;
+animation:none !important;
+filter: brightness(1.25);
+}
+
+.button:not(.endcap):active, 
+.endcap:active > .cap, 
+.elbow:active,
+.complexButton:active > *:not(.text) {
+  -webkit-animation: none !important;
+  animation: none !important;
+  filter: brightness(1.75) !important
+}
+
+.red-alert .text-white {
+	color: #ff9;
+}
+
+/* =========================================
+   Custom Active States
+   =========================================
+*/
+
+.dark-light:not(.complexButton){ 
+	-webkit-animation: dark-light 1s linear infinite !important; 
+	animation: dark-light 1s linear infinite !important; 
+}
+
+.dark-light.complexButton :not(.text){ 
+	-webkit-animation: dark-light 1s linear infinite !important; 
+	animation: dark-light 1s linear infinite !important; 
+}
+
+@-webkit-keyframes dark-light {
+   from, to { filter: none;}
+     25% {filter: brightness(1.25);}
+     50% {filter: none}
+     75% {filter: brightness(.75)}
+}
+
+@keyframes dark-light {
+  from, to { filter: none;}
+    25% {filter: brightness(1.25);}
+    50% {filter: none}
+    75% {filter: brightness(.75)}
+}
+
