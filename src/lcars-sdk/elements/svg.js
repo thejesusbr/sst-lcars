@@ -3,7 +3,8 @@ LCARS.element.svg = function(oDef){
 	//Begin Required
 	this.data = {
 		type:'svg',
-		id: oDef.id || 'svgSID'+ Math.random().toString(36).substr(2, 9)
+		id: oDef.id || 'svgSID'+ Math.random().toString(36).substr(2, 9),
+		xml: oDef.xml
 	}
 	
 	this.receiver = {};

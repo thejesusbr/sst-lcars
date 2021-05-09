@@ -4,8 +4,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="viewport" content="width=device-width" />
-
-    <title>LCARS SDK 4.0</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'" />
 
     <!-- Insert this line above script imports for browser/electron support -->
     <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
@@ -45,8 +44,18 @@
     <script type="text/javascript" src="lcars-sdk/widgets/sdk_default-bar-frame/default-bar-frame.js"></script>
     <script type="text/javascript" src="lcars-sdk/widgets/sdk_scroll-button/scroll-button.js"></script>
 
-    <!-- Project Specific JS-->        
-    <script type="text/javascript" src="js/module.js"></script>
+    <!-- Project Specific JS-->
+    <script type="text/javascript" src="lib/rand-color.js"></script>
+    <script type="text/javascript" src="lib/toggle-console.js"></script>
+    <script type="text/javascript" src="modules/helm-console.js"></script>
+    <script type="text/javascript" src="modules/shield-console.js"></script>
+    <script type="text/javascript" src="modules/weapons-console.js"></script>
+    <script type="text/javascript" src="modules/sensors-console.js"></script>
+    <script type="text/javascript" src="modules/navigation-console.js"></script>
+    <script type="text/javascript" src="modules/situation-panel.js"></script>
+    <script type="text/javascript" src="modules/tactical-console.js"></script>
+    <script type="text/javascript" src="modules/game-hud.js"></script>
+    <script type="text/javascript" src="module.js"></script>
 
     <!-- Insert this line after script imports for browser/electron support-->
     <script>if (window.module) module = window.module;</script>  
@@ -61,10 +70,14 @@
     <!-- Color Theme CSS-->    
     <link rel="stylesheet" type="text/css" href="lcars-sdk/themes/sdk_theme-default.css"> 
 
-    <!-- Project Specific CSS-->    
+    <!-- Project Specific CSS-->
+    <link rel="stylesheet" type="text/css" href="css/theme.css">    
     <link rel="stylesheet" type="text/css" href="css/module.css">
-    
+    <title>SST LCARS</title>
 </head>
 
-<body ontouchstart="" onload=""></body>
+<body ontouchstart="" onload="">
+    <audio id="audDummy"/>
+    <script src="js/lcars_audio.js"></script>    
+</body>
 </html>

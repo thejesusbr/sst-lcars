@@ -3,7 +3,7 @@ LCARS.element.htmlTag = function(oDef){
 	//Begin Required
 	this.data = {
 		type:'htmlTag',
-		id: oDef.id || 'htmlTagSID'+ Math.random().toString(36).substr(2, 9)
+		id: oDef.id || 'htmlTagSID'+ Math.random().toString(36).substr(2, 9),
 	}
 	
 	this.receiver = {};

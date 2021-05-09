@@ -6,6 +6,10 @@ body {
   padding: .25rem;
 }
 
+.hide {
+  display: none;
+}
+
 .block,
 .button {
   min-width: 7.5rem;
@@ -64,6 +68,15 @@ filter: brightness(1.25);
 	color: #ff9;
 }
 
+.complex-button .block ~ .text {
+  /*background-color: red !important;*/
+  min-width: 6.25rem;
+}
+
+.centered {
+  text-align: center;
+}
+
 /* =========================================
    Custom Active States
    =========================================
@@ -93,3 +106,6 @@ filter: brightness(1.25);
     75% {filter: brightness(.75)}
 }
 
+svg {
+  fill: cornflowerblue;
+}

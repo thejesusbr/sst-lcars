@@ -1,0 +1,26 @@
+.bg-blue-2,
+.bg-blue-2 > *:not([class*="bg-"]) {
+  fill: #88aacc;
+}
+
+.bg-blue-3,
+.bg-blue-3 > *:not([class*="bg-"]) {
+  fill: #3399cc;
+}
+
+.bg-blue-4,
+.bg-blue-4 > *:not([class*="bg-"]){
+	fill:#006699;
+}
+
+.red-alert .bg-blue-2 {
+  fill: #990000;
+}
+
+.red-alert .bg-blue-3 {
+  fill: #990000;
+}
+
+.red-alert .bg-blue-4 {
+  fill: #660000;
+}
