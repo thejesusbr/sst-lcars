@@ -158,9 +158,66 @@ let helmConsole = {
               version: 'round-right'
             }
           ]
-        }
+        } // set-dst-inp
       ]
     }, // dst-pnl
+    {
+      type: 'column',
+      id: 'wrp-pnl',
+      style: {'justify-content':'center'},
+      flex: 'v',
+      children: [
+        {
+          id: 'cur-pos-ind',
+          type: 'complexButton',
+          color: randColor(),
+          children: [
+            {
+              type: 'cap',
+              version: 'round-left'
+            },
+            {
+              type: 'block',
+              label: 'Warp Factor',
+              style: {'width': '15rem'}
+            },
+            {
+              id: 'wrp-fct',
+              type: 'text',
+              text: '1.0'
+            },
+            {
+              type: 'cap',
+              version: 'round-right'
+            }
+          ]
+        }, // wrp-ind
+        {
+          type: 'complexButton',
+          id: 'wrp-fct-sel',
+          children: [
+            {
+              type: 'solidLevelBar',
+              id: 'wrpFctSelBar',
+              version: 'horizontal',
+              max: 8,
+              min: 1,
+              namespace: 'sdk',
+              color: 'bg-blue-1',
+              level: 2, // TODO: fazer a barra funcionar completamente
+              label: '2',
+            },
+          ]
+        },
+        {
+          type: 'button',
+          id: 'wrpEng',
+          label: 'Engage',
+          color: randColor(),
+          style: {'width':'15rem', 'flex': 'none'},
+        }
+      ],
+    }, // wrp-pnl
   ]
 }
 

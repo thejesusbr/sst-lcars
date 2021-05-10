@@ -1,6 +1,7 @@
 const path = require('path')
 const { sign } = require('crypto')
-const { app, BrowserWindow, Menu } = require('electron')
+const { app, Menu } = require('electron')
+const MainWindow = require('./MainWindow')
 
 
 process.env.NODE_ENV = 'development'
@@ -8,7 +9,7 @@ process.env.NODE_ENV = 'development'
 const isDev = process.env.NODE_ENV !== 'production' ? true : false
 const isMac = process.platform === 'darwin' ? true : false
 
-let win
+let mainWindow
 
 const menu = [
   ...(isMac ? [{ role: 'appMenu' }] : []),
@@ -31,19 +32,10 @@ const menu = [
 ]
 
 function createWindow () {
-  win = new BrowserWindow({
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      //devTools: false,
-      /*preload: path.join(__dirname, 'preload.js')*/
-    }
-  })
-  win.loadFile(path.join(__dirname, 'src', 'index.html'))
-  win.maximize()
-  if (isDev) {
-    win.webContents.openDevTools()
-  }
+  mainWindow = new MainWindow(
+    path.join(__dirname, 'src', 'index.html'),
+    path.join(__dirname, 'src', 'assets', 'icons', 'mac', 'icon.icns'),
+    isDev)
 }
 
 app.whenReady().then(() => {
@@ -64,3 +56,5 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+app.allowRendererProcessReuse = true

@@ -7,7 +7,7 @@ LCARS.element.sdk.solidLevelBar = function(oDef){
 		type:'solidLevelBar',
 		id: oDef.id || 'solidLevelBarSID'+ Math.random().toString(36).substr(2, 9),
         namespace:'sdk',
-        version:'vertical'
+        version:'horizontal'
 	}
 	
 	this.receiver = {};
@@ -69,11 +69,12 @@ LCARS.element.sdk.solidLevelBar.prototype = {
         level:function(object, value){
             
             if(typeof value === 'number'){
-                object.data.level = value;
-
+                //object.data.level = value;
+                
                 if(object.data.version === 'vertical'){
                     var iLevelHeight = object.dom.height();
                     var min = object.data.min || 45;
+                    var max = object.data.max || 1;
                     var transformMin = Math.ceil((min / iLevelHeight) * 100);
                     if(value < transformMin){
                         if(object.data.reverse === true){
@@ -89,10 +90,14 @@ LCARS.element.sdk.solidLevelBar.prototype = {
                         }
                     }
                 }else{
-                    var iLevelWidth = object.dom.width();
-                    var min = object.data.min || 45;
+                    var iLevelWidth = object.dom.width()
+                    var min = object.data.min || 0;
+                    var max = object.data.max || 100;
+                    value = value < min ? min : value
+                    value = value > max ? max : value
+                    let newpos = value * 100 / max
                     var transformMin = Math.ceil((min / iLevelWidth) * 100);
-                    if(value < transformMin){
+                    if(newpos < transformMin){
                         if(object.data.reverse === true){
                             object.elements.wrapper.dom.css('transform', 'translateX('+(100 - transformMin) + '%)'); 
                         }else{
@@ -100,16 +105,18 @@ LCARS.element.sdk.solidLevelBar.prototype = {
                         }
                     }else{
                         if(object.data.reverse === true){
-                            object.elements.wrapper.dom.css('transform', 'translateX('+(100 - object.data.level) + '%)'); 
+                            object.elements.wrapper.dom.css('transform', 'translateX('+(100 - newpos) + '%)'); 
                         }else{
-                            object.elements.wrapper.dom.css('transform', 'translateX(-'+(100 - object.data.level) + '%)'); 
+                            object.elements.wrapper.dom.css('transform', 'translateX(-'+(100 - newpos) + '%)'); 
                         }
-                    }                    
+                    }   
+                    
+                                    
   
                 }
-                
+                object.data.level = value            
                 if(object.data.label){
-                    object.set('label', value);
+                    object.set('label', value.toString());
                 }else if(object.data.altLabel){
                     object.set('altLabel', value);
                 }
