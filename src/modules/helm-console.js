@@ -1,4 +1,4 @@
-LCARS.element.htmlTag.prototype.create = function(oDef){
+/*CARS.element.htmlTag.prototype.create = function(oDef){
     var attr = Object.keys(oDef.attributes)
     var vals = Object.values(oDef.attributes)
     var atr;
@@ -7,7 +7,7 @@ LCARS.element.htmlTag.prototype.create = function(oDef){
       atrStr += attr[atr]+':"'+vals[atr]+'" '
 		var element = $('<'+oDef.tag+' id="'+this.data.id+atrStr+'"></'+this.data.tag+'>');
 		return element;	
-}
+}*/
 
 let activeDstToggle = 'sec'
 
@@ -165,12 +165,12 @@ let helmConsole = {
     }, // dst-pnl
     {
       type: 'column',
-      id: 'wrp-pnl',
-      style: {'justify-content':'center'},
+      id: 'wrpPnl',
+      style: {'justify-content': 'center', 'align-items':'center'},
       flex: 'v',
       children: [
         {
-          id: 'cur-pos-ind',
+          id: 'wrpFctInd',
           type: 'complexButton',
           color: randColor(),
           children: [
@@ -184,9 +184,9 @@ let helmConsole = {
               style: {'width': '15rem'}
             },
             {
-              id: 'wrp-fct',
+              id: 'wrpFct',
               type: 'text',
-              text: '1.0'
+              text: '2.0'
             },
             {
               type: 'cap',
@@ -196,10 +196,21 @@ let helmConsole = {
         }, // wrp-ind
         {
           type: 'complexButton',
-          id: 'wrp-fct-sel',
+          id: 'wrpFctSel',
           children: [
             {
-              type: 'solidLevelBar',
+              type: 'cap',
+              version: 'round-left',
+              color: randColor(),
+            },
+            {
+              type: 'block',
+              label: 'Set Warp',
+              style: {'width': '7.5rem'},
+              color: randColor(),
+            },
+            {
+              type: 'solidLevelBar', // TODO: substituir por slider
               id: 'wrpFctSelBar',
               namespace: 'sdk',
               version: 'horizontal',
@@ -209,19 +220,26 @@ let helmConsole = {
               level: 2, // TODO: fazer a barra funcionar completamente
               label: '2',
             },
+            {
+              type: 'cap',
+              version: 'round-right',
+              color: randColor(),
+            },
           ]
-        },
+        }, // wrpFctSel
         {
           type: 'button',
           id: 'wrpEng',
+          version: 'round',
           label: 'Engage',
           color: randColor(),
           style: {'width':'15rem', 'flex': 'none'},
-        },
+        }, // wrpEng
         {
           type:'defaultBracket',
+          id: 'vwrScr',
           namespace:'sdk',
-          style: {'height': '100%'},
+          style: {'height': '300px'},
           coloring:{
             elbow:'bg-green-4',
             column1:['bg-blue-1', 'bg-green-2', 'bg-blue-1'],
@@ -232,13 +250,13 @@ let helmConsole = {
           },
           content: [
             {
-              type: 'block',
-              label: 'bla',
-              color: randColor(),
-              style: {'height': '100%'},
+              type: 'htmlTag',
+              id: 'vwrScrDsp',
+              tag: 'canvas',
+              style: {'height': '100%', 'width': '100%'}, // TODO: configurar starfield
             }
           ]
-        }
+        }, // vwrScr
       ],
     }, // wrp-pnl
   ]

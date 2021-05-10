@@ -7,8 +7,13 @@ $( document ).ready(() => {
       ob.set('level', ob.data.level)
   }
   toggleConsole({target: {id: 'hlm-cns-btn'}})
+  setHlmVwr()
 })
 
 $(() => {
   lcarsAudio.initialize(audDummy)
 })
+
+function setHlmVwr() {
+  warpEffect = new WarpSpeed('vwrScrDsp')
+}
