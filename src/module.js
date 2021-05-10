@@ -6,7 +6,6 @@ $( document ).ready(() => {
     if(ob.data.type === 'solidLevelBar')
       ob.set('level', ob.data.level)
   }
-    
   toggleConsole({target: {id: 'hlm-cns-btn'}})
 })
 

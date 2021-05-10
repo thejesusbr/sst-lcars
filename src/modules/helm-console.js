@@ -21,7 +21,9 @@ let toggleSysSec = (opt) => {
 let helmConsole = {
   type: 'row',
   id: 'hlm-cns-dsp',
-  class: ['hide'],
+  flex: 'h',
+  flexc: 'h',
+  style: {'justify-content': 'space-evenly'},
   children: [
     {
       type: 'column',
@@ -199,10 +201,10 @@ let helmConsole = {
             {
               type: 'solidLevelBar',
               id: 'wrpFctSelBar',
+              namespace: 'sdk',
               version: 'horizontal',
               max: 8,
               min: 1,
-              namespace: 'sdk',
               color: 'bg-blue-1',
               level: 2, // TODO: fazer a barra funcionar completamente
               label: '2',
@@ -215,6 +217,27 @@ let helmConsole = {
           label: 'Engage',
           color: randColor(),
           style: {'width':'15rem', 'flex': 'none'},
+        },
+        {
+          type:'defaultBracket',
+          namespace:'sdk',
+          style: {'height': '100%'},
+          coloring:{
+            elbow:'bg-green-4',
+            column1:['bg-blue-1', 'bg-green-2', 'bg-blue-1'],
+            column2:['bg-blue-3', 'bg-green-4', 'bg-blue-3'],
+            column3:['bg-blue-1', 'bg-green-2', 'bg-blue-1'],
+            column4:['bg-blue-3', 'bg-green-4', 'bg-blue-3'],
+            animated:'bg-red-1'                                          
+          },
+          content: [
+            {
+              type: 'block',
+              label: 'bla',
+              color: randColor(),
+              style: {'height': '100%'},
+            }
+          ]
         }
       ],
     }, // wrp-pnl
