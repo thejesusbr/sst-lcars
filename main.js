@@ -16,6 +16,12 @@ const menu = [
   {
     role: 'fileMenu',
   },
+  {
+    label: 'View',
+    submenu: [
+      { role: 'togglefullscreen' }
+    ]
+  },
   ...(isDev
     ? [
         {
