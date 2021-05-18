@@ -1,3 +1,9 @@
+function camelCase (string) {
+    return string.replace( /-([a-z])/ig, function( all, letter ) {
+        return letter.toUpperCase();
+    });
+}
+
 var lcars = {
     colors:{
         pool:{
@@ -1087,6 +1093,7 @@ var LCARS = {
 	},
 		
 	create:function(oDef){
+        if(oDef.id) oDef.id = camelCase(oDef.id)
 		if(Array.isArray(oDef)){
 			var objects = [];
 			for (var i = 0; i < oDef.length; i++){

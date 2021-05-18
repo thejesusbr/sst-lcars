@@ -1,16 +1,16 @@
 var navConsole = {
-  type: 'row',
-  id: 'nav-cns-dsp',
+  type: "row",
+  id: "nav-cns-dsp",
   children: [
     {
-      type: 'column',
+      type: "column",
       children: [
         {
-          type: 'button',
-          label: 'navigation',  
-          color: randColor()
-        }
-      ]
+          type: "button",
+          label: "navigation",
+          color: randColor(),
+        },
+      ],
     }, // dst-pnl
-  ]
-}
+  ],
+};

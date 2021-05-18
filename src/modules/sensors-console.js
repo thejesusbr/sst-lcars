@@ -1,16 +1,16 @@
 var sensorsConsole = {
-  type: 'row',
-  id: 'sns-cns-dsp',
+  type: "row",
+  id: "sns-cns-dsp",
   children: [
     {
-      type: 'column',
+      type: "column",
       children: [
         {
-          type: 'button',
-          label: 'Sensors',  
-          color: randColor()
-        }
-      ]
+          type: "button",
+          label: "Sensors",
+          color: randColor(),
+        },
+      ],
     }, // dst-pnl
-  ]
-}
+  ],
+};

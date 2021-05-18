@@ -1,19 +1,18 @@
-$( document ).ready(() => {
-  $('body').prepend(LCARS.create(gameHud).dom)
+$(document).ready(() => {
+  $("body").prepend(LCARS.create(gameHud).dom);
   // Gambiarra para inicializar o nível das barras
-  for (obj in LCARS.active){
-    let ob = LCARS.active[obj]
-    if(ob.data.type === 'solidLevelBar')
-      ob.set('level', ob.data.level)
+  for (obj in LCARS.active) {
+    let ob = LCARS.active[obj];
+    if (ob.data.type === "solidLevelBar") ob.set("level", ob.data.level);
   }
-  toggleConsole({target: {id: 'hlm-cns-btn'}})
-  setHlmVwr()
-})
+  toggleConsole({ target: { id: "shdCnsBtn" } });
+  setHlmVwr();
+});
 
 $(() => {
-  lcarsAudio.initialize(audDummy)
-})
+  lcarsAudio.initialize(audDummy);
+});
 
 function setHlmVwr() {
-  warpEffect = new WarpSpeed('vwrScrDsp')
+  warpEffect = new WarpSpeed("vwrScrDsp");
 }

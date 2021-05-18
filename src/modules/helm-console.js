@@ -9,83 +9,81 @@
 		return element;	
 }*/
 
-let activeDstToggle = 'sec'
+let activeDstToggle = "sec";
 
 let toggleSysSec = (opt) => {
-  if(opt === 'sec')
-    activeDstToggle = 'sec'
-  if(opt === 'sys')
-    activeDstToggle = 'sys'
-}
+  if (opt === "sec") activeDstToggle = "sec";
+  if (opt === "sys") activeDstToggle = "sys";
+};
 
 let helmConsole = {
-  type: 'row',
-  id: 'hlm-cns-dsp',
-  flex: 'h',
-  flexc: 'h',
-  style: {'justify-content': 'space-evenly'},
+  type: "row",
+  id: "hlm-cns-dsp",
+  flex: "h",
+  flexc: "h",
+  style: { "justify-content": "space-evenly" },
   children: [
     {
-      type: 'column',
-      id: 'dst-pnl',
-      style: {'justify-content':'center'},
-      flex: 'v',
+      type: "column",
+      id: "dst-pnl",
+      style: { "justify-content": "center" },
+      flex: "v",
       children: [
         {
-          id: 'cur-pos-ind',
-          type: 'complexButton',
+          id: "cur-pos-ind",
+          type: "complexButton",
           color: randColor(),
           children: [
             {
-              type: 'cap',
-              version: 'round-left'
+              type: "cap",
+              version: "round-left",
             },
             {
-              type: 'block',
-              label: 'Current Location',
-              style: {'width': '7.5rem'}
+              type: "block",
+              label: "Current Location",
+              style: { width: "7.5rem" },
             },
             {
-              type: 'block',
-              label: 'System',
-              style: {'width': '3.75rem'}
+              type: "block",
+              label: "System",
+              style: { width: "3.75rem" },
             },
             {
-              id: 'cur-loc-sys',
-              type: 'text',
-              text: '3, 4'
+              id: "cur-loc-sys",
+              type: "text",
+              text: "3, 4",
             },
             {
-              type: 'block',
-              label: 'Sector',
-              style: {'width': '3.75rem'}
+              type: "block",
+              label: "Sector",
+              style: { width: "3.75rem" },
             },
             {
-              id: 'cur-loc-sec',
-              type: 'text',
-              text: '3, 4'
+              id: "cur-loc-sec",
+              type: "text",
+              text: "3, 4",
             },
             {
-              type: 'cap',
-              version: 'round-right'
-            }
-          ]
+              type: "cap",
+              version: "round-right",
+            },
+          ],
         }, // cur-loc-ind
         {
-          type: 'title',
-          version: 'small centered',
-          text: 'Set Destination',
-          color: 'text-white'
+          type: "title",
+          version: "small centered",
+          text: "Set Destination",
+          color: "text-white",
         },
         {
-          id: 'hlm-dir-pad-wrp',
-          type: 'wrapper',
-          flex: 'h',
-          style: {'justify-content': 'center'},
-          children:  [
+          id: "hlm-dir-pad-wrp",
+          type: "wrapper",
+          flex: "h",
+          style: { "justify-content": "center" },
+          children: [
             {
-              id: 'hlm-dir-pad',
-              type: 'svg',
+              id: "hlm-dir-pad",
+              type: "svg",
               xml: `<svg width="70mm" height="70mm" 
               version="1.1" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" 
               xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"
@@ -119,157 +117,162 @@ let helmConsole = {
               <path d="m34 27.9h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
               <path d="m34 59h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
             </svg>`,
-            arrive: () => {bindPadButtons()},
+              arrive: () => {
+                bindPadButtons();
+              },
             }, // hlm-dir-pad
-          ]
+          ],
         }, // hlm-dir-pad-wrp
         {
-          type: 'complexButton',
-          id: 'set-dst-inp',
-          color: 'bg-blue-2',
-          style: {'justify-content':'center'},
+          type: "complexButton",
+          id: "set-dst-inp",
+          color: "bg-blue-2",
+          style: { "justify-content": "center" },
           children: [
             {
-              type: 'cap',
-              version: 'round-left'
+              type: "cap",
+              version: "round-left",
             },
             {
-              type: 'button',
-              label: 'System',
-              style: {'width':'3.75rem', 'flex': 'none'},
-              click: () => {toggleSysSec('sys')}
+              type: "button",
+              label: "System",
+              style: { width: "3.75rem", flex: "none" },
+              click: () => {
+                toggleSysSec("sys");
+              },
             },
             {
-              id: 'dst-sec-ind',
-              type: 'text',
-              text: '4, 3'
+              id: "dst-sec-ind",
+              type: "text",
+              text: "4, 3",
             },
             {
-              type: 'button',
-              label: 'Sector',
-              style: {'width':'3.75rem', 'flex': 'none'},
-              click: () => {toggleSysSec('sec')}
+              type: "button",
+              label: "Sector",
+              style: { width: "3.75rem", flex: "none" },
+              click: () => {
+                toggleSysSec("sec");
+              },
             },
             {
-              id: 'dst-sys-ind',
-              type: 'text',
-              text: '2, 5'
+              id: "dst-sys-ind",
+              type: "text",
+              text: "2, 5",
             },
             {
-              type: 'cap',
-              version: 'round-right'
-            }
-          ]
-        } // set-dst-inp
-      ]
+              type: "cap",
+              version: "round-right",
+            },
+          ],
+        }, // set-dst-inp
+      ],
     }, // dst-pnl
     {
-      type: 'column',
-      id: 'wrpPnl',
-      style: {'justify-content': 'center', 'align-items':'center'},
-      flex: 'v',
+      type: "column",
+      id: "wrpPnl",
+      style: { "justify-content": "center", "align-items": "center" },
+      flex: "v",
       children: [
         {
-          id: 'wrpFctInd',
-          type: 'complexButton',
+          id: "wrpFctInd",
+          type: "complexButton",
           color: randColor(),
           children: [
             {
-              type: 'cap',
-              version: 'round-left'
+              type: "cap",
+              version: "round-left",
             },
             {
-              type: 'block',
-              label: 'Warp Factor',
-              style: {'width': '15rem'}
+              type: "block",
+              label: "Warp Factor",
+              style: { width: "15rem" },
             },
             {
-              id: 'wrpFct',
-              type: 'text',
-              text: '2.0'
+              id: "wrpFct",
+              type: "text",
+              text: "2.0",
             },
             {
-              type: 'cap',
-              version: 'round-right'
-            }
-          ]
+              type: "cap",
+              version: "round-right",
+            },
+          ],
         }, // wrp-ind
         {
-          type: 'complexButton',
-          id: 'wrpFctSel',
+          type: "complexButton",
+          id: "wrpFctSel",
           children: [
             {
-              type: 'cap',
-              version: 'round-left',
+              type: "cap",
+              version: "round-left",
               color: randColor(),
             },
             {
-              type: 'block',
-              label: 'Set Warp',
-              style: {'width': '7.5rem'},
+              type: "block",
+              label: "Set Warp",
+              style: { width: "7.5rem" },
               color: randColor(),
             },
             {
-              type: 'solidLevelBar', // TODO: substituir por slider
-              id: 'wrpFctSelBar',
-              namespace: 'sdk',
-              version: 'horizontal',
+              type: "solidLevelBar", // TODO: substituir por slider
+              id: "wrpFctSelBar",
+              namespace: "sdk",
+              version: "horizontal",
               max: 8,
               min: 1,
-              color: 'bg-blue-1',
+              color: "bg-blue-1",
               level: 2, // TODO: fazer a barra funcionar completamente
-              label: '2',
+              label: "2",
             },
             {
-              type: 'cap',
-              version: 'round-right',
+              type: "cap",
+              version: "round-right",
               color: randColor(),
             },
-          ]
+          ],
         }, // wrpFctSel
         {
-          type: 'button',
-          id: 'wrpEng',
-          version: 'round',
-          label: 'Engage',
+          type: "button",
+          id: "wrpEng",
+          version: "round",
+          label: "Engage",
           color: randColor(),
-          style: {'width':'15rem', 'flex': 'none'},
+          style: { width: "15rem", flex: "none" },
         }, // wrpEng
         {
-          type:'defaultBracket',
-          id: 'vwrScr',
-          namespace:'sdk',
-          style: {'height': '300px'},
-          coloring:{
-            elbow:'bg-green-4',
-            column1:['bg-blue-1', 'bg-green-2', 'bg-blue-1'],
-            column2:['bg-blue-3', 'bg-green-4', 'bg-blue-3'],
-            column3:['bg-blue-1', 'bg-green-2', 'bg-blue-1'],
-            column4:['bg-blue-3', 'bg-green-4', 'bg-blue-3'],
-            animated:'bg-red-1'                                          
+          type: "defaultBracket",
+          id: "vwrScr",
+          namespace: "sdk",
+          style: { height: "300px" },
+          coloring: {
+            elbow: "bg-green-4",
+            column1: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
+            column2: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
+            column3: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
+            column4: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
+            animated: "bg-red-1",
           },
           content: [
             {
-              type: 'htmlTag',
-              id: 'vwrScrDsp',
-              tag: 'canvas',
-              style: {'height': '100%', 'width': '100%'}, // TODO: configurar starfield
-            }
-          ]
+              type: "htmlTag",
+              id: "vwrScrDsp",
+              tag: "canvas",
+              style: { height: "100%", width: "100%" }, // TODO: configurar starfield
+            },
+          ],
         }, // vwrScr
       ],
     }, // wrp-pnl
-  ]
-}
+  ],
+};
 
 function bindPadButtons() {
-  console.log('bindPadButtons')
-  let xyCtlUp = document.getElementById('xy_ctl_up')
-  xyCtlUp.addEventListener('click', e => {
-    console.log(e)
-  })
+  console.log("bindPadButtons");
+  let xyCtlUp = document.getElementById("xy_ctl_up");
+  xyCtlUp.addEventListener("click", (e) => {
+    console.log(e);
+  });
 }
-
 
 /*
 <svg width="70mm" height="70mm" version="1.1" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" style="display: inline-block; margin: auto">

@@ -1,16 +1,16 @@
 var weaponsConsole = {
-  type: 'row',
-  id: 'wpn-cns-dsp',
+  type: "row",
+  id: "wpn-cns-dsp",
   children: [
     {
-      type: 'column',
+      type: "column",
       children: [
         {
-          type: 'button',
-          label: 'Weapons',  
-          color: randColor()
-        }
-      ]
+          type: "button",
+          label: "Weapons",
+          color: randColor(),
+        },
+      ],
     }, // dst-pnl
-  ]
-}
+  ],
+};

@@ -40,6 +40,12 @@ body {
 
 .complex-button .block {
   min-width: 1rem;
+  flex: 1 1 auto;
+}
+
+.complex-button .block.decorator{
+  width: 1rem;
+  flex: none;
 }
 
 .complex-button .text {
