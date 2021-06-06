@@ -5,7 +5,7 @@ $(document).ready(() => {
     let ob = LCARS.active[obj];
     if (ob.data.type === "solidLevelBar") ob.set("level", ob.data.level);
   }
-  toggleConsole({ target: { id: "shdCnsBtn" } });
+  toggleConsole({ target: { id: "wpnCnsBtn" } });
   setHlmVwr();
 });
 
