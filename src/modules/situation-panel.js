@@ -8,14 +8,14 @@ let situationPanel = {
       id: "stn-pnl-mnu",
       style: { width: "7.5rem" },
       children: [
-        { type: "block", label: "9876 54", color: lcars.colors.primary[0] },
-        { type: "block", flexc: "v", color: lcars.colors.primary[0] },
+        { type: "block", label: "9876 54", color: theme.colors.static[1] },
+        { type: "block", flexc: "v", color: theme.colors.static[0] },
         {
           type: "elbow",
           version: "horizontal",
           direction: "bottom-left",
           size: "medium",
-          color: lcars.colors.primary[0],
+          color: theme.colors.static[0],
         },
       ],
     }, // stn-pnl-mnu
@@ -32,7 +32,7 @@ let situationPanel = {
             {
               type: "title",
               size: "small",
-              color: "text-white",
+              color: theme.colors.text.white,
               text: "Situation Panel",
             },
           ],
@@ -70,7 +70,7 @@ let situationPanel = {
                     },
                     {
                       type: "text",
-                      color: "text-white",
+                      color: theme.colors.text.white,
                       style: { width: "10.55rem" },
                       text: "3000",
                     },
@@ -87,21 +87,23 @@ let situationPanel = {
                   noEvente: false,
                   children: [
                     {
-                      type: "block",
-                      style: { background: "transparent", width: "3rem" },
+                      type: "cap",
+                      style: { background: "transparent" },
                     },
                     {
                       type: "block",
                       label: "Stardate",
-                      style: { width: "7.5rem" },
+                      style: { flex: "none", width: "7.5rem" },
                     },
                     {
                       type: "block",
+                      version: "decorator",
                     },
                     {
                       type: "text",
                       id: "sdtIndTxt",
-                      color: "text-white",
+                      color: theme.colors.text.white,
+                      style: { width: "9.25rem" },
                       text: "3600.0",
                     },
                     {
@@ -126,7 +128,7 @@ let situationPanel = {
                     },
                     {
                       type: "text",
-                      color: "text-white",
+                      color: theme.colors.text.white,
                       style: { width: "10.55rem" },
                       text: "12",
                     },
@@ -143,8 +145,8 @@ let situationPanel = {
                   noEvente: false,
                   children: [
                     {
-                      type: "block",
-                      style: { background: "transparent", width: "3rem" },
+                      type: "cap",
+                      style: { background: "transparent" },
                     },
                     {
                       type: "block",
@@ -153,10 +155,12 @@ let situationPanel = {
                     },
                     {
                       type: "block",
+                      version: "decorator",
                     },
                     {
                       type: "text",
-                      color: "text-white",
+                      id: "stb-lft-ind",
+                      color: theme.colors.text.white,
                       style: { width: "9.25rem" },
                       text: "14",
                     },
@@ -196,7 +200,7 @@ let situationPanel = {
             {
               type: "bar",
               style: { width: "7.5rem" },
-              color: lcars.colors.primary[0],
+              color: theme.colors.static[0],
             },
             {
               type: "bar",

@@ -2,6 +2,7 @@ html,
 body {
   font-size: 16px;
 }
+
 body {
   padding: 0.25rem;
 }
@@ -87,14 +88,6 @@ body {
   filter: brightness(0.5);
 }
 
-.red-alert .text-white {
-  color: #ff9;
-}
-
-.red-alert .text.off {
-  color: #858585;
-}
-
 .complex-button .block ~ .text {
   /*background-color: red !important;*/
   min-width: 6.25rem;
@@ -149,8 +142,4 @@ body {
   75% {
     filter: brightness(0.75);
   }
-}
-
-svg {
-  fill: cornflowerblue;
 }
