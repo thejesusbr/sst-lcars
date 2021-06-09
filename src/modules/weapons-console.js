@@ -1,16 +1,15 @@
 function toggle() {
-  this.dom[0].children[0].classList.add("transparent");
-  this.dom[0].children[1].classList.remove("transparent");
-  this.dom[0].children[2].classList.remove("off");
-  this.dom[0].children[2].innerText = "on";
   if (this.data.toggle) {
-    this.dom[0].children[0];
-  } else {
     this.dom[0].children[1].classList.add("transparent");
-    this.dom[0].children[0].classList.remove("transparent");
-    this.dom[0].children[0].style.setProperty("filter", "brightness(0.5)");
-    this.dom[0].children[2].classList.add("off");
-    this.dom[0].children[2].innerText = "off";
+    this.dom[0].children[2].classList.remove("transparent");
+    this.dom[0].children[3].classList.remove("off");
+    this.dom[0].children[3].innerText = "on";
+  } else {
+    this.dom[0].children[2].classList.add("transparent");
+    this.dom[0].children[1].classList.remove("transparent");
+    this.dom[0].children[1].style.setProperty("filter", "brightness(0.5)");
+    this.dom[0].children[3].classList.add("off");
+    this.dom[0].children[3].innerText = "off";
   }
 }
 
@@ -389,16 +388,16 @@ var weaponsConsole = {
               label: "Load",
             },
             {
-              type: "text",
-              text: "1",
-              style: { width: "3.75rem", "min-width": "unset" },
-            },
-            {
               type: "complexButton",
               color: randColor(),
               toggle: false,
               style: { "min-width": "unset" },
               children: [
+                {
+                  type: "block",
+                  label: "Tube 1",
+                  style: { width: "3.75rem", "min-width": "unset" },
+                },
                 {
                   type: "block",
                   style: { filter: "brightness(0.5)" },
@@ -436,16 +435,16 @@ var weaponsConsole = {
               label: "Load",
             },
             {
-              type: "text",
-              text: "2",
-              style: { width: "3.75rem", "min-width": "unset" },
-            },
-            {
               type: "complexButton",
               color: randColor(),
               toggle: false,
               style: { "min-width": "unset" },
               children: [
+                {
+                  type: "block",
+                  label: "Tube 2",
+                  style: { width: "3.75rem", "min-width": "unset" },
+                },
                 {
                   type: "block",
                   style: { filter: "brightness(0.5)" },
@@ -483,16 +482,16 @@ var weaponsConsole = {
               label: "Load",
             },
             {
-              type: "text",
-              text: "3",
-              style: { width: "3.75rem", "min-width": "unset" },
-            },
-            {
               type: "complexButton",
               color: randColor(),
               toggle: false,
               style: { "min-width": "unset" },
               children: [
+                {
+                  type: "block",
+                  label: "Tube 3",
+                  style: { width: "3.75rem", "min-width": "unset" },
+                },
                 {
                   type: "block",
                   style: { filter: "brightness(0.5)" },
@@ -519,6 +518,7 @@ var weaponsConsole = {
             },
           ],
         }, // ctr-tb3
+        // TODO Transformar este toggle em um widget
         {
           type: "button",
           version: "round dark-light",

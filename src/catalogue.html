@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'" />
+
+    <!-- Insert this line above script imports for browser/electron support -->
+    <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+    <!-- Core JS -->
+    <script type="text/javascript" src="lcars-sdk/core/jquery.js"></script>
+    <script type="text/javascript" src="lcars-sdk/core/jquery.mobile-events.min.js"></script>
+    <script type="text/javascript" src="lcars-sdk/core/arrive.js"></script>
+    <script type="text/javascript" src="lcars-sdk/core/lcars-sdk.js"></script>
+    <script type="text/javascript" src='js/warpspeed.min.js'></script>
+
+
+    <!-- Elements and Widgets JS-->    
+    <script type="text/javascript" src="lcars-sdk/elements/aside.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/bar.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/block.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/button.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/cap.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/column.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/complex-button.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/content.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/details.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/elbow.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/endcap.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/footer.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/header.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/html-tag.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/img.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/main.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/nav.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/oval.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/row.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/section.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/svg.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/text.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/title.js"></script>
+    <script type="text/javascript" src="lcars-sdk/elements/wrapper.js"></script>
+    <script type="text/javascript" src="lcars-sdk/widgets/sdk_solid-level-bar/solid-level-bar.js"></script>
+    <script type="text/javascript" src="lcars-sdk/widgets/sdk_default-bracket/default-bracket.js"></script>
+    <script type="text/javascript" src="lcars-sdk/widgets/sdk_default-bar-frame/default-bar-frame.js"></script>
+    <script type="text/javascript" src="lcars-sdk/widgets/sdk_scroll-button/scroll-button.js"></script>
+
+    <!-- Project Specific JS-->
+    <script type="text/javascript" src="lib/rand-color.js"></script>
+    <script type="text/javascript" src="lib/toggle-console.js"></script>
+    <script type="text/javascript" src="lib/theme.js"></script>
+    <script type="text/javascript" src="modules/helm-console.js"></script>
+    <script type="text/javascript" src="modules/shield-console.js"></script>
+    <script type="text/javascript" src="modules/weapons-console.js"></script>
+    <script type="text/javascript" src="modules/sensors-console.js"></script>
+    <script type="text/javascript" src="modules/navigation-console.js"></script>
+    <script type="text/javascript" src="modules/situation-panel.js"></script>
+    <script type="text/javascript" src="modules/tactical-console.js"></script>
+    <script type="text/javascript" src="modules/game-hud.js"></script>
+    <!-- script type="text/javascript" src="module.js"script -->
+
+    <!-- Insert this line after script imports for browser/electron support-->
+    <script>if (window.module) module = window.module;</script>  
+
+    <!-- Core and Widgets CSS-->    
+    <link rel="stylesheet" type="text/css" href="lcars-sdk/core/lcars-sdk.css">
+    <link rel="stylesheet" type="text/css" href="lcars-sdk/widgets/sdk_solid-level-bar/solid-level-bar.css">
+    <link rel="stylesheet" type="text/css" href="lcars-sdk/widgets/sdk_default-bracket/default-bracket.css">
+    <link rel="stylesheet" type="text/css" href="lcars-sdk/widgets/sdk_default-bar-frame/default-bar-frame.css">
+    <link rel="stylesheet" type="text/css" href="lcars-sdk/widgets/sdk_scroll-button/scroll-button.css">
+
+    <!-- Color Theme CSS-->    
+    <!-- link rel="stylesheet" type="text/css" href="lcars-sdk/themes/sdk_theme-default.css" -->
+
+    <!-- Project Specific CSS-->
+    <link rel="stylesheet" type="text/css" href="css/theme.css">    
+    <link rel="stylesheet" type="text/css" href="css/module.css">
+    <title>SST LCARS</title>
+</head>
+
+<body ontouchstart="" onload="">
+    <audio id="audDummy"/>
+    <script src="js/lcars_audio.js"></script>
+    <script type="text/javascript">
+      
+let colors = [
+  "anakiwa-bg",
+  "atomic-tangerine-bg",
+  "bahama-blue-bg",
+  "bourbon-bg",
+  "blue-bell-bg",
+  "chestnut-rose-bg",
+  "cosmic-bg",
+  "danub-bg",
+  "dodger-pale-bg",
+  "dodger-soft-bg",
+  "eggplant-bg",
+  "golden-tanoi-bg",
+  "hopbush-bg",
+  "husk-bg",
+  "indigo-bg",
+  "lavender-purple-bg",
+  "lilac-bg",
+  "mariner-bg",
+  "medium-carmine-bg",
+  "melrose-bg",
+  "navy-blue-bg",
+  "near-blue-bg",
+  "neon-carrot-bg",
+  "orange-peel-bg",
+  "pale-canary-bg",
+  "periwinkle-bg",
+  "alert-bg",
+  "red-damask-bg",
+  "rust-bg",
+  "sandy-brown-bg",
+  "tamarillo-bg",
+  "warning-bg",
+  "tanoi-bg",
+  "black-bg",
+  "white-bg",
+]
+
+function fillCatalog() {
+  objStr = `{"type": "row","flex": "h","children": [`;
+  colors.forEach((c, v) => {
+    /*if(v % 5 == 0)
+      objStr += `{
+        type: "row",
+        flex: "h",
+        children: [`
+    objStr += `{
+      type: "block",
+      color: "${c}",
+    }`
+    if(v % 5 == 0)
+      objStr += `]
+  }`*/
+  if(v % 7 == 0 && v != 0)
+    objStr += `],},{"type": "row","flex": "h","children": [`
+  objStr += `{"type": "block","color": "${c}","label":"${c}"},`
+  })
+  objStr += '],}'
+  console.log(objStr)
+  return objStr
+}
+
+fillCatalog()
+
+catalog = {
+  type: "column",
+  children: [
+  {"type": "row","flex": "h","children": [{"type": "block","color": "anakiwa-bg","label":"anakiwa-bg"},{"type": "block","color": "atomic-tangerine-bg","label":"atomic-tangerine-bg"},{"type": "block","color": "bahama-blue-bg","label":"bahama-blue-bg"},{"type": "block","color": "bourbon-bg","label":"bourbon-bg"},{"type": "block","color": "blue-bell-bg","label":"blue-bell-bg"},{"type": "block","color": "chestnut-rose-bg","label":"chestnut-rose-bg"},{"type": "block","color": "cosmic-bg","label":"cosmic-bg"},],},{"type": "row","flex": "h","children": [{"type": "block","color": "danub-bg","label":"danub-bg"},{"type": "block","color": "dodger-pale-bg","label":"dodger-pale-bg"},{"type": "block","color": "dodger-soft-bg","label":"dodger-soft-bg"},{"type": "block","color": "eggplant-bg","label":"eggplant-bg"},{"type": "block","color": "golden-tanoi-bg","label":"golden-tanoi-bg"},{"type": "block","color": "hopbush-bg","label":"hopbush-bg"},{"type": "block","color": "husk-bg","label":"husk-bg"},],},{"type": "row","flex": "h","children": [{"type": "block","color": "indigo-bg","label":"indigo-bg"},{"type": "block","color": "lavender-purple-bg","label":"lavender-purple-bg"},{"type": "block","color": "lilac-bg","label":"lilac-bg"},{"type": "block","color": "mariner-bg","label":"mariner-bg"},{"type": "block","color": "medium-carmine-bg","label":"medium-carmine-bg"},{"type": "block","color": "melrose-bg","label":"melrose-bg"},{"type": "block","color": "navy-blue-bg","label":"navy-blue-bg"},],},{"type": "row","flex": "h","children": [{"type": "block","color": "near-blue-bg","label":"near-blue-bg"},{"type": "block","color": "neon-carrot-bg","label":"neon-carrot-bg"},{"type": "block","color": "orange-peel-bg","label":"orange-peel-bg"},{"type": "block","color": "pale-canary-bg","label":"pale-canary-bg"},{"type": "block","color": "periwinkle-bg","label":"periwinkle-bg"},{"type": "block","color": "alert-bg","label":"alert-bg"},{"type": "block","color": "red-damask-bg","label":"red-damask-bg"},],},{"type": "row","flex": "h","children": [{"type": "block","color": "rust-bg","label":"rust-bg"},{"type": "block","color": "sandy-brown-bg","label":"sandy-brown-bg"},{"type": "block","color": "tamarillo-bg","label":"tamarillo-bg"},{"type": "block","color": "warning-bg","label":"warning-bg"},{"type": "block","color": "tanoi-bg","label":"tanoi-bg"},{"type": "block",version:"white-fg","color": "black-bg","label":"black-bg"},{"type": "block","color": "white-bg","label":"white-bg"},],}
+  ]
+}
+
+$('document').ready(() => {
+  $('body').prepend(LCARS.create(catalog).dom)
+})
+    </script>
+</body>
+</html>

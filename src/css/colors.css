@@ -244,7 +244,9 @@
   border-color: var(--black);
 }
 .white-bg,
-.white-bg > *:not([class*="-bg"]) {
+.bg-white,
+.white-bg > *:not([class*="-bg"]),
+.bg-white > *:not([class*="-bg"]) {
   fill: var(--white);
   background-color: var(--white);
   border-color: var(--white);

@@ -51,6 +51,7 @@ let helmConsole = {
             {
               id: "cur-loc-sys",
               type: "text",
+              color: "text-white",
               text: "3, 4",
             },
             {
@@ -61,6 +62,7 @@ let helmConsole = {
             {
               id: "cur-loc-sec",
               type: "text",
+              color: "text-white",
               text: "3, 4",
             },
             {
@@ -98,19 +100,19 @@ let helmConsole = {
                   </cc:work>
                 </rdf:rdf>
               </metadata>
-              <path id="xy_ctl_NE" class="button bg-blue-2" d="m47 33v-32.35c15.992 2.4474 29.977 16.417 32.424 32.35z"></path>
-              <path id="xy_ctl_SW" class="button bg-blue-2" d="m33 47v32.35c-15.992-2.4474-29.977-16.417-32.424-32.35z"></path>
-              <path id="xy_ctl_SE" class="button bg-blue-2" d="m47 47v32.35c15.992-2.4474 29.977-16.417 32.424-32.35z"></path>
-              <path id="xy_ctl_NW" class="button bg-blue-2" d="m32.977 33v-32.35c-15.992 2.4474-29.977 16.417-32.424 32.35z"></path>
-              <path id="xy_ctl_up" class="button bg-blue-4" d="m34 10h12v-9.5c-3.8785-0.47437-8.044-0.4824-12 0z"></path>
+              <path id="xy_ctl_NE" class="button primary-static" d="m47 33v-32.35c15.992 2.4474 29.977 16.417 32.424 32.35z"></path>
+              <path id="xy_ctl_SW" class="button primary-static" d="m33 47v32.35c-15.992-2.4474-29.977-16.417-32.424-32.35z"></path>
+              <path id="xy_ctl_SE" class="button primary-static" d="m47 47v32.35c15.992-2.4474 29.977-16.417 32.424-32.35z"></path>
+              <path id="xy_ctl_NW" class="button primary-static" d="m32.977 33v-32.35c-15.992 2.4474-29.977 16.417-32.424 32.35z"></path>
+              <path id="xy_ctl_up" class="button tertiary-static" d="m34 10h12v-9.5c-3.8785-0.47437-8.044-0.4824-12 0z"></path>
               <path d="m44.2 2.2v5.0271" style="fill:none;stroke-width:1.2;stroke:#000000"></path>
-              <path id="xy_ctl_left" class="button bg-blue-4" d="m10 46v-12h-9.5c-0.47437 3.8785-0.4824 8.044 0 12z"></path>
+              <path id="xy_ctl_left" class="button tertiary-static" d="m10 46v-12h-9.5c-0.47437 3.8785-0.4824 8.044 0 12z"></path>
               <path d="m2.199 35.8h5.0271" style="fill:none;opacity:.889;stroke-width:1.2;stroke:#000000"></path>
-              <path id="xy_ctl_right" class="button bg-blue-4" d="m70 34v12h9.5c0.47437-3.8785 0.4824-8.044 0-12z"></path>
+              <path id="xy_ctl_right" class="button tertiary-static" d="m70 34v12h9.5c0.47437-3.8785 0.4824-8.044 0-12z"></path>
               <path d="m77.801 44.2h-5.0271" style="fill:none;stroke-width:1.2;stroke:#000000"></path>
-              <path id="xy_ctl_down" class="button bg-blue-4" d="m46 70h-12v9.5c3.8785 0.47437 8.044 0.4824 12 0z"></path>
+              <path id="xy_ctl_down" class="button tertiary-static" d="m46 70h-12v9.5c3.8785 0.47437 8.044 0.4824 12 0z"></path>
               <path d="m35.8 77.8v-5.0271" style="fill:none;stroke-width:1.2;stroke:#000000"></path>
-              <path d="m11 34v12h23v23h12v-23h23v-12h-23v-23h-12v23z" class="bg-blue-3"></path>
+              <path d="m11 34v12h23v23h12v-23h23v-12h-23v-23h-12v23z" class="secondary-static"></path>
               <path d="m34 13.49h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
               <path d="m34 16.2h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
               <path d="m34 19.48h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
@@ -126,7 +128,7 @@ let helmConsole = {
         {
           type: "complexButton",
           id: "set-dst-inp",
-          color: "bg-blue-2",
+          color: randColor(),
           style: { "justify-content": "center" },
           children: [
             {
@@ -144,6 +146,7 @@ let helmConsole = {
             {
               id: "dst-sec-ind",
               type: "text",
+              color: "text-white",
               text: "4, 3",
             },
             {
@@ -157,6 +160,7 @@ let helmConsole = {
             {
               id: "dst-sys-ind",
               type: "text",
+              color: "text-white",
               text: "2, 5",
             },
             {
@@ -220,7 +224,7 @@ let helmConsole = {
               version: "horizontal",
               max: 8,
               min: 1,
-              color: "bg-blue-1",
+              color: "primary-static",
               level: 2, // TODO: fazer a barra funcionar completamente
               label: "2",
             },
@@ -245,12 +249,20 @@ let helmConsole = {
           namespace: "sdk",
           style: { height: "300px" },
           coloring: {
-            elbow: "bg-green-4",
-            column1: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
-            column2: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
-            column3: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
-            column4: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
-            animated: "bg-red-1",
+            elbow: "tertiary-static",
+            column1: ["primary-static", "tertiary-static", "primary-static"],
+            column2: [
+              "secondary-static",
+              "tertiary-static",
+              "secondary-static",
+            ],
+            column3: ["primary-static", "secondary-static", "primary-static"],
+            column4: [
+              "secondary-static",
+              "tertiary-static",
+              "secondary-static",
+            ],
+            animated: "tamarillo-bg",
           },
           content: [
             {
@@ -285,23 +297,23 @@ function bindPadButtons() {
       </cc:work>
     </rdf:rdf>
   </metadata>
-  <path id="xy_ctl_NE" class="bg-blue-5" d="m47 33v-32.35c15.992 2.4474 29.977 16.417 32.424 32.35z"></path>
-  <path id="xy_ctl_SW" class="bg-blue-5" d="m33 47v32.35c-15.992-2.4474-29.977-16.417-32.424-32.35z"></path>
-  <path id="xy_ctl_SE" class="bg-blue-5" d="m47 47v32.35c15.992-2.4474 29.977-16.417 32.424-32.35z"></path>
-  <path id="xy_ctl_up" class="button bg-blue-3" d="m34 10h12v-9.5c-3.8785-0.47437-8.044-0.4824-12 0z"></path>
+  <path id="xy_ctl_NE" class="secondary-static5" d="m47 33v-32.35c15.992 2.4474 29.977 16.417 32.424 32.35z"></path>
+  <path id="xy_ctl_SW" class="secondary-static5" d="m33 47v32.35c-15.992-2.4474-29.977-16.417-32.424-32.35z"></path>
+  <path id="xy_ctl_SE" class="secondary-static5" d="m47 47v32.35c15.992-2.4474 29.977-16.417 32.424-32.35z"></path>
+  <path id="xy_ctl_up" class="button secondary-static" d="m34 10h12v-9.5c-3.8785-0.47437-8.044-0.4824-12 0z"></path>
   <path d="m44.2 2.2v5.0271" style="fill:none;stroke-width:1.2;stroke:#000000"></path>
-  <path id="xy_ctl_left" class="button bg-blue-3" d="m10 46v-12h-9.5c-0.47437 3.8785-0.4824 8.044 0 12z"></path>
+  <path id="xy_ctl_left" class="button secondary-static" d="m10 46v-12h-9.5c-0.47437 3.8785-0.4824 8.044 0 12z"></path>
   <path d="m2.199 35.8h5.0271" style="fill:none;opacity:.889;stroke-width:1.2;stroke:#000000"></path>
-  <path id="xy_ctl_right" class="button bg-blue-3" d="m70 34v12h9.5c0.47437-3.8785 0.4824-8.044 0-12z"></path>
+  <path id="xy_ctl_right" class="button secondary-static" d="m70 34v12h9.5c0.47437-3.8785 0.4824-8.044 0-12z"></path>
   <path d="m77.801 44.2h-5.0271" style="fill:none;stroke-width:1.2;stroke:#000000"></path>
-  <path id="xy_ctl_down" class="button bg-blue-3" d="m46 70h-12v9.5c3.8785 0.47437 8.044 0.4824 12 0z"></path>
+  <path id="xy_ctl_down" class="button secondary-static" d="m46 70h-12v9.5c3.8785 0.47437 8.044 0.4824 12 0z"></path>
   <path d="m35.8 77.8v-5.0271" style="fill:none;stroke-width:1.2;stroke:#000000"></path>
-  <path d="m11 34v12h23v23h12v-23h23v-12h-23v-23h-12v23z" class="bg-blue-4"></path>
+  <path d="m11 34v12h23v23h12v-23h23v-12h-23v-23h-12v23z" class="secondary-static"></path>
   <path d="m34 13.49h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
   <path d="m34 16.2h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
   <path d="m34 19.48h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
   <path d="m34 27.9h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
   <path d="m34 59h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
-  <path id="xy_ctl_NW" class="bg-blue-5" d="m32.977 33v-32.35c-15.992 2.4474-29.977 16.417-32.424 32.35z"></path>
+  <path id="xy_ctl_NW" class="secondary-static5" d="m32.977 33v-32.35c-15.992 2.4474-29.977 16.417-32.424 32.35z"></path>
 </svg>
                       */
