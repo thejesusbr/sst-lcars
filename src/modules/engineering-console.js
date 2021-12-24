@@ -1,13 +1,13 @@
-var sensorsConsole = {
+var engineeringConsole = {
   type: "row",
-  id: "sns-cns-dsp",
+  id: "eng-cns-dsp",
   children: [
     {
       type: "column",
       children: [
         {
           type: "button",
-          label: "Sensors",
+          label: "Engineering",
           color: randColor(),
         },
       ],

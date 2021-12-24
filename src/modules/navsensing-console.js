@@ -1,4 +1,4 @@
-var navConsole = {
+var navSensingConsole = {
   type: "row",
   id: "nav-cns-dsp",
   children: [
@@ -7,7 +7,7 @@ var navConsole = {
       children: [
         {
           type: "button",
-          label: "navigation",
+          label: "Nav & Sensing",
           color: randColor(),
         },
       ],

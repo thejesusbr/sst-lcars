@@ -256,13 +256,13 @@ let helmConsole = {
               "tertiary-static",
               "secondary-static",
             ],
-            column3: ["primary-static", "secondary-static", "primary-static"],
+            column3: ["primary-static", "tertiary-static", "primary-static"],
             column4: [
               "secondary-static",
               "tertiary-static",
               "secondary-static",
             ],
-            animated: "tamarillo-bg",
+            animated: "pale-canary-bg",
           },
           content: [
             {

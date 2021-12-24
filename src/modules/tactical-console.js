@@ -37,16 +37,16 @@ let tacticalConsole = {
           click: toggleConsole,
         },
         {
-          id: "sns-cns-btn",
+          id: "nav-cns-btn",
           type: "button",
-          label: "Sensors",
+          label: "Nav & Sensing",
           color: randColor(),
           click: toggleConsole,
         },
         {
-          id: "nav-cns-btn",
+          id: "eng-cns-btn",
           type: "button",
-          label: "Navigation",
+          label: "Engineering",
           color: randColor(),
           click: toggleConsole,
         },
@@ -109,8 +109,8 @@ let tacticalConsole = {
             helmConsole,
             shieldConsole,
             weaponsConsole,
-            sensorsConsole,
-            navConsole,
+            navSensingConsole,
+            engineeringConsole,
           ],
         }, // tct-cns-ctn
         {
