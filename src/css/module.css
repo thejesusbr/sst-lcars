@@ -40,17 +40,16 @@ body {
 }
 
 .complex-button .block {
-  min-width: 1rem;
   flex: 1 1 auto;
 }
 
 .complex-button .block.decorator {
-  width: 1rem;
+  min-width: 1rem;
   flex: none;
 }
 
 .complex-button .block.check {
-  width: 1rem !important;
+  min-width: 1rem !important;
   flex: unset;
 }
 

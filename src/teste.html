@@ -90,7 +90,7 @@
     <script type="text/javascript" src="modules/situation-panel.js"></script>
     <script type="text/javascript" src="modules/tactical-console.js"></script>
     <script type="text/javascript" src="modules/game-hud.js"></script>
-    <script type="text/javascript" src="module.js"></script>
+    <!-- script type="text/javascript" src="module.js"script -->
 
     <!-- Insert this line after script imports for browser/electron support-->
     <script>
@@ -136,5 +136,150 @@
   <body ontouchstart="" onload="">
     <audio id="audDummy" />
     <script src="js/lcars_audio.js"></script>
+    <script type="text/javascript">
+      let colors = [
+        "anakiwa-bg",
+        "atomic-tangerine-bg",
+        "bahama-blue-bg",
+        "bourbon-bg",
+        "blue-bell-bg",
+        "chestnut-rose-bg",
+        "cosmic-bg",
+        "danub-bg",
+        "dodger-pale-bg",
+        "dodger-soft-bg",
+        "eggplant-bg",
+        "golden-tanoi-bg",
+        "hopbush-bg",
+        "husk-bg",
+        "indigo-bg",
+        "lavender-purple-bg",
+        "lilac-bg",
+        "mariner-bg",
+        "medium-carmine-bg",
+        "melrose-bg",
+        "navy-blue-bg",
+        "near-blue-bg",
+        "neon-carrot-bg",
+        "orange-peel-bg",
+        "pale-canary-bg",
+        "periwinkle-bg",
+        "alert-bg",
+        "red-damask-bg",
+        "rust-bg",
+        "sandy-brown-bg",
+        "tamarillo-bg",
+        "warning-bg",
+        "tanoi-bg",
+        "black-bg",
+        "white-bg",
+      ];
+
+      catalog = {
+        type: "column",
+        children: [
+          {
+            type: "row",
+            children: [
+              {
+                type: "defaultBracket",
+                id: "shr-scn-vwr",
+                namespace: "sdk",
+                style: {
+                  height: "21rem",
+                  width: "24rem",
+                },
+                coloring: {
+                  elbow: "tertiary-static",
+                  column1: [
+                    "primary-static",
+                    "tertiary-static",
+                    "primary-static",
+                  ],
+                  column2: [
+                    "secondary-static",
+                    "tertiary-static",
+                    "secondary-static",
+                  ],
+                  column3: [
+                    "primary-static",
+                    "tertiary-static",
+                    "primary-static",
+                  ],
+                  column4: [
+                    "secondary-static",
+                    "tertiary-static",
+                    "secondary-static",
+                  ],
+                  animated: "pale-canary-bg",
+                },
+                content: [
+                  {
+                    type: "scanner",
+                    id: "testScanner",
+                    version: "short",
+                    width: 8,
+                    height: 8,
+                    color: randColor(),
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "row",
+            children: [
+              {
+                type: "defaultBracket",
+                id: "lgr-scn-vwr",
+                namespace: "sdk",
+                style: {
+                  height: "21rem",
+                  width: "42rem",
+                },
+                coloring: {
+                  elbow: "tertiary-static",
+                  column1: [
+                    "primary-static",
+                    "tertiary-static",
+                    "primary-static",
+                  ],
+                  column2: [
+                    "secondary-static",
+                    "tertiary-static",
+                    "secondary-static",
+                  ],
+                  column3: [
+                    "primary-static",
+                    "tertiary-static",
+                    "primary-static",
+                  ],
+                  column4: [
+                    "secondary-static",
+                    "tertiary-static",
+                    "secondary-static",
+                  ],
+                  animated: "pale-canary-bg",
+                },
+                content: [
+                  {
+                    type: "scanner",
+                    id: "testScanner",
+                    version: "long",
+                    width: 8,
+                    height: 8,
+                    color: randColor(),
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      $("document").ready(() => {
+        $("body").prepend(LCARS.create(catalog).dom);
+      });
+    </script>
   </body>
 </html>

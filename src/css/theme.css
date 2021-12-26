@@ -132,7 +132,7 @@
 }
 
 .red-alert .text-light {
-  color: var(--pale-canary);
+  color: white;
 }
 
 .red-alert .text-dark {
