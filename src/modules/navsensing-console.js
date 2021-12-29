@@ -101,9 +101,8 @@ var navSensingConsole = {
           ],
         }, // snd-hlm-sec end
         {
-          type: "complexButton",
-          color: randColor(),
-          flex: "h",
+          type: "row",
+          style: { justifyContent: "space-evenly" },
           children: [
             {
               type: "button",
@@ -124,7 +123,7 @@ var navSensingConsole = {
               id: "snd-prt-btn",
               version: "round",
               color: randColor(),
-              label: "Send Party",
+              label: "Snd Party",
             },
           ],
         },
@@ -232,7 +231,7 @@ var navSensingConsole = {
               id: "sndSysHlm",
               version: "round",
               color: randColor(),
-              label: "Snd Helm",
+              label: "Snd to Helm",
             },
           ],
         },

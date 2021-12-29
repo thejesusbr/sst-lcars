@@ -1,3 +1,6 @@
+// TODO: add event listener for individual tiles
+// TODO: add state property
+
 //Setup LCARS Base Element Prototype Object
 LCARS.element.scanner = function (oDef) {
   //Begin Required

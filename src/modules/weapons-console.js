@@ -180,27 +180,36 @@ var weaponsConsole = {
           size: "small",
         },
         {
-          type: "defaultBracket",
-          id: "tpd-tgt-vwr",
-          namespace: "sdk",
-          style: {
-            height: "250px",
-            width: "445px",
-          },
-          coloring: {
-            elbow: "bg-green-4",
-            column1: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
-            column2: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
-            column3: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
-            column4: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
-            animated: "bg-red-1",
-          },
-          content: [
+          type: "row",
+          style: { "justify-content": "center" },
+          children: [
             {
-              type: "htmlTag",
-              id: "tpd-tgt-vwr-scr",
-              tag: "canvas",
-              style: { height: "100%", width: "100%" }, // TODO: configurar starfield
+              type: "defaultBracket",
+              id: "tpdTgtVwr",
+              namespace: "sdk",
+              style: {
+                height: "21rem",
+                width: "24rem",
+                transform: "scale(0.9)",
+              },
+              coloring: {
+                elbow: "bg-green-4",
+                column1: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
+                column2: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
+                column3: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
+                column4: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
+                animated: "bg-red-1",
+              },
+              content: [
+                {
+                  type: "scanner",
+                  id: "shtRngScnTpdTgt",
+                  version: "short",
+                  width: 8,
+                  height: 8,
+                  color: randColor(),
+                },
+              ],
             },
           ],
         }, // tpd-tgt-vwr
