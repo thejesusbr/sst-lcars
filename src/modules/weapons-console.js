@@ -15,14 +15,13 @@ function toggle() {
 
 var weaponsConsole = {
   type: "row",
-  id: "wpn-cns-dsp",
-  flex: "h",
+  id: "wpnCnsDsp",
   flexc: "h",
   style: { "justify-content": "space-evenly" },
   children: [
     {
       type: "column",
-      id: "phs-ctr-pnl",
+      id: "phsCtrPnl",
       flex: "v",
       style: {
         "justify-content": "center",
