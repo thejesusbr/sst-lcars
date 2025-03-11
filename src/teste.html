@@ -74,6 +74,10 @@
       type="text/javascript"
       src="lcars-sdk/widgets/sdk_scroll-button/scroll-button.js"
     ></script>
+    <script
+      type="text/javascript"
+      src="lcars-sdk/widgets/sdk_selector-button/selector-button.js"
+    ></script>
 
     <!-- Project Specific JS-->
     <script type="text/javascript" src="lib/rand-color.js"></script>
@@ -122,6 +126,11 @@
       rel="stylesheet"
       type="text/css"
       href="lcars-sdk/widgets/sdk_scroll-button/scroll-button.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="lcars-sdk/widgets/sdk_selector-button/selector-button.css"
     />
 
     <!-- Color Theme CSS-->
@@ -271,6 +280,27 @@
                     color: randColor(),
                   },
                 ],
+              },
+            ],
+          },
+          {
+            type: "row",
+            children: [
+              {
+                id: "selector",
+                type: "selectorButton",
+                namespace: "sdk",
+                color: randColor(),
+                label: "teste",
+                valueList: ["250", "500", "1000"],
+                event: {
+                  click: function () {
+                    console.log("Cliquei.");
+                  },
+                  mouseover: function () {
+                    console.log("Entrei");
+                  },
+                },
               },
             ],
           },

@@ -1,7 +1,6 @@
 var navSensingConsole = {
   type: "row",
   id: "nav-cns-dsp",
-  flex: "h",
   flexc: "h",
   style: { "justify-content": "space-evenly" },
   children: [

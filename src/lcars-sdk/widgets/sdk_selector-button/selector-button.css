@@ -1,0 +1,12 @@
+.sdk.selector-button {
+  background-color: transparent !important;
+  padding: 0px;
+  overflow: hidden;
+  position: relative;
+  width: fit-content;
+  height: fit-content;
+}
+
+.sdk.selector-button > * {
+  background-color: white;
+}
