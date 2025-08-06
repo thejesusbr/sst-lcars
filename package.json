@@ -8,7 +8,11 @@
     "dev": "nodemon --exec electron-forge start",
     "start": "electron-forge start",
     "package": "npm rum prebuild && electron-forge package",
-    "make": "electron-forge make"
+    "make": "electron-forge make",
+    "lint": "eslint *.js src/**/*.js --fix",
+    "lint:check": "eslint *.js src/**/*.js",
+    "format": "prettier --write *.js src/**/*.js",
+    "format:check": "prettier --check *.js src/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -33,6 +37,10 @@
     "@electron-forge/maker-zip": "^6.0.0-beta.54",
     "electron": "^12.0.2",
     "electron-icon-builder": "^2.0.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-node": "^11.1.0",
     "nodemon": "^2.0.7"
   },
   "dependencies": {
