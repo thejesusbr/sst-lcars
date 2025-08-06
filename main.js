@@ -1,6 +1,6 @@
 const path = require("path");
 const { sign } = require("crypto");
-const { app, Menu } = require("electron");
+const { app, Menu, BrowserWindow } = require("electron");
 const MainWindow = require("./MainWindow");
 
 process.env.NODE_ENV = "development";
