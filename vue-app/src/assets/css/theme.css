@@ -1,0 +1,148 @@
+/*****************
+* Color theme for SST LCARS
+*
+* The UI elements were divided in two categories: interactive and static.
+* Interactive elements are, as the name implies, those the user can interact with,
+* like, buttons, sliders, text inputs, etc.
+* Static are framing and displays.
+* Colors are defined in the colors.css file as variables.
+* There is a normal and a red-alert theme. Changing to red-alert is done by adding
+* the red-alert class to the root element. Each theme has a primary, a secondary and 
+* a tertiary color for both interactive and static elements, a light and a dark
+* text-color with the respective red-alert counterparts.
+* The overall theme was based on the colors shown in the LCARS interface of the first
+* seasons of ST:TNG. It means that the focus is on warmer colors. The Nemesis motion
+* picture changed it for a cooler palette, using mainly blues and whites.
+*/
+@import "colors.css";
+
+/* Theme classes */
+.primary-static,
+.primary-static > *:not([class*="-bg"]) {
+  fill: var(--pale-canary);
+  background-color: var(--pale-canary);
+  border-color: var(--pale-canary);
+}
+
+.secondary-static,
+.secondary-static > *:not([class*="-bg"]) {
+  fill: var(--golden-tanoi);
+  background-color: var(--golden-tanoi);
+  border-color: var(--golden-tanoi);
+}
+
+.tertiary-static,
+.tertiary-static > *:not([class*="-bg"]) {
+  fill: var(--lilac);
+  background-color: var(--lilac);
+  border-color: var(--lilac);
+}
+
+.primary-interactive,
+.primary-interactive > *:not([class*="-bg"]) {
+  fill: var(--pale-canary);
+  background-color: var(--pale-canary);
+  border-color: var(--pale-canary);
+}
+
+.secondary-interactive,
+.secondary-interactive > *:not([class*="-bg"]) {
+  fill: var(--golden-tanoi);
+  background-color: var(--golden-tanoi);
+  border-color: var(--golden-tanoi);
+}
+
+.tertiary-interactive,
+.tertiary-interactive > *:not([class*="-bg"]) {
+  fill: var(--lilac);
+  background-color: var(--lilac);
+  border-color: var(--lilac);
+}
+
+.highlight-interactive,
+.highlight-interactive > *:not([class*="-bg"]) {
+  fill: var(--rust);
+  background-color: var(--rust);
+  border-color: var(--rust);
+}
+
+.text-light {
+  color: var(--pale-canary);
+}
+
+.text-dark {
+  color: var(--red-damask);
+}
+
+.text-white {
+  color: white;
+}
+
+.text-black {
+  color: black;
+}
+
+.red-alert .primary-static,
+.red-alert .primary-static > *:not([class*="-bg"]) {
+  fill: var(--alert);
+  background-color: var(--alert);
+  border-color: var(--alert);
+}
+
+.red-alert .secondary-static,
+.red-alert .secondary-static > *:not([class*="-bg"]) {
+  fill: var(--alert);
+  background-color: var(--alert);
+  border-color: var(--alert);
+}
+
+.red-alert .tertiary-static,
+.red-alert .tertiary-static > *:not([class*="-bg"]) {
+  fill: var(--alert);
+  background-color: var(--alert);
+  border-color: var(--alert);
+}
+
+.red-alert .primary-interactive,
+.red-alert .primary-interactive > *:not([class*="-bg"]) {
+  fill: var(--alert);
+  background-color: var(--alert);
+  border-color: var(--alert);
+}
+
+.red-alert .secondary-interactive,
+.red-alert .secondary-interactive > *:not([class*="-bg"]) {
+  fill: var(--warning);
+  background-color: var(--warning);
+  border-color: var(--warning);
+}
+
+.red-alert .tertiary-interactive,
+.red-alert .tertiary-interactive > *:not([class*="-bg"]) {
+  fill: var(--tamarillo);
+  background-color: var(--tamarillo);
+  border-color: var(--tamarillo);
+}
+
+.red-alert .highlight-interactive,
+.red-alert .highlight-interactive > *:not([class*="-bg"]) {
+  fill: var(--red-damask);
+  background-color: var(--red-damask);
+  border-color: var(--red-damask);
+}
+
+.red-alert .text-light {
+  color: white;
+}
+
+.red-alert .text-dark {
+  color: var(--red-damask);
+}
+
+.red-alert .text-white {
+  color: var(--pale-canary);
+}
+
+.red-alert .text-black {
+  color: black;
+}
