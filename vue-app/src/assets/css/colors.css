@@ -1,0 +1,367 @@
+/* Color variables */
+:root {
+  --anakiwa: #9cf;
+  --atomic-tangerine: #f90;
+  --bahama-blue: #069;
+  --bourbon: #b62;
+  --blue-bell: #99c;
+  --chestnut-rose: #c66;
+  --cosmic: #746;
+  --danub: #68c;
+  --dodger-pale: #59f;
+  --dodger-soft: #36f;
+  --eggplant: #646;
+  --golden-tanoi: #fc6;
+  --hopbush: #c69;
+  --husk: #ba5;
+  --indigo: #45b;
+  --lavender-purple: #97a;
+  --lilac: #c9c;
+  --mariner: #36c;
+  --medium-carmine: #a53;
+  --melrose: #99f;
+  --navy-blue: #008;
+  --near-blue: #01e;
+  --neon-carrot: #f93;
+  --orange-peel: #f96;
+  --pale-canary: #ff9;
+  --periwinkle: #cdf;
+  --alert: #e10;
+  --red-damask: #d64;
+  --rust: #b41;
+  --sandy-brown: #e95;
+  --tamarillo: #821;
+  --warning: #b11;
+  --tanoi: #fc9;
+  --black: #000;
+  --white: #fff;
+}
+
+/* Color classes */
+
+.anakiwa-bg,
+.anakiwa-bg > *:not([class*="-bg"]) {
+  fill: var(--anakiwa);
+  background-color: var(--anakiwa);
+  border-color: var(--anakiwa);
+}
+.atomic-tangerine-bg,
+.atomic-tangerine-bg > *:not([class*="-bg"]) {
+  fill: var(--atomic-tangerine);
+  background-color: var(--atomic-tangerine);
+  border-color: var(--atomic-tangerine);
+}
+.bahama-blue-bg,
+.bahama-blue-bg > *:not([class*="-bg"]) {
+  fill: var(--bahama-blue);
+  background-color: var(--bahama-blue);
+  border-color: var(--aabahama-bluea);
+}
+.bourbon-bg,
+.bourbon-bg > *:not([class*="-bg"]) {
+  fill: var(--bourbon);
+  background-color: var(--bourbon);
+  border-color: var(--bourbon);
+}
+.blue-bell-bg,
+.blue-bell-bg > *:not([class*="-bg"]) {
+  fill: var(--blue-bell);
+  background-color: var(--blue-bell);
+  border-color: var(--blue-bell);
+}
+.chestnut-rose-bg,
+.chestnut-rose-bg > *:not([class*="-bg"]) {
+  fill: var(--chestnut-rose);
+  background-color: var(--chestnut-rose);
+  border-color: var(--chestnut-rose);
+}
+.cosmic-bg,
+.cosmic-bg > *:not([class*="-bg"]) {
+  fill: var(--cosmic);
+  background-color: var(--cosmic);
+  border-color: var(--cosmic);
+}
+.danub-bg,
+.danub-bg > *:not([class*="-bg"]) {
+  fill: var(--danub);
+  background-color: var(--danub);
+  border-color: var(--danub);
+}
+.dodger-pale-bg,
+.dodger-pale-bg > *:not([class*="-bg"]) {
+  fill: var(--dodger-pale);
+  background-color: var(--dodger-pale);
+  border-color: var(--dodger-pale);
+}
+.dodger-soft-bg,
+.dodger-soft-bg > *:not([class*="-bg"]) {
+  fill: var(--dodger-soft);
+  background-color: var(--dodger-soft);
+  border-color: var(--dodger-soft);
+}
+.eggplant-bg,
+.eggplant-bg > *:not([class*="-bg"]) {
+  fill: var(--eggplant);
+  background-color: var(--eggplant);
+  border-color: var(--eggplant);
+}
+.golden-tanoi-bg,
+.golden-tanoi-bg > *:not([class*="-bg"]) {
+  fill: var(--golden-tanoi);
+  background-color: var(--golden-tanoi);
+  border-color: var(--golden-tanoi);
+}
+.hopbush-bg,
+.hopbush-bg > *:not([class*="-bg"]) {
+  fill: var(--hopbush);
+  background-color: var(--hopbush);
+  border-color: var(--hopbush);
+}
+.husk-bg,
+.husk-bg > *:not([class*="-bg"]) {
+  fill: var(--husk);
+  background-color: var(--husk);
+  border-color: var(--husk);
+}
+.indigo-bg,
+.indigo-bg > *:not([class*="-bg"]) {
+  fill: var(--indigo);
+  background-color: var(--indigo);
+  border-color: var(--indigo);
+}
+.lavender-purple-bg,
+.lavender-purple-bg > *:not([class*="-bg"]) {
+  fill: var(--lavender-purple);
+  background-color: var(--lavender-purple);
+  border-color: var(--lavender-purple);
+}
+.lilac-bg,
+.lilac-bg > *:not([class*="-bg"]) {
+  fill: var(--lilac);
+  background-color: var(--lilac);
+  border-color: var(--lilac);
+}
+.mariner-bg,
+.mariner-bg > *:not([class*="-bg"]) {
+  fill: var(--mariner);
+  background-color: var(--mariner);
+  border-color: var(--mariner);
+}
+.medium-carmine-bg,
+.medium-carmine-bg > *:not([class*="-bg"]) {
+  fill: var(--medium-carmine);
+  background-color: var(--medium-carmine);
+  border-color: var(--medium-carmine);
+}
+.melrose-bg,
+.melrose-bg > *:not([class*="-bg"]) {
+  fill: var(--melrose);
+  background-color: var(--melrose);
+  border-color: var(--melrose);
+}
+.navy-blue-bg,
+.navy-blue-bg > *:not([class*="-bg"]) {
+  fill: var(--navy-blue);
+  background-color: var(--navy-blue);
+  border-color: var(--navy-blue);
+}
+.near-blue-bg,
+.near-blue-bg > *:not([class*="-bg"]) {
+  fill: var(--near-blue);
+  background-color: var(--near-blue);
+  border-color: var(--aanear-bluea);
+}
+.neon-carrot-bg,
+.neon-carrot-bg > *:not([class*="-bg"]) {
+  fill: var(--neon-carrot);
+  background-color: var(--neon-carrot);
+  border-color: var(--neon-carrot);
+}
+.orange-peel-bg,
+.orange-peel-bg > *:not([class*="-bg"]) {
+  fill: var(--orange-peel);
+  background-color: var(--orange-peel);
+  border-color: var(--orange-peel);
+}
+.pale-canary-bg,
+.pale-canary-bg > *:not([class*="-bg"]) {
+  fill: var(--pale-canary);
+  background-color: var(--pale-canary);
+  border-color: var(--pale-canary);
+}
+.periwinkle-bg,
+.periwinkle-bg > *:not([class*="-bg"]) {
+  fill: var(--periwinkle);
+  background-color: var(--periwinkle);
+  border-color: var(--periwinkle);
+}
+.alert-bg,
+.alert-bg > *:not([class*="-bg"]) {
+  fill: var(--alert);
+  background-color: var(--alert);
+  border-color: var(--alert);
+}
+.red-damask-bg,
+.red-damask-bg > *:not([class*="-bg"]) {
+  fill: var(--red-damask);
+  background-color: var(--red-damask);
+  border-color: var(--red-damask);
+}
+.rust-bg,
+.rust-bg > *:not([class*="-bg"]) {
+  fill: var(--rust);
+  background-color: var(--rust);
+  border-color: var(--rust);
+}
+.sandy-brown-bg,
+.sandy-brown-bg > *:not([class*="-bg"]) {
+  fill: var(--sandy-brown);
+  background-color: var(--sandy-brown);
+  border-color: var(--sandy-brown);
+}
+.tamarillo-bg,
+.tamarillo-bg > *:not([class*="-bg"]) {
+  fill: var(--tamarillo);
+  background-color: var(--tamarillo);
+  border-color: var(--tamarillo);
+}
+.tanoi-bg,
+.tanoi-bg > *:not([class*="-bg"]) {
+  fill: var(--tanoi);
+  background-color: var(--tanoi);
+  border-color: var(--tanoi);
+}
+.warning-bg,
+.warning-bg > *:not([class*="-bg"]) {
+  fill: var(--warning);
+  background-color: var(--warning);
+  border-color: var(--warning);
+}
+.black-bg,
+.black-bg > *:not([class*="-bg"]) {
+  fill: var(--black);
+  background-color: var(--black);
+  border-color: var(--black);
+}
+.white-bg,
+.bg-white,
+.white-bg > *:not([class*="-bg"]),
+.bg-white > *:not([class*="-bg"]) {
+  fill: var(--white);
+  background-color: var(--white);
+  border-color: var(--white);
+}
+
+/* Foreground colors */
+
+.anakiwa-fg {
+  color: var(--anakiwa);
+}
+.atomic-tangerine-fg {
+  fill: var(--atomic-tangerine);
+  background-color: var(--atomic-tangerine);
+  border-color: var(--atomic-tangerine);
+}
+.bahama-blue-fg {
+  color: var(--aabahama-bluea);
+}
+.bourbon-fg {
+  color: var(--bourbon);
+}
+.blue-bell-fg {
+  color: var(--blue-bell);
+}
+.chestnut-rose-fg {
+  color: var(--chestnut-rose);
+}
+.cosmic-fg {
+  color: var(--cosmic);
+}
+.danub-fg {
+  color: var(--danub);
+}
+.dodger-pale-fg {
+  color: var(--dodger-pale);
+}
+.dodger-soft-fg {
+  color: var(--dodger-soft);
+}
+.eggplant-fg {
+  color: var(--eggplant);
+}
+.golden-tanoi-fg {
+  color: var(--golden-tanoi);
+}
+.hopbush-fg {
+  color: var(--hopbush);
+}
+.husk-fg {
+  color: var(--husk);
+}
+.indigo-fg {
+  color: var(--indigo);
+}
+.lavender-purple-fg {
+  color: var(--lavender-purple);
+}
+.lilac-fg {
+  fill: var(--lilac);
+  background-color: var(--lilac);
+  border-color: var(--lilac);
+}
+.mariner-fg {
+  color: var(--mariner);
+}
+.medium-carmine-fg {
+  color: var(--medium-carmine);
+}
+.melrose-fg {
+  color: var(--melrose);
+}
+.navy-blue-fg {
+  color: var(--navy-blue);
+}
+.near-blue-fg {
+  fill: var(--near-blue);
+  background-color: var(--near-blue);
+  border-color: var(--aanear-bluea);
+}
+.neon-carrot-fg {
+  color: var(--neon-carrot);
+}
+.orange-peel-fg {
+  color: var(--orange-peel);
+}
+.pale-canary-fg {
+  color: var(--pale-canary);
+}
+.periwinkle-fg {
+  color: var(--periwinkle);
+}
+.alert-fg {
+  color: var(--alert);
+}
+.red-damask-fg {
+  color: var(--red-damask);
+}
+.rust-fg {
+  color: var(--rust);
+}
+.sandy-brown-fg {
+  color: var(--sandy-brown);
+}
+.tamarillo-fg {
+  color: var(--tamarillo);
+}
+.tanoi-fg {
+  color: var(--tanoi);
+}
+.warning-fg {
+  color: var(--warning);
+}
+.black-fg {
+  color: var(--black);
+}
+.white-fg {
+  color: var(--white);
+}
