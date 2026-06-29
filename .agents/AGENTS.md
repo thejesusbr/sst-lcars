@@ -47,5 +47,5 @@ Antes de dar uma tarefa por concluída, execute as ferramentas de validação re
 
 ## 4. Preservação de Documentação e Legibilidade
 - Mantenha comentários originais que explicam a lógica matemática ou física do jogo original Super Star Trek (ex: cálculos de distância, consumo de energia).
-- Prefira commits pequenos e focados.
+- Prefira commits pequenos e focados. Use Conventional Commits nas mensagens.
 - Documente novas regras de negócio criadas ou descobertas em [BRULES.md](file:///home/wendell/Projetos/sst-lcars/.agents/BRULES.md).

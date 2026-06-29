@@ -37,7 +37,7 @@ export interface LcarsElementData {
   max?: number
   xml?: string
   tag?: string
-  coloring?: LcarsBracketColoring
+  coloring?: LcarsBracketColoring | LcarsBarFrameColoring
   content?: LcarsElementDefinition[] | string
   template?: LcarsElementDefinition[]
 }
@@ -60,6 +60,17 @@ export interface LcarsBracketColoring {
   column2?: string[]
   column3?: string[]
   column4?: string[]
+}
+
+export interface LcarsBarFrameColoring {
+  headerCapLeft?: string
+  headerCapRight?: string
+  headerBar?: string
+  headerTitle?: string
+  footerCapLeft?: string
+  footerCapRight?: string
+  footerBar?: string
+  footerTitle?: string
 }
 
 export interface LcarsColors {

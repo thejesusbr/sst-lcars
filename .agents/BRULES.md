@@ -46,6 +46,12 @@ A interface é dividida em módulos específicos, cada um com regras de comporta
   - Controla a alocação de energia para os diferentes subsistemas: Motores (Engines), Escudos (Shields), Armas (Weapons) e Suporte de Vida (Life Support).
   - Danos sofridos em combate afetam a eficiência de conversão energética e desabilitam temporariamente sistemas até que sejam reparados por equipes de manutenção ou em uma base estelar.
 
+### 2.6. Scanner Component (LcarsScanner)
+- **Divisão em Grade**: Constrói uma grade de visualização baseada no `scanner.js` legado utilizando as classes `.scanner`, `.item`, `.short` ou `.long`.
+- **Coordenadas de Borda**: Exibe coordenadas numéricas (ou rótulos customizados via `rowLabels`/`colLabels`) nas bordas superior (onde `row = 0`) e esquerda (onde `col = 0`). O canto superior esquerdo (`row = 0, col = 0`) permanece vazio.
+- **Células Centrais**: As células internas representam os setores de jogo e renderizam símbolos e valores de forma declarativa via propriedade `gridData` (que aceita matriz 2D ou mapas de coordenadas como `"i,j"` ou `"XiYj"`). Suporta customização de cores (ex: `.alert-fg` para Klingons, `.golden-tanoi-fg` para a Enterprise), classes adicionais e estilos inline.
+- **Interação**: Cada célula é clicável e emite o evento `'cell-click'` com informações completas (linha, coluna, tipo, dados e se é borda).
+
 ---
 
 ## 3. Estados de Alerta
