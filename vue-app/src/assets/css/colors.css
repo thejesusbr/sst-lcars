@@ -365,3 +365,30 @@
 .white-fg {
   color: var(--white);
 }
+
+/* Green Group from legacy theme */
+.bg-green-1,
+.bg-green-1 > *:not([class*="bg-"]) {
+  background-color: #33ffff !important;
+  border-color: #33ffff !important;
+}
+.bg-green-2,
+.bg-green-2 > *:not([class*="bg-"]) {
+  background-color: #33ffcc !important;
+  border-color: #33ffcc !important;
+}
+.bg-green-3,
+.bg-green-3 > *:not([class*="bg-"]) {
+  background-color: #00cc99 !important;
+  border-color: #00cc99 !important;
+}
+.bg-green-4,
+.bg-green-4 > *:not([class*="bg-"]) {
+  background-color: #009999 !important;
+  border-color: #009999 !important;
+}
+.bg-green-5,
+.bg-green-5 > *:not([class*="bg-"]) {
+  background-color: #006666 !important;
+  border-color: #006666 !important;
+}

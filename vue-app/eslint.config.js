@@ -9,5 +9,12 @@ export default [{
   files: ['**/*.{ts,mts,tsx,vue}'],
 }, {
   name: 'app/files-to-ignore',
-  ignores: ['**/dist/**', '**/dist-ssr/**', '**/coverage/**'],
+  ignores: [
+    '**/dist/**',
+    '**/dist-ssr/**',
+    '**/coverage/**',
+    '**/src/stories/Button.*',
+    '**/src/stories/Header.*',
+    '**/src/stories/Page.*'
+  ],
 }, ...pluginVue.configs['flat/essential'], ...vueTsEslintConfig(), ...storybook.configs["flat/recommended"]];
