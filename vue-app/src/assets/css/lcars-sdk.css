@@ -482,6 +482,7 @@ pre {
 }
 
 .text {
+  margin: 0px;
 }
 
 .number {
@@ -808,7 +809,7 @@ pre {
 
 .complex-button .cap {
   position: relative;
-  height: 100%;
+  height: auto;
 }
 
 .complex-button .button {
