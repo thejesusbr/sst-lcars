@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useLcarsColors } from '@/composables/useLcarsColors'
+import { useScannerIcons, ScannerEntity } from '@/composables/useScannerIcons'
 import LcarsRow from '@/components/elements/LcarsRow.vue'
 import LcarsColumn from '@/components/elements/LcarsColumn.vue'
 import LcarsTitle from '@/components/elements/LcarsTitle.vue'
@@ -12,20 +13,33 @@ import LcarsBlock from '@/components/elements/LcarsBlock.vue'
 import LcarsText from '@/components/elements/LcarsText.vue'
 import LcarsButton from '@/components/elements/LcarsButton.vue'
 
+const props = withDefaults(defineProps<{
+  shortRangeGrid?: Record<string, ScannerCell>
+}>(), {
+  shortRangeGrid: undefined,
+})
+
 const { randColor } = useLcarsColors()
+const { getIcon, getRandomPlanet } = useScannerIcons()
 
 const selectedSector = ref('3,4')
 const selectedSystem = ref('3,4')
 const remainingProbes = ref(3)
 const probeStatus = ref<'Offline' | 'Active'>('Offline')
 
-const shortRangeGrid = ref<Record<string, { text: string; color?: string }>>({
-  '4,4': { text: 'E', color: 'anakiwa-fg' },
-  '2,3': { text: '★', color: 'golden-tanoi-fg' },
-  '6,7': { text: '★', color: 'golden-tanoi-fg' },
-  '3,5': { text: 'B', color: 'blue-bell-fg' },
-  '5,2': { text: 'K', color: 'alert-fg' }
-})
+// Demo grid: called once at setup so the random planet stays stable
+const demoShortRangeGrid: Record<string, ScannerCell> = {
+  '4,4': { img: getIcon(ScannerEntity.PLAYER) },
+  '2,3': { img: getRandomPlanet() },
+  '6,6': { img: getIcon(ScannerEntity.STARBASE_DOCK) },
+  '3,6': { img: getIcon(ScannerEntity.KLINGON_CRUISER) },
+  '5,2': { img: getIcon(ScannerEntity.ROMULAN_WARBIRD) },
+  '7,5': { text: '★', color: 'golden-tanoi-fg' },
+}
+
+const activeShortRangeGrid = ref<Record<string, ScannerCell>>(
+  props.shortRangeGrid ?? demoShortRangeGrid
+)
 
 const longRangeGrid = ref<Record<string, { text: string; color?: string }>>({
   '2,2': { text: '003', color: 'golden-tanoi-fg' },
@@ -118,7 +132,7 @@ const sendProbe = () => {
             version="short"
             :width="8"
             :height="8"
-            :grid-data="shortRangeGrid"
+            :grid-data="activeShortRangeGrid"
             @cell-click="handleShortRangeCellClick"
           />
         </DefaultBracket>
