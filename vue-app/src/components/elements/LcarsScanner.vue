@@ -4,6 +4,7 @@ import { useLcarsRegistry } from '@/composables/useLcarsRegistry'
 
 export interface ScannerCell {
   text?: string
+  img?: string
   color?: string
   class?: string
   style?: Record<string, string>
@@ -194,6 +195,11 @@ onUnmounted(() => {
             {{ getBorderLabel(i - 1, j - 1) }}
           </span>
           <!-- Central cells content display -->
+          <img
+            v-else-if="!isBorderCell(i - 1, j - 1) && getCentralCellData(i - 1, j - 1)?.img"
+            :src="getCentralCellData(i - 1, j - 1)!.img"
+            style="width: 90%; height: 90%; object-fit: contain; image-rendering: pixelated;"
+          />
           <span v-else-if="!isBorderCell(i - 1, j - 1) && getCentralCellData(i - 1, j - 1)?.text">
             {{ getCentralCellData(i - 1, j - 1)?.text }}
           </span>
