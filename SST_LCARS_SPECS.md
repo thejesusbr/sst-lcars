@@ -272,6 +272,8 @@ Stardate (taxa proporcional à integridade danificada)
 ser adicionado aqui
 * **Starbase repair** — ao atracar em Starbase, todos os subsistemas voltam a 100% e energia
 é reabastecida; isso precisa ser acionado a partir de Engineering ou de um evento global
+* **Warp Core (WC) como 9º subsistema** — nova mecânica proposta (sobrecarga + core breach),
+ainda não representada na tabela de subsistemas; ver seção 10\.
 
 **Proposta de integração (sem implementar):**
 
@@ -362,6 +364,8 @@ Não há nenhuma tela, lógica ou componente para:
 * **Derrota por stardate** — tempo esgotado com Klingons restantes
 * **Derrota por starbases** — todas as starbases destruídas
 * **Rendição** — `QUIT`/`SURR` do clássico
+* **Derrota por explosão do Warp Core** — sobrecarga descontrolada (nova mecânica, ver seção 10\.)
+* **Derrota por radiação** — core breach não reparado em 5 turnos (nova mecânica, ver seção 10\.)
 
 **Proposta:** Um componente de **tela de resultado** (overlay fullscreen) ativado pelo
 `useGameState` quando qualquer condição terminal for detectada, mostrando:
@@ -561,7 +565,11 @@ interface GameState {
   phaserPower: number       // 0–3000
 
   // Subsistemas (0–100)
-  systems: Record<SystemKey, number>
+  systems: Record<SystemKey, number>   // inclui `warpCore` (nova mecânica, ver seção 10\.)
+
+  // Warp Core (WC) — nova mecânica, ver seção 10\.
+  warpCoreOverload: number             // 0–20 (%), estado persistente definido pelo jogador
+  radiationBreach: { active: boolean; turnsRemaining: number } | null
 
   // Universo
   galaxy: QuadrantData\[]\[]  // grade 8×8
@@ -586,18 +594,26 @@ interface GameState {
    └── REST → avança stardate, repara sistemas
    └── PRB → lança sonda (resultado async)
 
-2. TURNO INIMIGO (após cada ação do jogador)
+2. RESOLVER WARP CORE (autônomo, todo turno — nova mecânica, ver seção 10\.)
+   └── Se overload ativo (warpCoreOverload > 0):
+       ├── Dano contínuo ao WC, proporcional a warpCoreOverload
+       └── Roll de explosão, chance proporcional a warpCoreOverload
+   └── Sempre (independente de overload):
+       └── Roll de core breach, chance proporcional ao dano acumulado do WC
+
+3. TURNO INIMIGO (após cada ação do jogador)
    └── Para cada Klingon no quadrante atual:
        ├── Calcula dano ao jogador (distância × poder Klingon)
        ├── Reduz shieldEnergy (e mainEnergy se escudos a 0)
        ├── Dano aleatório a subsistema (chance %)
        └── Klingon pode mover (pequena chance)
 
-3. VERIFICAR CONDIÇÕES TERMINAIS
+4. VERIFICAR CONDIÇÕES TERMINAIS
    └── Vitória: enemiesLeft === 0
    └── Derrota: mainEnergy <= 0 || stardate >= stardateLimit || starbasesLeft === 0
+   └── Derrota: explosão do WC || radiationBreach.turnsRemaining <= 0
 
-4. ATUALIZAR DISPLAYS
+5. ATUALIZAR DISPLAYS
    └── SituationPanel recebe novos valores
    └── SRS/LRS atualizam grids
    └── EngineeringConsole atualiza subsistemas
@@ -632,6 +648,73 @@ desenvolvimento da engine.
 8. **Dificuldade:** o SST clássico tem dificuldades NOVICE/FAIR/GOOD/EXPERT/EMERITUS — implementar?
 9. **Torpedos:** manter mira X,Y (atual) ou adicionar também a opção de bearing 0-360° do clássico?
 10. **Starbases:** apenas STARBASE\_DOCK ou manter os dois tipos (Dock + Science)?
+11. **Sobrecarga do WC:** fórmula exata de dano/turno e de chance de explosão por % de
+sobrecarga — ainda não definida (ver seção 10\.2).
+12. **Balanceamento reparo vs. sobrecarga:** taxa de reparo focado (FIX 3x/5x) precisa
+vencer a taxa de dano em overload baixo (5–10%), senão sobrecarga nunca compensa o
+risco — validar quando as fórmulas do item 11 forem definidas.
+13. **Equipe de Controle de Danos (CdD):** mecânica de alocação/deslocamento entre
+sistemas para resolver core breach — autor quer revisar/modificar, não desenhar ainda
+(ver seção 10\.3).
+14. **Core breach — reparo parcial ou binário?** Ainda não definido se tem estados
+intermediários ou é resolvido/não-resolvido dentro da janela de 5 turnos.
+15. **HUD do SituationPanel:** acumulando pendências (torpedos restantes, status do
+escudo, status do WC/sobrecarga, alerta de radiação) — provável necessidade de
+reorganizar o layout quando os indicadores forem definidos.
+
+\---
+
+## 10\. Mecânica Proposta: Warp Core (WC) e Gerenciamento de Energia
+
+> Consolidado em sessão de design de 2026-07-20. Expande o M/A-M Converter do manual
+> original (seção 2\., gera 400 unidades/stardate a 100% de reparo) para um modelo de
+> potência distribuída entre sistemas. Pontos em aberto listados na seção 9\., itens 11–15.
+
+### 10.1. Conceito
+
+* O WC passa a ser um **subsistema próprio** — hoje ausente da tabela de 8 subsistemas do
+EngineeringConsole (seção 4\.5); precisa virar o 9º, ou substituir "Damage Control" (que
+é função de reparo, não sistema de fato).
+* Energia gerada pelo WC é função da % de dano do WC (`systems.warpCore`). O modelo deixa
+de ser um pool único simples (`mainEnergy`) e passa a ser **distribuído entre sistemas**,
+com prioridade: sistemas não-essenciais (luzes, equipamento não-crítico) podem ser
+desligados ou reduzidos para liberar energia aos sistemas de combate quando o WC não
+está a 100%.
+* **Pré-requisito técnico:** um dreno passivo por sistema (consumo mesmo sem uso ativo)
+que hoje não existe em nenhum lugar do modelo atual — sem ele, não há nada para "liberar"
+ao desligar sistemas não-essenciais.
+
+### 10.2. Sobrecarga (Overload)
+
+* Jogador define um valor de sobrecarga entre **1% e 20%**, contínuo — o valor fica ativo
+até o jogador reajustar (estado persistente, não ação pontual — mesmo padrão do Red Alert).
+* Sobrecarga aumenta a energia fornecida pelo WC em até +20% acima do normal.
+* Enquanto ativa: **dano contínuo ao WC**, proporcional ao valor da sobrecarga.
+* Enquanto ativa: **chance de explosão por turno**, proporcional ao valor da sobrecarga.
+Explosão = condição de derrota instantânea (seção 5\.3).
+* Fórmulas exatas: item 11 da seção 9\. (em aberto).
+
+### 10.3. Core Breach (Vazamento de Radiação)
+
+* Roll **independente** do de explosão — não depende de sobrecarga estar ativa.
+* Chance por turno proporcional à % de dano acumulado do WC (não à sobrecarga). Ou seja:
+dano de combate no WC já é perigoso por si só, mesmo que sobrecarga nunca tenha sido usada.
+* Ao disparar: tripulação tem **5 turnos** para reparo imediato (despacho de equipe de
+Controle de Danos) antes de morrer por envenenamento de radiação — nova condição de
+derrota (seção 5\.3).
+* Reparo pode exigir deslocar equipe de CdD de outro sistema — **mecânica de alocação de
+equipes ainda não definida**, autor quer revisar antes de fechar (item 13 da seção 9\.).
+
+### 10.4. Integração com Sistemas Existentes
+
+|Sistema existente|Como se conecta|
+|-|-|
+|EngineeringConsole|Home natural: WC vira linha na tabela de subsistemas; slider de sobrecarga reusa o padrão visual de temperatura/efetividade já usado no WeaponsConsole|
+|SituationPanel (HUD)|Precisa de indicador persistente de status do WC/sobrecarga e, se core breach ativo, de um estado de alerta próprio (paralelo ao Red Alert)|
+|Fila de mensagens (seção 5\.6 / 7\.2)|Canal natural para alertas de core breach e explosão iminente — mesmo padrão de 4 slots com ack do manual original|
+|FIX / reparo focado (seção 5\.5, 6\.2)|WC vira alvo prioritário natural do reparo focado (3x/5x); ver restrição de balanceamento, item 12 da seção 9\.|
+|Dilítio / planetas (LAND/ORBIT/USE)|Cristal de dilítio vira o reabastecimento de emergência do WC danificado — conecta duas mecânicas hoje órfãs no dossiê|
+|Fim de jogo (seção 5\.3)|+2 condições de derrota: explosão do WC, morte da tripulação por radiação|
 
 \---
 
