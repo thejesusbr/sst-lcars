@@ -5,3 +5,4 @@ out/
 prettierrc
 *storybook.log
 storybook-static
+*:Zone.Identifier
