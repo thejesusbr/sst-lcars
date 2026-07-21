@@ -15,10 +15,11 @@ import ShieldConsole from './ShieldConsole.vue'
 import WeaponsConsole from './WeaponsConsole.vue'
 import NavSensingConsole from './NavSensingConsole.vue'
 import EngineeringConsole from './EngineeringConsole.vue'
+import StarChartConsole from './StarChartConsole.vue'
 
 const { randColor, lcarsColors } = useLcarsColors()
 
-type ConsoleType = 'helm' | 'shield' | 'weapons' | 'nav' | 'engineering'
+type ConsoleType = 'helm' | 'shield' | 'weapons' | 'nav' | 'engineering' | 'starchart'
 
 const activeConsole = ref<ConsoleType>('engineering')
 
@@ -66,7 +67,14 @@ const toggleConsole = (console: ConsoleType) => {
         :color="randColor()"
         @click="toggleConsole('engineering')"
       />
-      
+
+      <LcarsButton
+        id="str-cns-btn"
+        label="Star Chart"
+        :color="randColor()"
+        @click="toggleConsole('starchart')"
+      />
+
       <LcarsBlock label="1234 56" version="dark-light" :color="randColor()" />
       <LcarsBlock flexc="v" :color="randColor()" />
     </LcarsColumn>
@@ -85,6 +93,7 @@ const toggleConsole = (console: ConsoleType) => {
         <WeaponsConsole v-show="activeConsole === 'weapons'" />
         <NavSensingConsole v-show="activeConsole === 'nav'" />
         <EngineeringConsole v-show="activeConsole === 'engineering'" />
+        <StarChartConsole v-show="activeConsole === 'starchart'" />
       </LcarsWrapper>
 
       <LcarsRow :style="{ 'flex-direction': 'row-reverse' }">

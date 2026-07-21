@@ -2,11 +2,13 @@
 import LcarsWrapper from '@/components/elements/LcarsWrapper.vue'
 import SituationPanel from './SituationPanel.vue'
 import TacticalConsole from './TacticalConsole.vue'
+import CombatLog from './CombatLog.vue'
 </script>
 
 <template>
   <LcarsWrapper id="main-scr" version="column" flex="v" :style="{ height: '100%' }">
     <SituationPanel />
     <TacticalConsole />
+    <CombatLog />
   </LcarsWrapper>
 </template>

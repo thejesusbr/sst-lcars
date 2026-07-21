@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useLcarsColors } from '@/composables/useLcarsColors'
 import LcarsRow from '@/components/elements/LcarsRow.vue'
 import LcarsColumn from '@/components/elements/LcarsColumn.vue'
@@ -66,8 +66,21 @@ const bindPadButtons = () => {
   }
 }
 
+const warpFactor = ref(2)
+let warpEffect: WarpSpeed | undefined
+
 onMounted(() => {
   bindPadButtons()
+  warpEffect = new WarpSpeed('vwrScrDsp')
+  warpEffect.TARGET_SPEED = warpFactor.value
+})
+
+onUnmounted(() => {
+  warpEffect?.destroy()
+})
+
+watch(warpFactor, (value) => {
+  if (warpEffect) warpEffect.TARGET_SPEED = value
 })
 </script>
 
@@ -104,23 +117,36 @@ onMounted(() => {
       <LcarsComplexButton id="wrpFctInd" :color="randColor()">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Warp Factor" :style="{ width: '15rem' }" />
-        <LcarsText id="wrpFct" text="2.0" />
+        <LcarsText id="wrpFct" :text="warpFactor.toFixed(1)" />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
       <LcarsComplexButton id="wrpFctSel">
         <LcarsCap version="round-left" :color="randColor()" />
         <LcarsBlock label="Set Warp" :style="{ width: '7.5rem' }" :color="randColor()" />
+        <LcarsButton
+          version="round"
+          :color="randColor()"
+          label="-"
+          :style="{ width: '3rem', flex: 'none' }"
+          @click="warpFactor = Math.max(1, warpFactor - 1)"
+        />
         <SolidLevelBar
           id="wrpFctSelBar"
           version="horizontal"
           :max="8"
           :min="1"
           color="primary-static"
-          :level="2"
-          label="2"
+          :level="warpFactor"
+          :label="String(warpFactor)"
         />
-        <LcarsCap version="round-right" :color="randColor()" />
+        <LcarsButton
+          version="round-right"
+          :color="randColor()"
+          label="+"
+          :style="{ width: '3rem', flex: 'none' }"
+          @click="warpFactor = Math.min(8, warpFactor + 1)"
+        />
       </LcarsComplexButton>
 
       <LcarsButton id="wrpEng" version="round" label="Engage" :color="randColor()" :style="{ width: '15rem', flex: 'none' }" />

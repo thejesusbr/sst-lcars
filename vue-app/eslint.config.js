@@ -15,6 +15,7 @@ export default [{
     '**/coverage/**',
     '**/src/stories/Button.*',
     '**/src/stories/Header.*',
-    '**/src/stories/Page.*'
+    '**/src/stories/Page.*',
+    '**/public/**'
   ],
 }, ...pluginVue.configs['flat/essential'], ...vueTsEslintConfig(), ...storybook.configs["flat/recommended"]];

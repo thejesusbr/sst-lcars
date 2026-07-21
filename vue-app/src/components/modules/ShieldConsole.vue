@@ -9,7 +9,7 @@ import LcarsBlock from '@/components/elements/LcarsBlock.vue'
 import LcarsText from '@/components/elements/LcarsText.vue'
 import LcarsTitle from '@/components/elements/LcarsTitle.vue'
 import LcarsButton from '@/components/elements/LcarsButton.vue'
-import LcarsSvg from '@/components/elements/LcarsSvg.vue'
+import EnterpriseShieldSvg, { type ShieldZoneKey } from '@/components/elements/EnterpriseShieldSvg.vue'
 import SolidLevelBar from '@/components/widgets/SolidLevelBar.vue'
 import DefaultBracket from '@/components/widgets/DefaultBracket.vue'
 
@@ -19,6 +19,18 @@ const props = withDefaults(defineProps<{
 }>(), {
   initialShieldEnergy: 1500,
   initialMainEnergy: 3000,
+})
+
+// Mock local (Fase 3.5, sem estado global ainda) -- mesmas chaves de EngineeringConsole.vue
+const mockIntegrity = ref<Partial<Record<ShieldZoneKey, number>>>({
+  warp: 100,
+  srs: 100,
+  lrs: 100,
+  phasers: 100,
+  photons: 100,
+  shields: 100,
+  damage: 100,
+  life: 100,
 })
 
 const { randColor } = useLcarsColors()
@@ -46,20 +58,6 @@ const bracketColoring = {
   column4: ['secondary-static', 'tertiary-static', 'secondary-static'],
   animated: 'anakiwa-bg',
 }
-
-const enterpriseSvg = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
-  <ellipse cx="100" cy="100" rx="90" ry="70" fill="none" stroke="#7777ff" stroke-width="1" opacity="0.4"/>
-  <ellipse cx="100" cy="100" rx="70" ry="55" fill="none" stroke="#5555ff" stroke-width="1" opacity="0.5"/>
-  <ellipse cx="100" cy="100" rx="50" ry="38" fill="none" stroke="#4444cc" stroke-width="1" opacity="0.6"/>
-  <ellipse id="enterprise-saucer" cx="100" cy="85" rx="32" ry="32" fill="#334" stroke="#7799bb" stroke-width="1.5"/>
-  <circle cx="100" cy="78" r="5" fill="#445566" stroke="#aabbcc" stroke-width="1"/>
-  <rect x="96" y="117" width="8" height="28" rx="2" fill="#334" stroke="#7799bb" stroke-width="1"/>
-  <ellipse cx="100" cy="155" rx="14" ry="20" fill="#334" stroke="#7799bb" stroke-width="1.5"/>
-  <rect id="nacelle-left" x="58" y="130" width="28" height="9" rx="4" fill="#223" stroke="#6688aa" stroke-width="1"/>
-  <rect id="nacelle-right" x="114" y="130" width="28" height="9" rx="4" fill="#223" stroke="#6688aa" stroke-width="1"/>
-  <line x1="86" y1="130" x2="96" y2="148" stroke="#6688aa" stroke-width="1.5"/>
-  <line x1="114" y1="130" x2="104" y2="148" stroke="#6688aa" stroke-width="1.5"/>
-</svg>`
 
 const transferEnergy = (amount: number) => {
   const actualTransfer = Math.min(amount, mainEnergy.value)
@@ -117,7 +115,7 @@ const raiseShields = () => {
       </LcarsComplexButton>
 
       <DefaultBracket :coloring="bracketColoring" :style="{ marginTop: '1rem', width: '100%', minHeight: '14rem' }">
-        <LcarsSvg :xml="enterpriseSvg" :style="{ width: '100%', height: '100%' }" />
+        <EnterpriseShieldSvg :shield-level="shieldEnergy" :system-integrity="mockIntegrity" />
       </DefaultBracket>
 
     </LcarsColumn>

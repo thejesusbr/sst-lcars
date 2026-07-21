@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
-import SituationPanel from '@/components/modules/SituationPanel.vue'
+import ResultScreen from '@/components/modules/ResultScreen.vue'
 
-const meta: Meta<typeof SituationPanel> = {
-  title: 'Modules/SituationPanel',
-  component: SituationPanel,
+const meta: Meta<typeof ResultScreen> = {
+  title: 'Modules/ResultScreen',
+  component: ResultScreen,
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
@@ -13,8 +13,12 @@ const meta: Meta<typeof SituationPanel> = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
-  args: {},
+export const Victory: Story = {
+  args: {
+    outcome: 'Victory',
+    reason: 'All Klingon forces destroyed.',
+    rating: 'Commander',
+  },
   decorators: [
     () => ({
       template: '<div style="width: 100%; height: 600px; background: #000;"><story /></div>',
@@ -22,13 +26,11 @@ export const Default: Story = {
   ],
 }
 
-export const CoreBreach: Story = {
+export const Defeat: Story = {
   args: {
-    warpCoreStatus: 'Breach',
-    overloadPercent: 18,
-    breachTurnsRemaining: 3,
-    shieldStatus: 'Down',
-    torpedoStock: 2,
+    outcome: 'Defeat',
+    reason: 'The Enterprise was destroyed by a Warp Core breach.',
+    rating: 'Ensign',
   },
   decorators: [
     () => ({

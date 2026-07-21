@@ -18,6 +18,7 @@ const meta: Meta<typeof EngineeringConsole> = {
     shieldIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     damageIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     lifeIntegrity: { control: { type: 'number', min: 0, max: 100 } },
+    warpCoreIntegrity: { control: { type: 'number', min: 0, max: 100 } },
   }
 }
 
@@ -35,6 +36,7 @@ export const Default: Story = {
     shieldIntegrity: 100,
     damageIntegrity: 100,
     lifeIntegrity: 100,
+    warpCoreIntegrity: 100,
   },
   decorators: [
     () => ({
@@ -54,6 +56,7 @@ export const DamagedSystems: Story = {
     shieldIntegrity: 0,
     damageIntegrity: 100,
     lifeIntegrity: 100,
+    warpCoreIntegrity: 60,
   },
   decorators: [
     () => ({

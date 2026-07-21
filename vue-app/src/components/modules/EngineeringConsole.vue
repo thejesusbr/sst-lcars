@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useLcarsColors } from '@/composables/useLcarsColors'
 import LcarsRow from '@/components/elements/LcarsRow.vue'
 import LcarsColumn from '@/components/elements/LcarsColumn.vue'
@@ -22,6 +22,7 @@ const props = withDefaults(defineProps<{
   shieldIntegrity?: number
   damageIntegrity?: number
   lifeIntegrity?: number
+  warpCoreIntegrity?: number
 }>(), {
   initialEnergy: 4500,
   warpIntegrity: 100,
@@ -32,6 +33,7 @@ const props = withDefaults(defineProps<{
   shieldIntegrity: 100,
   damageIntegrity: 100,
   lifeIntegrity: 100,
+  warpCoreIntegrity: 100,
 })
 
 const { randColor } = useLcarsColors()
@@ -56,6 +58,7 @@ const subsystems = ref<Subsystem[]>([
   { name: 'Shield Control', key: 'shields', integrity: props.shieldIntegrity },
   { name: 'Damage Control', key: 'damage', integrity: props.damageIntegrity },
   { name: 'Life Support', key: 'life', integrity: props.lifeIntegrity },
+  { name: 'Warp Core', key: 'warpCore', integrity: props.warpCoreIntegrity },
 ])
 
 // Watch props to sync Storybook changes dynamically
@@ -68,6 +71,57 @@ watch(() => props.photonIntegrity, (val) => { subsystems.value[4].integrity = va
 watch(() => props.shieldIntegrity, (val) => { subsystems.value[5].integrity = val })
 watch(() => props.damageIntegrity, (val) => { subsystems.value[6].integrity = val })
 watch(() => props.lifeIntegrity, (val) => { subsystems.value[7].integrity = val })
+watch(() => props.warpCoreIntegrity, (val) => { subsystems.value[8].integrity = val })
+
+// Warp Core overload slider (1-20%, curva de risco da seção 10.2 do specs)
+const overload = ref(1)
+
+const overloadColor = computed(() => {
+  if (overload.value < 8) return 'bg-green-3'
+  if (overload.value <= 15) return 'golden-tanoi-bg'
+  return 'alert-bg'
+})
+
+// Equipes de Controle de Danos (CdD) — mock local, sem lógica de fadiga real (Fase 3.5)
+interface DamageControlTeam {
+  id: number
+  efficiency: number
+  assignedSystem: string | null
+  status: 'idle' | 'working' | 'cooldown'
+}
+
+const teams = ref<DamageControlTeam[]>([
+  { id: 1, efficiency: 100, assignedSystem: null, status: 'idle' },
+  { id: 2, efficiency: 79, assignedSystem: 'Warp Core', status: 'working' },
+  { id: 3, efficiency: 63, assignedSystem: 'Shield Control', status: 'working' },
+  { id: 4, efficiency: 100, assignedSystem: null, status: 'idle' },
+  { id: 5, efficiency: 39, assignedSystem: null, status: 'cooldown' },
+  { id: 6, efficiency: 20, assignedSystem: 'Warp Core', status: 'working' },
+])
+
+const teamEfficiencyColor = (efficiency: number) => {
+  if (efficiency > 60) return 'bg-green-3'
+  if (efficiency > 20) return 'golden-tanoi-bg'
+  return 'alert-bg'
+}
+
+const dispatchTargets = subsystems.value.map((sys) => sys.name)
+
+const cycleAssignment = (team: DamageControlTeam) => {
+  if (team.assignedSystem === null) {
+    team.assignedSystem = dispatchTargets[0]
+    team.status = 'working'
+    return
+  }
+  const currentIndex = dispatchTargets.indexOf(team.assignedSystem)
+  const nextIndex = currentIndex + 1
+  if (nextIndex >= dispatchTargets.length) {
+    team.assignedSystem = null
+    team.status = 'idle'
+  } else {
+    team.assignedSystem = dispatchTargets[nextIndex]
+  }
+}
 
 // Helper to return style class and status text based on integrity level
 const getSystemStatus = (integrity: number) => {
@@ -127,7 +181,7 @@ const simulateDamage = () => {
         />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
-      
+
       <!-- Energy Simulation Controls -->
       <LcarsRow :style="{ 'margin-top': '1.5rem', 'gap': '0.75rem', 'width': '100%', 'justify-content': 'center' }">
         <LcarsButton
@@ -143,7 +197,36 @@ const simulateDamage = () => {
           @click="energy = Math.min(4500, energy + 500)"
         />
       </LcarsRow>
-      
+
+      <LcarsTitle version="centered" size="small" text="Warp Core Overload" :style="{ 'margin-top': '1.5rem' }" />
+
+      <LcarsComplexButton :color="randColor()" size="large" :style="{ width: '100%' }">
+        <LcarsCap version="round-left" />
+        <LcarsBlock label="Overload" :style="{ width: '6rem' }" />
+        <LcarsButton
+          version="round"
+          :color="randColor()"
+          label="-"
+          :style="{ width: '3rem', flex: 'none' }"
+          @click="overload = Math.max(1, overload - 1)"
+        />
+        <SolidLevelBar
+          version="horizontal"
+          :max="20"
+          :min="1"
+          :color="overloadColor"
+          :level="overload"
+          :label="`${overload}%`"
+        />
+        <LcarsButton
+          version="round-right"
+          :color="randColor()"
+          label="+"
+          :style="{ width: '3rem', flex: 'none' }"
+          @click="overload = Math.min(20, overload + 1)"
+        />
+      </LcarsComplexButton>
+
       <LcarsBlock size="large" :color="randColor()" :style="{ 'margin-top': '1.5rem', width: '100%' }" />
     </LcarsColumn>
 
@@ -193,6 +276,37 @@ const simulateDamage = () => {
           @click="repairAll"
         />
       </LcarsRow>
+
+      <LcarsRow :style="{ 'justify-content': 'center', 'margin-top': '1.5rem', 'margin-bottom': '1rem' }">
+        <LcarsTitle version="centered" size="small" text="Damage Control Teams" />
+      </LcarsRow>
+
+      <div class="systems-grid">
+        <div
+          v-for="team in teams"
+          :key="team.id"
+          class="system-row"
+        >
+          <LcarsComplexButton
+            :color="teamEfficiencyColor(team.efficiency)"
+            size="medium"
+            :style="{ width: '100%' }"
+          >
+            <LcarsCap version="round-left" />
+            <LcarsBlock :label="`Team ${team.id}`" :style="{ width: '6rem', 'text-align': 'left' }" />
+            <LcarsText :text="team.efficiency + '%'" color="text-white" :style="{ width: '4rem', 'text-align': 'center', 'font-weight': 'bold' }" />
+            <LcarsBlock :label="team.status.toUpperCase()" :style="{ width: '7rem' }" />
+            <LcarsBlock version="decorator" :style="{ flex: '1' }" />
+            <LcarsButton
+              version="round-right"
+              :color="randColor()"
+              :label="team.assignedSystem ?? 'Dispatch'"
+              :style="{ width: '11rem' }"
+              @click="cycleAssignment(team)"
+            />
+          </LcarsComplexButton>
+        </div>
+      </div>
     </LcarsColumn>
   </LcarsRow>
 </template>

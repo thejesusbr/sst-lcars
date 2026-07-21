@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import GameHud from '@/components/modules/GameHud.vue'
+import GameScreen from '@/components/modules/GameScreen.vue'
 </script>
 
 <template>
-  <GameHud />
+  <GameScreen />
 </template>
 
 <style>

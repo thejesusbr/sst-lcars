@@ -19,6 +19,11 @@ const props = withDefaults(
     enemiesLeft?: number;
     starbasesLeft?: number;
     sectorCoords?: string;
+    torpedoStock?: number;
+    shieldStatus?: "Up" | "Down";
+    warpCoreStatus?: "Nominal" | "Damaged" | "Breach";
+    overloadPercent?: number;
+    breachTurnsRemaining?: number;
   }>(),
   {
     energyLevel: 3000,
@@ -26,6 +31,11 @@ const props = withDefaults(
     enemiesLeft: 12,
     starbasesLeft: 14,
     sectorCoords: "9876 54",
+    torpedoStock: 8,
+    shieldStatus: "Up",
+    warpCoreStatus: "Nominal",
+    overloadPercent: 0,
+    breachTurnsRemaining: 5,
   }
 );
 
@@ -43,6 +53,12 @@ const energyStatus = computed(() =>
 const starbasesStatus = computed(() =>
   props.starbasesLeft > 0 ? "Nominal" : "None"
 );
+
+const warpCoreColor = computed(() => {
+  if (props.warpCoreStatus === "Breach") return "alert-bg blink";
+  if (props.warpCoreStatus === "Damaged") return "golden-tanoi-bg";
+  return "bg-green-3";
+});
 </script>
 
 <template>
@@ -158,6 +174,90 @@ const starbasesStatus = computed(() =>
                 :label="starbasesStatus"
                 :style="{ flex: 'none', width: '5.5rem' }"
               />
+            </LcarsComplexButton>
+          </LcarsRow>
+
+          <!-- Linha 3: Torpedo Stock + Shield Status -->
+          <LcarsRow>
+            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                label="Torpedoes"
+                :style="{ flex: 'none', width: '6.5rem' }"
+              />
+              <LcarsText
+                color="text-white"
+                :text="String(torpedoStock)"
+                :style="{ flex: '1', textAlign: 'center' }"
+              />
+              <LcarsBlock
+                version="round-right"
+                :style="{ flex: 'none', width: '3rem' }"
+              />
+            </LcarsComplexButton>
+
+            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+              <LcarsCap :style="{ background: 'transparent' }" />
+              <LcarsBlock
+                label="Shields"
+                :style="{ flex: 'none', width: '5.5rem' }"
+              />
+              <LcarsBlock version="decorator" />
+              <LcarsBlock
+                :label="shieldStatus"
+                :style="{ flex: '1', textAlign: 'center' }"
+              />
+              <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
+            </LcarsComplexButton>
+          </LcarsRow>
+
+          <!-- Linha 4: Warp Core Status + Overload -->
+          <LcarsRow>
+            <LcarsComplexButton :color="warpCoreColor" :style="{ flex: '1' }">
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                label="Warp Core"
+                :style="{ flex: 'none', width: '6.5rem' }"
+              />
+              <LcarsBlock
+                :label="warpCoreStatus"
+                :style="{ flex: '1', textAlign: 'center' }"
+              />
+              <LcarsBlock
+                version="round-right"
+                :style="{ flex: 'none', width: '3rem' }"
+              />
+            </LcarsComplexButton>
+
+            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+              <LcarsCap :style="{ background: 'transparent' }" />
+              <LcarsBlock
+                label="Overload"
+                :style="{ flex: 'none', width: '5.5rem' }"
+              />
+              <LcarsBlock version="decorator" />
+              <LcarsText
+                color="text-white"
+                :text="`${overloadPercent}%`"
+                :style="{ flex: '1', textAlign: 'center' }"
+              />
+              <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
+            </LcarsComplexButton>
+          </LcarsRow>
+
+          <!-- Alerta de Core Breach: linha condicional, largura total -->
+          <LcarsRow v-if="warpCoreStatus === 'Breach'">
+            <LcarsComplexButton
+              color="alert-bg"
+              class="blink"
+              :style="{ flex: '1' }"
+            >
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                :label="`RADIATION BREACH — ${breachTurnsRemaining} TURNS REMAINING`"
+                :style="{ flex: '1', textAlign: 'center', fontWeight: 'bold' }"
+              />
+              <LcarsCap version="round-right" />
             </LcarsComplexButton>
           </LcarsRow>
         </LcarsColumn>
