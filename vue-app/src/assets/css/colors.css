@@ -5,6 +5,7 @@
   --bahama-blue: #069;
   --bourbon: #b62;
   --blue-bell: #99c;
+  --caribbean-green: #0c9;
   --chestnut-rose: #c66;
   --cosmic: #746;
   --danub: #68c;
@@ -68,6 +69,12 @@
   fill: var(--blue-bell);
   background-color: var(--blue-bell);
   border-color: var(--blue-bell);
+}
+.caribbean-green-bg,
+.caribbean-green-bg > *:not([class*="-bg"]) {
+  fill: var(--caribbean-green);
+  background-color: var(--caribbean-green);
+  border-color: var(--caribbean-green);
 }
 .chestnut-rose-bg,
 .chestnut-rose-bg > *:not([class*="-bg"]) {

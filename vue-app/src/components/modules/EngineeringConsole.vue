@@ -100,7 +100,7 @@ const teams = ref<DamageControlTeam[]>([
 ])
 
 const teamEfficiencyColor = (efficiency: number) => {
-  if (efficiency > 60) return 'bg-green-3'
+  if (efficiency > 60) return 'caribbean-green-bg'
   if (efficiency > 20) return 'golden-tanoi-bg'
   return 'alert-bg'
 }
@@ -128,7 +128,7 @@ const getSystemStatus = (integrity: number) => {
   if (integrity === 100) {
     return {
       text: 'OPERATIONAL',
-      color: 'bg-green-3', // Green shade from our custom-patched colors.css
+      color: 'caribbean-green-bg', // classe temática (sem !important) -- bg-green-3 forçava a mesma cor em todos os filhos do complex-button
       isBlinking: false
     }
   } else if (integrity > 0) {

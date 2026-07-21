@@ -23,6 +23,7 @@ const themeColors: ThemeColors = reactive({
     'bahama-blue-bg',
     'bourbon-bg',
     'blue-bell-bg',
+    'caribbean-green-bg',
     'chestnut-rose-bg',
     'cosmic-bg',
     'danub-bg',

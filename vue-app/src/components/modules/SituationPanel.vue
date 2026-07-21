@@ -57,7 +57,7 @@ const starbasesStatus = computed(() =>
 const warpCoreColor = computed(() => {
   if (props.warpCoreStatus === "Breach") return "alert-bg blink";
   if (props.warpCoreStatus === "Damaged") return "golden-tanoi-bg";
-  return "bg-green-3";
+  return "caribbean-green-bg";
 });
 </script>
 
