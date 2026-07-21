@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useLcarsColors } from '@/composables/useLcarsColors'
-import LcarsRow from '@/components/elements/LcarsRow.vue'
-import LcarsColumn from '@/components/elements/LcarsColumn.vue'
-import LcarsComplexButton from '@/components/elements/LcarsComplexButton.vue'
-import LcarsCap from '@/components/elements/LcarsCap.vue'
-import LcarsBlock from '@/components/elements/LcarsBlock.vue'
-import LcarsText from '@/components/elements/LcarsText.vue'
-import LcarsTitle from '@/components/elements/LcarsTitle.vue'
-import LcarsWrapper from '@/components/elements/LcarsWrapper.vue'
-import LcarsSvg from '@/components/elements/LcarsSvg.vue'
-import LcarsButton from '@/components/elements/LcarsButton.vue'
-import SolidLevelBar from '@/components/widgets/SolidLevelBar.vue'
-import DefaultBracket from '@/components/widgets/DefaultBracket.vue'
-import LcarsHtmlTag from '@/components/elements/LcarsHtmlTag.vue'
+import { ref, onMounted, onUnmounted, watch } from "vue";
+import { useLcarsColors } from "@/composables/useLcarsColors";
+import LcarsRow from "@/components/elements/LcarsRow.vue";
+import LcarsColumn from "@/components/elements/LcarsColumn.vue";
+import LcarsComplexButton from "@/components/elements/LcarsComplexButton.vue";
+import LcarsCap from "@/components/elements/LcarsCap.vue";
+import LcarsBlock from "@/components/elements/LcarsBlock.vue";
+import LcarsText from "@/components/elements/LcarsText.vue";
+import LcarsTitle from "@/components/elements/LcarsTitle.vue";
+import LcarsWrapper from "@/components/elements/LcarsWrapper.vue";
+import LcarsSvg from "@/components/elements/LcarsSvg.vue";
+import LcarsButton from "@/components/elements/LcarsButton.vue";
+import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
+import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
+import LcarsHtmlTag from "@/components/elements/LcarsHtmlTag.vue";
 
-const { randColor } = useLcarsColors()
+const { randColor } = useLcarsColors();
 
-const activeDstToggle = ref<'sec' | 'sys'>('sec')
+const activeDstToggle = ref<"sec" | "sys">("sec");
 
-const toggleSysSec = (opt: 'sec' | 'sys') => {
-  activeDstToggle.value = opt
-}
+const toggleSysSec = (opt: "sec" | "sys") => {
+  activeDstToggle.value = opt;
+};
 
 const dirPadSvg = `<svg width="70mm" height="70mm" 
   version="1.1" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" 
@@ -55,37 +55,42 @@ const dirPadSvg = `<svg width="70mm" height="70mm"
   <path d="m34 19.48h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
   <path d="m34 27.9h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
   <path d="m34 59h12" style="fill:none;stroke-width:.75;stroke:#000000"></path>
-</svg>`
+</svg>`;
 
 const bindPadButtons = () => {
-  const xyCtlUp = document.getElementById('xy_ctl_up')
+  const xyCtlUp = document.getElementById("xy_ctl_up");
   if (xyCtlUp) {
-    xyCtlUp.addEventListener('click', (e) => {
-      console.log('Up clicked', e)
-    })
+    xyCtlUp.addEventListener("click", (e) => {
+      console.log("Up clicked", e);
+    });
   }
-}
+};
 
-const warpFactor = ref(2)
-let warpEffect: WarpSpeed | undefined
+const warpFactor = ref(2);
+let warpEffect: WarpSpeed | undefined;
 
 onMounted(() => {
-  bindPadButtons()
-  warpEffect = new WarpSpeed('vwrScrDsp')
-  warpEffect.TARGET_SPEED = warpFactor.value
-})
+  bindPadButtons();
+  warpEffect = new WarpSpeed("vwrScrDsp");
+  warpEffect.TARGET_SPEED = warpFactor.value;
+});
 
 onUnmounted(() => {
-  warpEffect?.destroy()
-})
+  warpEffect?.destroy();
+});
 
 watch(warpFactor, (value) => {
-  if (warpEffect) warpEffect.TARGET_SPEED = value
-})
+  if (warpEffect) warpEffect.TARGET_SPEED = value;
+});
 </script>
 
 <template>
-  <LcarsRow id="hlm-cns-dsp" flex="h" flexc="h" :style="{ 'justify-content': 'space-evenly' }">
+  <LcarsRow
+    id="hlm-cns-dsp"
+    flex="h"
+    flexc="h"
+    :style="{ 'justify-content': 'space-evenly' }"
+  >
     <LcarsColumn id="dst-pnl" :style="{ 'justify-content': 'center' }" flex="v">
       <LcarsComplexButton id="cur-pos-ind" :color="randColor()">
         <LcarsCap version="round-left" />
@@ -97,23 +102,47 @@ watch(warpFactor, (value) => {
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
-      <LcarsTitle version="small centered" text="Set Destination" color="text-white" />
+      <LcarsTitle
+        version="small centered"
+        text="Set Destination"
+        color="text-white"
+      />
 
-      <LcarsWrapper id="hlm-dir-pad-wrp" flex="h" :style="{ 'justify-content': 'center' }">
+      <LcarsWrapper
+        id="hlm-dir-pad-wrp"
+        flex="h"
+        :style="{ 'justify-content': 'center' }"
+      >
         <LcarsSvg id="hlm-dir-pad" :xml="dirPadSvg" />
       </LcarsWrapper>
 
-      <LcarsComplexButton id="set-dst-inp" :color="randColor()" :style="{ 'justify-content': 'center' }">
+      <LcarsComplexButton
+        id="set-dst-inp"
+        :color="randColor()"
+        :style="{ 'justify-content': 'center' }"
+      >
         <LcarsCap version="round-left" />
-        <LcarsButton label="System" :style="{ width: '3.75rem', flex: 'none' }" @click="toggleSysSec('sys')" />
+        <LcarsButton
+          label="System"
+          :style="{ width: '3.75rem', flex: 'none' }"
+          @click="toggleSysSec('sys')"
+        />
         <LcarsText id="dst-sec-ind" color="text-white" text="4, 3" />
-        <LcarsButton label="Sector" :style="{ width: '3.75rem', flex: 'none' }" @click="toggleSysSec('sec')" />
+        <LcarsButton
+          label="Sector"
+          :style="{ width: '3.75rem', flex: 'none' }"
+          @click="toggleSysSec('sec')"
+        />
         <LcarsText id="dst-sys-ind" color="text-white" text="2, 5" />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
     </LcarsColumn>
 
-    <LcarsColumn id="wrpPnl" :style="{ 'justify-content': 'center', 'align-items': 'center' }" flex="v">
+    <LcarsColumn
+      id="wrpPnl"
+      :style="{ 'justify-content': 'center', 'align-items': 'center' }"
+      flex="v"
+    >
       <LcarsComplexButton id="wrpFctInd" :color="randColor()">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Warp Factor" :style="{ width: '15rem' }" />
@@ -123,12 +152,16 @@ watch(warpFactor, (value) => {
 
       <LcarsComplexButton id="wrpFctSel">
         <LcarsCap version="round-left" :color="randColor()" />
-        <LcarsBlock label="Set Warp" :style="{ width: '7.5rem' }" :color="randColor()" />
+        <LcarsBlock
+          label="Set Warp"
+          :style="{ width: '7.5rem' }"
+          :color="randColor()"
+        />
         <LcarsButton
-          version="round"
+          version="round-left"
           :color="randColor()"
           label="-"
-          :style="{ width: '3rem', flex: 'none' }"
+          :style="{ width: '1.5rem', flex: 'none' }"
           @click="warpFactor = Math.max(1, warpFactor - 1)"
         />
         <SolidLevelBar
@@ -144,12 +177,18 @@ watch(warpFactor, (value) => {
           version="round-right"
           :color="randColor()"
           label="+"
-          :style="{ width: '3rem', flex: 'none' }"
+          :style="{ width: '1.5rem', flex: 'none' }"
           @click="warpFactor = Math.min(8, warpFactor + 1)"
         />
       </LcarsComplexButton>
 
-      <LcarsButton id="wrpEng" version="round" label="Engage" :color="randColor()" :style="{ width: '15rem', flex: 'none' }" />
+      <LcarsButton
+        id="wrpEng"
+        version="round"
+        label="Engage"
+        :color="randColor()"
+        :style="{ width: '15rem', flex: 'none' }"
+      />
 
       <DefaultBracket
         id="vwrScr"
@@ -160,10 +199,14 @@ watch(warpFactor, (value) => {
           column2: ['secondary-static', 'tertiary-static', 'secondary-static'],
           column3: ['primary-static', 'tertiary-static', 'primary-static'],
           column4: ['secondary-static', 'tertiary-static', 'secondary-static'],
-          animated: 'pale-canary-bg'
+          animated: 'pale-canary-bg',
         }"
       >
-        <LcarsHtmlTag id="vwrScrDsp" tag="canvas" :style="{ height: '100%', width: '100%' }" />
+        <LcarsHtmlTag
+          id="vwrScrDsp"
+          tag="canvas"
+          :style="{ height: '100%', width: '100%' }"
+        />
       </DefaultBracket>
     </LcarsColumn>
   </LcarsRow>

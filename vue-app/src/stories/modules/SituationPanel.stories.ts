@@ -24,10 +24,10 @@ export const Default: Story = {
 
 export const CoreBreach: Story = {
   args: {
-    warpCoreStatus: 'Breach',
+    warpCoreStatus: 'BREACH',
     overloadPercent: 18,
     breachTurnsRemaining: 3,
-    shieldStatus: 'Down',
+    shieldStatus: 'DOWN',
     torpedoStock: 2,
   },
   decorators: [

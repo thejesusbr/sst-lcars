@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from "vue";
+import { computed, ref, watch, onUnmounted, nextTick } from "vue";
 import { useLcarsColors } from "@/composables/useLcarsColors";
+import LcarsButton from "../elements/LcarsButton.vue";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
 import LcarsBlock from "@/components/elements/LcarsBlock.vue";
@@ -20,8 +21,8 @@ const props = withDefaults(
     starbasesLeft?: number;
     sectorCoords?: string;
     torpedoStock?: number;
-    shieldStatus?: "Up" | "Down";
-    warpCoreStatus?: "Nominal" | "Damaged" | "Breach";
+    shieldStatus?: "UP" | "DOWN";
+    warpCoreStatus?: "NOMINAL" | "DAMAGED" | "BREACH";
     overloadPercent?: number;
     breachTurnsRemaining?: number;
   }>(),
@@ -32,8 +33,8 @@ const props = withDefaults(
     starbasesLeft: 14,
     sectorCoords: "9876 54",
     torpedoStock: 8,
-    shieldStatus: "Up",
-    warpCoreStatus: "Nominal",
+    shieldStatus: "UP",
+    warpCoreStatus: "NOMINAL",
     overloadPercent: 0,
     breachTurnsRemaining: 5,
   }
@@ -55,8 +56,8 @@ const starbasesStatus = computed(() =>
 );
 
 const warpCoreColor = computed(() => {
-  if (props.warpCoreStatus === "Breach") return "alert-bg blink";
-  if (props.warpCoreStatus === "Damaged") return "golden-tanoi-bg";
+  if (props.warpCoreStatus === "BREACH") return "alert-bg blink";
+  if (props.warpCoreStatus === "DAMAGED") return "golden-tanoi-bg";
   return "caribbean-green-bg";
 });
 
@@ -74,6 +75,64 @@ watch(redAlert, (value) => {
 onUnmounted(() => {
   document.body.classList.remove("red-alert");
 });
+
+// Combat Log embutido na 4a coluna (antes era um CombatLog.vue a parte,
+// painel fixo inferior -- fundido aqui pra caber no grid de 4 colunas).
+type LogCategory = "captain" | "general" | "engineering";
+
+interface CombatLogEntry {
+  stardate: number;
+  category: LogCategory;
+  text: string;
+}
+
+const activeLogTab = ref<LogCategory>("general");
+
+const toggleLogTab = (tab: LogCategory) => {
+  activeLogTab.value = tab;
+};
+
+const logEntries = ref<CombatLogEntry[]>([
+  {
+    stardate: 3600.1,
+    category: "general",
+    text: "*** RED ALERT *** Klingons in this quadrant!",
+  },
+  {
+    stardate: 3600.2,
+    category: "engineering",
+    text: "Shields absorb 340 units.",
+  },
+  {
+    stardate: 3600.3,
+    category: "captain",
+    text: "Captain's Log: entering hostile quadrant 3,4.",
+  },
+  { stardate: 3600.4, category: "general", text: "*** KLINGON DESTROYED ***" },
+  {
+    stardate: 3600.5,
+    category: "engineering",
+    text: "Warp Core overload at 12%. Damage control team dispatched.",
+  },
+]);
+
+const filteredLogEntries = computed(() =>
+  logEntries.value.filter((entry) => entry.category === activeLogTab.value)
+);
+
+const logContent = ref<HTMLElement | null>(null);
+
+watch(
+  logEntries,
+  () => {
+    nextTick(() => {
+      if (logContent.value) {
+        logContent.value.scrollTop = logContent.value.scrollHeight;
+      }
+    });
+  },
+  { deep: true }
+);
 </script>
 
 <template>
@@ -218,8 +277,9 @@ onUnmounted(() => {
                 :style="{ flex: 'none', width: '5.5rem' }"
               />
               <LcarsBlock version="decorator" />
-              <LcarsBlock
-                :label="shieldStatus"
+              <LcarsText
+                color="text-white"
+                :text="shieldStatus"
                 :style="{ flex: '1', textAlign: 'center' }"
               />
               <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
@@ -234,8 +294,9 @@ onUnmounted(() => {
                 label="Warp Core"
                 :style="{ flex: 'none', width: '6.5rem' }"
               />
-              <LcarsBlock
-                :label="warpCoreStatus"
+              <LcarsText
+                color="text-white"
+                :text="warpCoreStatus"
                 :style="{ flex: '1', textAlign: 'center' }"
               />
               <LcarsBlock
@@ -261,7 +322,7 @@ onUnmounted(() => {
           </LcarsRow>
 
           <!-- Alerta de Core Breach: linha condicional, largura total -->
-          <LcarsRow v-if="warpCoreStatus === 'Breach'">
+          <LcarsRow v-if="warpCoreStatus === 'BREACH'">
             <LcarsComplexButton
               color="alert-bg"
               class="blink"
@@ -279,24 +340,100 @@ onUnmounted(() => {
 
         <!-- Botão Toggle Red Alert -->
         <LcarsColumn>
+          <LcarsRow
+            :style="{ width: '100%', gap: '0.5rem', 'align-items': 'stretch' }"
+          >
+            <LcarsComplexButton
+              :color="randColor()"
+              :style="{ background: 'transparent' }"
+            >
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                label="ALERT"
+                :color="lcarsColors.pool.orange[2]"
+                :style="{ flex: '1' }"
+              />
+              <LcarsText
+                color="text-white"
+                :style="{ 'min-width': '7.5rem' }"
+                :text="redAlert ? 'RED' : 'GREEN'"
+              />
+              <LcarsBlock version="decorator" :style="{ flex: '1' }" />
+            </LcarsComplexButton>
+            <LcarsToggleSwitch
+              color="atomic-tangerine-bg"
+              :style="{ flex: '1' }"
+              v-model="redAlert"
+            />
+          </LcarsRow>
+        </LcarsColumn>
+        <LcarsColumn>
           <LcarsComplexButton :color="randColor()">
             <LcarsCap version="round-left" />
-            <LcarsBlock
-              label="ALERT"
-              :color="lcarsColors.primary[2]"
-              :style="{ flex: '1' }"
+            <LcarsButton
+              id="cap-log-tab"
+              label="Cap. Log"
+              :color="lcarsColors.primary[5]"
+              :style="{
+                filter: activeLogTab === 'captain' ? '' : 'brightness(0.6)',
+              }"
+              @click="toggleLogTab('captain')"
             />
-            <LcarsText :text="redAlert ? 'RED' : 'GREEN'" />
-            <LcarsBlock version="decorator" :style="{ flex: '1' }" />
-            <LcarsToggleSwitch
-              :color="lcarsColors.primary[3]"
-              v-model="redAlert"
+            <LcarsButton
+              id="shp-log-tab"
+              label="Ship Log"
+              :color="lcarsColors.primary[0]"
+              :style="{
+                filter: activeLogTab === 'general' ? '' : 'brightness(0.6)',
+              }"
+              @click="toggleLogTab('general')"
+            />
+            <LcarsButton
+              id="eng-log-tab"
+              label="Eng. Log"
+              :color="lcarsColors.primary[1]"
+              :style="{
+                filter: activeLogTab === 'engineering' ? '' : 'brightness(0.6)',
+              }"
+              @click="toggleLogTab('engineering')"
             />
             <LcarsCap version="round-right" :color="lcarsColors.primary[4]" />
           </LcarsComplexButton>
-        </LcarsColumn>
-        <LcarsColumn
-          ><LcarsBlock :color="lcarsColors.primary[1]" />
+          <div
+            :style="{
+              display: 'grid',
+              'grid-template-columns': 'minmax(0, max-content)',
+            }"
+          >
+            <div
+              ref="logContent"
+              class="log-content"
+              :style="{
+                flex: '1',
+                minHeight: '0',
+                minWidth: '0',
+                maxWidth: '100%',
+                'overflow-wrap': 'break-word',
+              }"
+            >
+              <p
+                v-for="(entry, i) in filteredLogEntries"
+                :key="i"
+                class="log-entry"
+              >
+                <span class="log-stardate"
+                  >[{{ entry.stardate.toFixed(1) }}]</span
+                >
+                {{ entry.text }}
+              </p>
+              <p
+                v-if="filteredLogEntries.length === 0"
+                class="log-entry log-empty"
+              >
+                No entries.
+              </p>
+            </div>
+          </div>
         </LcarsColumn>
       </LcarsRow>
 
@@ -320,7 +457,7 @@ onUnmounted(() => {
             padding: '0 0.5rem',
             display: 'flex',
             alignItems: 'center',
-            fontSize: '1.0rem',
+            fontSize: '1.5rem',
             lineHeight: '1.5rem',
           }"
         />
@@ -329,3 +466,32 @@ onUnmounted(() => {
     </LcarsWrapper>
   </LcarsRow>
 </template>
+
+<style scoped>
+.log-content {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: "LCARS-Mono", monospace;
+  color: #fff;
+}
+
+.log-entry {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.log-entry {
+  margin: 0 0 0.35rem 0;
+}
+
+.log-stardate {
+  color: #ff9900;
+  margin-right: 0.5rem;
+}
+
+.log-empty {
+  opacity: 0.5;
+}
+</style>

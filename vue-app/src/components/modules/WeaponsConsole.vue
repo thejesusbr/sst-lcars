@@ -1,143 +1,178 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useLcarsColors } from '@/composables/useLcarsColors'
-import { useScannerIcons, ScannerEntity } from '@/composables/useScannerIcons'
-import LcarsRow from '@/components/elements/LcarsRow.vue'
-import LcarsColumn from '@/components/elements/LcarsColumn.vue'
-import LcarsCap from '@/components/elements/LcarsCap.vue'
-import LcarsBlock from '@/components/elements/LcarsBlock.vue'
-import LcarsButton from '@/components/elements/LcarsButton.vue'
-import LcarsComplexButton from '@/components/elements/LcarsComplexButton.vue'
-import LcarsText from '@/components/elements/LcarsText.vue'
-import LcarsTitle from '@/components/elements/LcarsTitle.vue'
-import LcarsScanner from '@/components/elements/LcarsScanner.vue'
-import LcarsToggleSwitch from '@/components/elements/LcarsToggleSwitch.vue'
-import DefaultBracket from '@/components/widgets/DefaultBracket.vue'
-import SolidLevelBar from '@/components/widgets/SolidLevelBar.vue'
+import { ref, computed, watch } from "vue";
+import { useLcarsColors } from "@/composables/useLcarsColors";
+import { useScannerIcons, ScannerEntity } from "@/composables/useScannerIcons";
+import LcarsRow from "@/components/elements/LcarsRow.vue";
+import LcarsColumn from "@/components/elements/LcarsColumn.vue";
+import LcarsCap from "@/components/elements/LcarsCap.vue";
+import LcarsBlock from "@/components/elements/LcarsBlock.vue";
+import LcarsButton from "@/components/elements/LcarsButton.vue";
+import LcarsComplexButton from "@/components/elements/LcarsComplexButton.vue";
+import LcarsText from "@/components/elements/LcarsText.vue";
+import LcarsTitle from "@/components/elements/LcarsTitle.vue";
+import LcarsScanner from "@/components/elements/LcarsScanner.vue";
+import LcarsToggleSwitch from "@/components/elements/LcarsToggleSwitch.vue";
+import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
+import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
 
-const props = withDefaults(defineProps<{
-  initialStock?: number
-  initialPhaserTemp?: number
-  initialTargets?: number
-}>(), {
-  initialStock: 8,
-  initialPhaserTemp: 50,
-  initialTargets: 3,
-})
+const props = withDefaults(
+  defineProps<{
+    initialStock?: number;
+    initialPhaserTemp?: number;
+    initialTargets?: number;
+  }>(),
+  {
+    initialStock: 8,
+    initialPhaserTemp: 50,
+    initialTargets: 3,
+  }
+);
 
-const { randColor } = useLcarsColors()
-const { getIcon } = useScannerIcons()
+const { randColor } = useLcarsColors();
+const { getIcon } = useScannerIcons();
 
 interface Tube {
-  targetX: number
-  targetY: number
-  status: 'Empty' | 'Loaded'
-  autoLoad: boolean
+  targetX: number;
+  targetY: number;
+  status: "Empty" | "Loaded";
+  autoLoad: boolean;
 }
 
-const phaserTemp = ref(props.initialPhaserTemp)
-const phaserPower = ref(1500)
-const lockedTargets = ref(props.initialTargets)
-const torpedoStock = ref(props.initialStock)
+const phaserTemp = ref(props.initialPhaserTemp);
+const phaserPower = ref(1500);
+const lockedTargets = ref(props.initialTargets);
+const torpedoStock = ref(props.initialStock);
 
 const tubes = ref<Tube[]>([
-  { targetX: 3, targetY: 2, status: 'Empty', autoLoad: false },
-  { targetX: 6, targetY: 7, status: 'Empty', autoLoad: false },
-  { targetX: 2, targetY: 5, status: 'Empty', autoLoad: false },
-])
+  { targetX: 3, targetY: 2, status: "Empty", autoLoad: false },
+  { targetX: 6, targetY: 7, status: "Empty", autoLoad: false },
+  { targetX: 2, targetY: 5, status: "Empty", autoLoad: false },
+]);
 
-watch(() => props.initialPhaserTemp, (val) => { phaserTemp.value = val })
-watch(() => props.initialStock, (val) => { torpedoStock.value = val })
-watch(() => props.initialTargets, (val) => { lockedTargets.value = val })
+watch(
+  () => props.initialPhaserTemp,
+  (val) => {
+    phaserTemp.value = val;
+  }
+);
+watch(
+  () => props.initialStock,
+  (val) => {
+    torpedoStock.value = val;
+  }
+);
+watch(
+  () => props.initialTargets,
+  (val) => {
+    lockedTargets.value = val;
+  }
+);
 
 const phaserEffectiveness = computed(() =>
   Math.max(0, 100 - phaserTemp.value / 2.7)
-)
+);
 
 const phaserTempColor = computed(() => {
-  if (phaserTemp.value < 100) return 'bg-blue-3'
-  if (phaserTemp.value < 200) return 'golden-tanoi-bg'
-  return 'alert-bg'
-})
+  if (phaserTemp.value < 100) return "bg-blue-3";
+  if (phaserTemp.value < 200) return "golden-tanoi-bg";
+  return "alert-bg";
+});
 
 const torpedoStockColor = computed(() => {
-  if (torpedoStock.value > 4) return 'bg-green-3'
-  if (torpedoStock.value > 0) return 'golden-tanoi-bg'
-  return 'alert-bg'
-})
+  if (torpedoStock.value > 4) return "bg-green-3";
+  if (torpedoStock.value > 0) return "golden-tanoi-bg";
+  return "alert-bg";
+});
 
 const scannerGrid = computed(() => {
   const grid: Record<string, { img?: string }> = {
-    '4,4': { img: getIcon(ScannerEntity.PLAYER) },
-  }
-  tubes.value.forEach(tube => {
-    const key = `${tube.targetY},${tube.targetX}`
-    if (key !== '4,4') {
-      grid[key] = { img: getIcon(ScannerEntity.KLINGON_CRUISER) }
+    "4,4": { img: getIcon(ScannerEntity.PLAYER) },
+  };
+  tubes.value.forEach((tube) => {
+    const key = `${tube.targetY},${tube.targetX}`;
+    if (key !== "4,4") {
+      grid[key] = { img: getIcon(ScannerEntity.KLINGON_CRUISER) };
     }
-  })
-  return grid
-})
+  });
+  return grid;
+});
 
 const bracketColoring = {
-  elbow: 'bg-green-4',
-  column1: ['bg-blue-1', 'bg-green-2', 'bg-blue-1'],
-  column2: ['bg-blue-3', 'bg-green-4', 'bg-blue-3'],
-  column3: ['bg-blue-1', 'bg-green-2', 'bg-blue-1'],
-  column4: ['bg-blue-3', 'bg-green-4', 'bg-blue-3'],
-  animated: 'bg-red-1',
-}
+  elbow: "bg-green-4",
+  column1: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
+  column2: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
+  column3: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
+  column4: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
+  animated: "bg-red-1",
+};
 
 const firePhasers = () => {
-  phaserTemp.value = Math.min(270, phaserTemp.value + 30)
-}
+  phaserTemp.value = Math.min(270, phaserTemp.value + 30);
+};
 
 const lockTargets = () => {
-  lockedTargets.value = Math.max(0, lockedTargets.value)
-}
+  lockedTargets.value = Math.max(0, lockedTargets.value);
+};
 
 const cycleTubeTarget = (index: number) => {
-  tubes.value[index].targetX = Math.floor(Math.random() * 8) + 1
-  tubes.value[index].targetY = Math.floor(Math.random() * 8) + 1
-}
+  tubes.value[index].targetX = Math.floor(Math.random() * 8) + 1;
+  tubes.value[index].targetY = Math.floor(Math.random() * 8) + 1;
+};
 
 const loadTube = (index: number) => {
-  if (torpedoStock.value > 0 && tubes.value[index].status === 'Empty') {
-    torpedoStock.value -= 1
-    tubes.value[index].status = 'Loaded'
+  if (torpedoStock.value > 0 && tubes.value[index].status === "Empty") {
+    torpedoStock.value -= 1;
+    tubes.value[index].status = "Loaded";
   }
-}
+};
 
 const toggleAutoLoad = (index: number) => {
-  tubes.value[index].autoLoad = !tubes.value[index].autoLoad
-}
+  tubes.value[index].autoLoad = !tubes.value[index].autoLoad;
+};
 
 const fireTorpedoes = () => {
-  const hasLoaded = tubes.value.some(t => t.status === 'Loaded')
+  const hasLoaded = tubes.value.some((t) => t.status === "Loaded");
   if (hasLoaded) {
-    tubes.value.forEach(tube => {
-      if (tube.status === 'Loaded') {
-        tube.status = 'Empty'
+    tubes.value.forEach((tube) => {
+      if (tube.status === "Loaded") {
+        tube.status = "Empty";
       }
-    })
-    lockedTargets.value = Math.max(0, lockedTargets.value - 1)
-    phaserTemp.value = Math.min(270, phaserTemp.value + 30)
+    });
+    lockedTargets.value = Math.max(0, lockedTargets.value - 1);
+    phaserTemp.value = Math.min(270, phaserTemp.value + 30);
   }
-}
+};
 </script>
 
 <template>
-  <LcarsRow id="wpnCnsDsp" flexc="h" :style="{ 'justify-content': 'space-evenly', gap: '2rem', width: '100%' }">
-
+  <LcarsRow
+    id="wpnCnsDsp"
+    flexc="h"
+    :style="{ 'justify-content': 'space-evenly', gap: '2rem', width: '100%' }"
+  >
     <!-- Column 1: Phaser Bank Control -->
     <LcarsColumn
       flex="v"
-      :style="{ 'justify-content': 'flex-start', 'align-items': 'center', gap: '0.75rem', width: '22rem' }"
+      :style="{
+        'justify-content': 'flex-start',
+        'align-items': 'center',
+        gap: '0.75rem',
+        width: '22rem',
+      }"
     >
-      <LcarsTitle version="centered" size="small" text="Phaser Bank Control" color="text-white" />
+      <LcarsTitle
+        version="centered"
+        size="small"
+        text="Phaser Bank Control"
+        color="text-white"
+      />
 
       <!-- Temperature -->
-      <LcarsComplexButton :color="randColor()" size="large" :style="{ width: '100%' }">
+      <LcarsComplexButton
+        :color="randColor()"
+        size="large"
+        :style="{ width: '100%' }"
+      >
         <LcarsCap version="round-left" />
         <LcarsBlock label="Temperature" :style="{ width: '8.5rem' }" />
         <SolidLevelBar
@@ -152,7 +187,11 @@ const fireTorpedoes = () => {
       </LcarsComplexButton>
 
       <!-- Effectiveness -->
-      <LcarsComplexButton :color="randColor()" size="large" :style="{ width: '100%' }">
+      <LcarsComplexButton
+        :color="randColor()"
+        size="large"
+        :style="{ width: '100%' }"
+      >
         <LcarsCap version="round-left" />
         <LcarsBlock label="Effectiveness" :style="{ width: '8.5rem' }" />
         <SolidLevelBar
@@ -167,7 +206,11 @@ const fireTorpedoes = () => {
       </LcarsComplexButton>
 
       <!-- Set Power Output -->
-      <LcarsComplexButton :color="randColor()" size="large" :style="{ width: '100%' }">
+      <LcarsComplexButton
+        :color="randColor()"
+        size="large"
+        :style="{ width: '100%' }"
+      >
         <LcarsCap version="round-left" />
         <LcarsBlock label="Set Power" :style="{ width: '6rem' }" />
         <LcarsButton
@@ -195,7 +238,9 @@ const fireTorpedoes = () => {
       </LcarsComplexButton>
 
       <!-- Lock + Targets locked -->
-      <LcarsRow :style="{ width: '100%', gap: '0.5rem', 'align-items': 'center' }">
+      <LcarsRow
+        :style="{ width: '100%', gap: '0.5rem', 'align-items': 'center' }"
+      >
         <LcarsButton
           version="round"
           :color="randColor()"
@@ -227,9 +272,19 @@ const fireTorpedoes = () => {
     <!-- Column 2: Torpedo Targeting -->
     <LcarsColumn
       flex="v"
-      :style="{ 'justify-content': 'flex-start', 'align-items': 'center', gap: '0.75rem', width: '26rem' }"
+      :style="{
+        'justify-content': 'flex-start',
+        'align-items': 'center',
+        gap: '0.75rem',
+        width: '26rem',
+      }"
     >
-      <LcarsTitle version="centered" size="small" text="Torpedo Targeting" color="text-white" />
+      <LcarsTitle
+        version="centered"
+        size="small"
+        text="Torpedo Targeting"
+        color="text-white"
+      />
 
       <LcarsRow :style="{ 'justify-content': 'center' }">
         <DefaultBracket
@@ -280,12 +335,26 @@ const fireTorpedoes = () => {
     <!-- Column 3: Torpedo Control -->
     <LcarsColumn
       flex="v"
-      :style="{ 'justify-content': 'flex-start', 'align-items': 'center', gap: '0.75rem', width: '24rem' }"
+      :style="{
+        'justify-content': 'flex-start',
+        'align-items': 'center',
+        gap: '0.75rem',
+        width: '24rem',
+      }"
     >
-      <LcarsTitle version="centered" size="small" text="Torpedo Control" color="text-white" />
+      <LcarsTitle
+        version="centered"
+        size="small"
+        text="Torpedo Control"
+        color="text-white"
+      />
 
       <!-- Stock level -->
-      <LcarsComplexButton :color="randColor()" size="large" :style="{ width: '100%' }">
+      <LcarsComplexButton
+        :color="randColor()"
+        size="large"
+        :style="{ width: '100%' }"
+      >
         <LcarsCap version="round-left" />
         <LcarsBlock label="Stock" :style="{ width: '5rem' }" />
         <SolidLevelBar
@@ -301,9 +370,21 @@ const fireTorpedoes = () => {
 
       <!-- Header labels -->
       <LcarsRow :style="{ width: '100%', gap: '0.5rem' }">
-        <LcarsBlock label="Tubes" :color="randColor()" :style="{ width: '7rem', flex: 'none' }" />
-        <LcarsBlock label="Auto-load" :color="randColor()" :style="{ flex: '1', 'text-align': 'center' }" />
-        <LcarsBlock label="Status" :color="randColor()" :style="{ width: '7rem', flex: 'none' }" />
+        <LcarsBlock
+          label="Tubes"
+          :color="randColor()"
+          :style="{ width: '7rem', flex: 'none' }"
+        />
+        <LcarsBlock
+          label="Auto-load"
+          :color="randColor()"
+          :style="{ flex: '1', 'text-align': 'center' }"
+        />
+        <LcarsBlock
+          label="Status"
+          :color="randColor()"
+          :style="{ width: '7rem', flex: 'none' }"
+        />
       </LcarsRow>
 
       <!-- Tube control rows -->
@@ -339,11 +420,10 @@ const fireTorpedoes = () => {
         version="round dark-light"
         color="alert-bg"
         label="Fire Torpedoes"
-        :disabled="!tubes.some(t => t.status === 'Loaded')"
+        :disabled="!tubes.some((t) => t.status === 'Loaded')"
         :style="{ width: '100%' }"
         @click="fireTorpedoes"
       />
     </LcarsColumn>
-
   </LcarsRow>
 </template>
