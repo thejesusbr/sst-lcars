@@ -1,16 +1,18 @@
 # SST LCARS Edition — Dossiê de Especificações de Engine
 
 > \*\*Documento de revisão pré-Fase 4.\*\* Não implementar nada sem aprovação do autor.
-> Status: itens 1–10 da seção 9 revisados e decididos (2026-07-20). Itens 11–15
-> (Warp Core) e item 16 (ícones) ainda abertos.
+> Status: itens 1–15 da seção 9 revisados e decididos (2026-07-20). Item 16 (ícones)
+> ainda aberto. Fase 3.5 (ajustes de interface, seção 11) planejada antes da Fase 4.
 
 \---
 
 ## 1\. Resumo Executivo
 
 O SST LCARS Edition é um revival do clássico *Super Star Trek* com interface LCARS. A Fase 3
-concluiu a migração visual de todos os consoles. A Fase 4 precisa criar a **engine de jogo**
-que conecta os controles visuais a um estado reativo centralizado.
+concluiu a migração visual de todos os consoles. Uma **Fase 3.5** (seção 11) fecha os
+displays que as mecânicas novas (Warp Core, CdD, Core Breach) exigem. A Fase 4 então
+cria a **engine de jogo** — desacoplada da UI (seção 8\.4) — que conecta os controles
+visuais a um estado reativo centralizado.
 
 Este documento mapeia:
 
@@ -666,8 +668,7 @@ própria camada de estado/adapter (Pinia, Zustand, o que for).
 
 ## 9\. Itens para Discussão
 
-> Revisão item a item concluída em 2026-07-20 (itens 1–10). Itens 11–15 (Warp Core)
-> seguem abertos.
+> Revisão item a item concluída em 2026-07-20 (itens 1–15). Item 16 (ícones) segue aberto.
 
 1. ✅ **Starchart:** nova aba no TacticalConsole (6ª aba). Ver seção 7.1.
 2. ✅ **Combat Log:** painel fixo inferior, com scroll + auto-scroll, abas Captain's Log /
@@ -693,19 +694,25 @@ NOVICE/FAIR/GOOD/EXPERT/EMERITUS é upgrade futuro, junto com item 7.
 `STARBASE_DOCK` (StarBase, resupply completo), `STARBASE_SCIENCE` (Research Station, só
 life support), `STARBASE_SUPPLY` (Supply Depot, life support + torpedos, **novo**).
 `KLINGON_BASE` é hostil, fora dessa contagem. Ver seção 2.2 e 5.4.
-11. **Sobrecarga do WC:** fórmula exata de dano/turno e de chance de explosão por % de
-sobrecarga — ainda não definida (ver seção 10\.2).
-12. **Balanceamento reparo vs. sobrecarga:** taxa de reparo focado (FIX 3x/5x) precisa
-vencer a taxa de dano em overload baixo (5–10%), senão sobrecarga nunca compensa o
-risco — validar quando as fórmulas do item 11 forem definidas.
-13. **Equipe de Controle de Danos (CdD):** mecânica de alocação/deslocamento entre
-sistemas para resolver core breach — autor quer revisar/modificar, não desenhar ainda
-(ver seção 10\.3).
-14. **Core breach — reparo parcial ou binário?** Ainda não definido se tem estados
-intermediários ou é resolvido/não-resolvido dentro da janela de 5 turnos.
-15. **HUD do SituationPanel:** acumulando pendências (torpedos restantes, status do
-escudo, status do WC/sobrecarga, alerta de radiação) — provável necessidade de
-reorganizar o layout quando os indicadores forem definidos.
+11. ✅ **Sobrecarga do WC:** curva Fibonacci indexada por overload%, dano cap 85, chance
+cap 55%. Lookup tables prontas. Ver seção 10\.2.
+12. ✅ **Balanceamento reparo vs. sobrecarga:** validado com os multiplicadores clássicos
+de FIX (achados no manual oficial: 1x/2.5x/3x/5x). Reparo focado (3x, 1 equipe, 100%)
+sobra até overload 10% (15%/turno vs. 1.10 de dano), empata perto de 15%, perde sozinho
+a partir de 18%. Ver seção 10\.3 e 10\.4.
+13. ✅ **Equipe de Controle de Danos (CdD):** mecânica completa — 6 equipes, fadiga com
+meia-vida de 3 turnos (floor 20%), empilhamento com penalidade a partir da 3ª equipe,
+recuperação linear 8%/turno idle, reset instantâneo ao docar em StarBase/Research Station
+(não em Supply Depot). Ver seção 10\.3.
+14. ✅ **Core breach — reparo parcial ou binário?** Parcial: barra de contenção 0-100,
+equipes dispatchadas nele reparam em tier de urgência máxima (5x, mesmo no espaço), e
+**todo reparo fora do breach sofre penalidade ×0.5** enquanto ele estiver ativo (radiação
+distraindo/envenenando a tripulação inteira). Simulado: equipe solo precisa de ≥80% de
+eficiência pra conter sozinha dentro dos 5 turnos; negligência total (6 equipes exaustas)
+falha por pouco. Ver seção 10\.4.
+15. ✅ **HUD do SituationPanel:** requisitos especificados (revisão 2026-07-20, item 15
+da seção 9) — torpedos restantes, status do escudo, status do WC/sobrecarga, alerta de
+breach (contagem regressiva, urgente). Layout final fica pra Fase 3.5, ver seção 11.
 16. **Ícones de base pendentes** (surgiu na revisão do item 10): `STARBASE_SUPPLY` (Supply
 Depot) não tem ícone nenhum ainda — precisa de asset novo. `KLINGON_BASE` usa `k7.png`
 hoje, autor quer revisar se é o ícone certo depois.
@@ -740,32 +747,167 @@ até o jogador reajustar (estado persistente, não ação pontual — mesmo padr
 * Enquanto ativa: **dano contínuo ao WC**, proporcional ao valor da sobrecarga.
 * Enquanto ativa: **chance de explosão por turno**, proporcional ao valor da sobrecarga.
 Explosão = condição de derrota instantânea (seção 5\.3).
-* Fórmulas exatas: item 11 da seção 9\. (em aberto).
+* **Fórmulas (decidido, revisão 2026-07-20, item 11 da seção 9\.):** curva Fibonacci
+indexada por `overload%` (0-20), com cap de dano em 85 e cap de chance em 55%:
 
-### 10.3. Core Breach (Vazamento de Radiação)
+```
+fib(overload)  = Fibonacci(overload)        // 0,1,1,2,3,5,8,13,21,34,55,89,144,233,377,610,987,1597,2584,4181,6765
+danoWC/turno   = min(85, fib(overload) / 50)
+chanceExplosao = min(0.55, fib(overload) / 12300)   // kChance = fib(20)/0.55 = 12300
+```
+
+Cap de dano em 85 só afeta `overload = 20` (19% já chega a 83.62 sem cap) — overload máximo
+ainda destrói o WC em ~2 turnos sem reparo, mantendo peso à decisão. Lookup tables prontas
+pra engine (evita recalcular Fibonacci em runtime):
+
+```typescript
+// índice = overload% (0-20)
+const WARP_CORE_DAMAGE_TABLE = [
+  0, 0.02, 0.02, 0.04, 0.06, 0.1, 0.16, 0.26, 0.42, 0.68, 1.1,
+  1.78, 2.88, 4.66, 7.54, 12.2, 19.74, 31.94, 51.68, 83.62, 85,
+]
+
+const WARP_CORE_EXPLOSION_CHANCE_TABLE = [
+  0, 0.00008, 0.00008, 0.00016, 0.00024, 0.00041, 0.00065, 0.00106,
+  0.00171, 0.00276, 0.00447, 0.00724, 0.01171, 0.01894, 0.03065,
+  0.04959, 0.08024, 0.12984, 0.21008, 0.33992, 0.55,
+]
+```
+
+Abaixo de 10% de sobrecarga o WC aguenta tranquilo (dano e chance quase zero); acima de
+10-11% acelera rápido — 18%+ já é jogar os dados a cada turno.
+
+### 10.3. Equipes de Controle de Danos (CdD)
+
+> Decidido em revisão 2026-07-20 (item 13 da seção 9\.). Substitui o reparo focado
+> genérico (FIX) do manual original por um pool de equipes nomeadas, com fadiga.
+
+* **6 equipes** fixas (`teamCount = 6`), menos que os 9 subsistemas (8 + WC) — força
+priorização, nunca dá pra cobrir tudo ao mesmo tempo.
+* Cada equipe: `{ efficiency: 0-100, assignedSystem: SystemKey | null, status: 'idle' |
+'working' | 'cooldown' }`.
+* **Fadiga** — cai enquanto trabalha, meia-vida de 3 turnos, floor em 20% (nunca para,
+"queima" força de vontade):
+
+```
+efficiency(turnosTrabalhados) = max(20, 100 * 0.5^(turnosTrabalhados / 3))
+```
+
+| turnos trabalhando | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7+ |
+|-|-|-|-|-|-|-|-|-|
+| efficiency | 100% | 79.4% | 63.0% | 50% | 39.7% | 31.5% | 25% | 20% (floor) |
+
+* **Recuperação** — linear, idle, `+8%/turno` (recuperação plena de uma equipe no floor
+até 100% leva exatamente 10 turnos: `(100-20)/10 = 8`).
+* **Docking:** `STARBASE_DOCK` e `STARBASE_SCIENCE` restauram todas as equipes a 100%
+instantaneamente (licença/entretenimento da tripulação). `STARBASE_SUPPLY` **não**
+recupera fadiga (sem área de lazer).
+* **Empilhamento** — múltiplas equipes no mesmo sistema somam, mas com retorno
+decrescente a partir da **3ª** equipe (excesso de gente atrapalha):
+
+```
+multiplicador por posição na fila: [1, 1, 0.5, 0.25, 0.125, 0.0625]
+```
+
+* **Taxa de reparo** — reusa os multiplicadores clássicos de FIX do manual oficial
+(1x/2.5x/3x/5x), com base `1x = 5%/turno` (mesma taxa já fixada pro `REST`, seção 5\.5):
+
+```
+repairPerTurn(sistema) = 5 * tier * Σ(efficiency_i/100 * stackMult_i)
+// tier = 3 (equipe focada, no espaço) ou 5 (focada + docado em STARBASE_DOCK)
+```
+
+**Validação (item 12 da seção 9\.)** contra a tabela de dano do WC (seção 10\.2, 1 equipe
+100%, tier 3): sobra até overload 10% (15/turno vs. 1.10 de dano), empata perto de 15%
+(15 vs. 12.2), perde sozinho a partir de 18% (15 vs. 51.68) — precisa empilhar.
+
+### 10.4. Core Breach (Vazamento de Radiação)
 
 * Roll **independente** do de explosão — não depende de sobrecarga estar ativa.
 * Chance por turno proporcional à % de dano acumulado do WC (não à sobrecarga). Ou seja:
 dano de combate no WC já é perigoso por si só, mesmo que sobrecarga nunca tenha sido usada.
 * Ao disparar: tripulação tem **5 turnos** para reparo imediato (despacho de equipe de
-Controle de Danos) antes de morrer por envenenamento de radiação — nova condição de
-derrota (seção 5\.3).
-* Reparo pode exigir deslocar equipe de CdD de outro sistema — **mecânica de alocação de
-equipes ainda não definida**, autor quer revisar antes de fechar (item 13 da seção 9\.).
+CdD) antes de morrer por envenenamento de radiação — condição de derrota (seção 5\.3).
 
-### 10.4. Integração com Sistemas Existentes
+**Modelagem (decidido, revisão 2026-07-20, item 14 da seção 9\.):**
+
+```typescript
+radiationBreach: {
+  active: boolean
+  containment: number       // 0-100, progresso de contenção
+  turnsRemaining: number    // começa em 5, regressivo
+} | null
+```
+
+* Reparo do breach é **parcial** (barra de contenção), não binário. Equipes dispatchadas
+nele usam a mesma fórmula da seção 10\.3, mas com **tier fixo em 5x** (urgência máxima —
+vale o bônus de "docado" mesmo no espaço, é vida ou morte):
+`repairPerTurn(breach) = 5 * 5 * Σ(efficiency_i/100 * stackMult_i)`
+* Enquanto `active`, **todo reparo fora do breach sofre penalidade ×0.5** — radiação
+distrai/envenena a tripulação inteira, não só quem está na ruptura.
+* Resolve quando `containment >= 100` antes de `turnsRemaining` zerar. Se zerar antes:
+morte por radiação (derrota, seção 5\.3).
+* Dispatch é decisão manual do jogador (igual FIX normal) — não puxa equipes
+automaticamente.
+
+**Simulação de verificação:**
+
+| cenário | taxa/turno | turnos p/ conter | resultado |
+|-|-|-|-|
+| 1 equipe fresca (100%) | 25.00 | 4 | ✅ contido |
+| 1 equipe meio-fatigada (50%) | 12.50 | 8 | ☠️ morte por radiação |
+| 1 equipe exausta (floor 20%) | 5.00 | 20 | ☠️ morte por radiação |
+| 2 equipes frescas | 50.00 | 2 | ✅ contido |
+| 2 equipes: 1 fresca + 1 exausta | 30.00 | 4 | ✅ contido |
+| 3 equipes frescas | 62.50 | 2 | ✅ contido |
+| todas as 6 exaustas (20% cada) | 14.69 | 7 | ☠️ morte por radiação |
+
+Equipe solo precisa de **≥80% de eficiência** pra conter sozinha dentro de 5 turnos
+(`25*(e/100)*5 >= 100 → e>=80`). Negligência total (nenhuma equipe descansada) falha por
+pouco — castigo justo por má gestão de fadiga, não RNG cego.
+
+### 10.5. Integração com Sistemas Existentes
 
 |Sistema existente|Como se conecta|
 |-|-|
-|EngineeringConsole|Home natural: WC vira linha na tabela de subsistemas; slider de sobrecarga reusa o padrão visual de temperatura/efetividade já usado no WeaponsConsole|
-|SituationPanel (HUD)|Precisa de indicador persistente de status do WC/sobrecarga e, se core breach ativo, de um estado de alerta próprio (paralelo ao Red Alert)|
+|EngineeringConsole|Home natural: WC vira linha na tabela de subsistemas; slider de sobrecarga reusa o padrão visual de temperatura/efetividade já usado no WeaponsConsole; novo painel de gerenciamento das 6 equipes de CdD (dispatch, efficiency, status) — ver Fase 3.5, seção 11|
+|SituationPanel (HUD)|Indicador persistente de status do WC/sobrecarga e, se core breach ativo, alerta próprio urgente com contagem regressiva (paralelo ao Red Alert) — ver seção 11|
 |Fila de mensagens (seção 5\.6 / 7\.2)|Canal natural para alertas de core breach e explosão iminente — mesmo padrão de 4 slots com ack do manual original|
-|FIX / reparo focado (seção 5\.5, 6\.2)|WC vira alvo prioritário natural do reparo focado (3x/5x); ver restrição de balanceamento, item 12 da seção 9\.|
+|FIX / reparo focado (seção 5\.5, 6\.2)|Substituído pela mecânica de equipes de CdD (seção 10\.3) — reusa os multiplicadores 1x/2.5x/3x/5x do manual, agora por equipe nomeada com fadiga|
 |Dilítio / planetas (LAND/ORBIT/USE)|Cristal de dilítio vira o reabastecimento de emergência do WC danificado — conecta duas mecânicas hoje órfãs no dossiê|
 |Fim de jogo (seção 5\.3)|+2 condições de derrota: explosão do WC, morte da tripulação por radiação|
 
 \---
 
-*Fim do dossiê. Itens 1–10 decididos (2026-07-20). Aguardando revisão dos itens 11–15
-(Warp Core) e 16 (ícones) antes de iniciar implementação da Fase 4.*
+## 11\. Fase 3.5 — Ajustes de Interface (pré-Fase 4)
+
+> Decidido em revisão 2026-07-20 (item 15 da seção 9\.). As mecânicas novas (Warp Core,
+> CdD, Core Breach) e as decisões dos itens 1–10 pedem displays que não existem em nenhum
+> console hoje. Antes de escrever a engine (Fase 4), fechar essas telas evita
+> retrabalho de layout no meio da implementação — trabalho de **UI apenas**, sem lógica
+> de estado real (segue com props/mock, igual o resto da Fase 3).
+
+**Escopo:**
+
+* **SituationPanel** — reorganizar o layout 2×2 pra caber: torpedos restantes, status do
+escudo, status do WC/sobrecarga (nominal/danificado/breach), alerta de breach (contagem
+regressiva de turnos, visual urgente — não pode ser discreto)
+* **EngineeringConsole** — WC como 9ª linha na tabela de subsistemas + slider de
+sobrecarga (1-20%, reusa padrão visual de temperatura/efetividade do WeaponsConsole);
+novo painel de gerenciamento de equipes de CdD (6 equipes: status, efficiency, dispatch)
+* **ShieldConsole** — extrair e integrar o SVG real da Enterprise (item 5), props
+reativas de opacidade/dano
+* **HelmConsole** — instanciar `WarpSpeed` no canvas existente, componente com prop
+`warpFactor` (item 6)
+* **TacticalConsole** — 6ª aba Star Chart (item 1)
+* **Combat Log** — novo painel fixo inferior, scroll + auto-scroll, abas Captain's
+Log/General/Engineering (item 2)
+* **GameScreen** — scaffold dos 3 modos (briefing/playing/result), sem lógica de
+transição real ainda (item 3)
+
+\---
+
+*Fim do dossiê. Itens 1–15 da seção 9 revisados e decididos (2026-07-20). Item 16 (ícones
+de base pendentes) segue aberto. Próximo passo: Fase 3.5 (ajustes de interface, seção 11),
+depois Fase 4 (engine core + Pinia, seção 8\.4).*
 
