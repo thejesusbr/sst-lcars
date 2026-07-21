@@ -399,3 +399,254 @@
   background-color: #006666 !important;
   border-color: #006666 !important;
 }
+
+/* Variacoes red-alert do Green Group -- valores de referencia da propria
+   LCARS SDK (src/lcars-sdk/themes/sdk_theme-default.css, tema padrao da
+   lib, comentado no index.html legado e nunca usado -- mas os valores de
+   red-alert dela pro Green Group sao os mesmos daqui, reaproveitados). */
+.red-alert .bg-green-1,
+.red-alert .bg-green-1 > *:not([class*="bg-"]) {
+  background-color: #ffff66 !important;
+  border-color: #ffff66 !important;
+}
+.red-alert .bg-green-2,
+.red-alert .bg-green-2 > *:not([class*="bg-"]) {
+  background-color: #ffff66 !important;
+  border-color: #ffff66 !important;
+}
+.red-alert .bg-green-3,
+.red-alert .bg-green-3 > *:not([class*="bg-"]) {
+  background-color: #cccccc !important;
+  border-color: #cccccc !important;
+}
+.red-alert .bg-green-4,
+.red-alert .bg-green-4 > *:not([class*="bg-"]) {
+  background-color: #ff0000 !important;
+  border-color: #ff0000 !important;
+}
+.red-alert .bg-green-5,
+.red-alert .bg-green-5 > *:not([class*="bg-"]) {
+  background-color: #cc0000 !important;
+  border-color: #cc0000 !important;
+}
+
+/* Blue/Purple/Orange/Red/Grey Groups -- usados por lcarsColors.pool
+   (useLcarsColors.ts: primary/secondary/tertiary/custom arrays e os
+   bracketColoring dos consoles), mas nunca tinham sido definidos em
+   nenhum CSS portado -- nem no app legado (so bg-white e bg-green-*
+   existiam em src/css/colors.css). Valores e variacoes red-alert
+   portados de src/lcars-sdk/themes/sdk_theme-default.css (tema padrao
+   da LCARS SDK, comentado no index.html legado e nunca ligado, mas com
+   a paleta legado inteira ja definida -- mesma fonte reaproveitada pro
+   Green Group acima). bg-red-* e bg-grey-* nao tem variacao red-alert
+   la (vermelho ja e vermelho; cinza e neutro de chrome), mantido igual. */
+
+/* Blue Group */
+.bg-blue-1,
+.bg-blue-1 > *:not([class*="bg-"]) {
+  background-color: #99ccff !important;
+  border-color: #99ccff !important;
+}
+.bg-blue-2,
+.bg-blue-2 > *:not([class*="bg-"]) {
+  background-color: #88aacc !important;
+  border-color: #88aacc !important;
+}
+.bg-blue-3,
+.bg-blue-3 > *:not([class*="bg-"]) {
+  background-color: #3399cc !important;
+  border-color: #3399cc !important;
+}
+.bg-blue-4,
+.bg-blue-4 > *:not([class*="bg-"]) {
+  background-color: #006699 !important;
+  border-color: #006699 !important;
+}
+.bg-blue-5,
+.bg-blue-5 > *:not([class*="bg-"]) {
+  background-color: #003366 !important;
+  border-color: #003366 !important;
+}
+.red-alert .bg-blue-1,
+.red-alert .bg-blue-1 > *:not([class*="bg-"]) {
+  background-color: #999999 !important;
+  border-color: #999999 !important;
+}
+.red-alert .bg-blue-2,
+.red-alert .bg-blue-2 > *:not([class*="bg-"]) {
+  background-color: #990000 !important;
+  border-color: #990000 !important;
+}
+.red-alert .bg-blue-3,
+.red-alert .bg-blue-3 > *:not([class*="bg-"]) {
+  background-color: #990000 !important;
+  border-color: #990000 !important;
+}
+.red-alert .bg-blue-4,
+.red-alert .bg-blue-4 > *:not([class*="bg-"]) {
+  background-color: #660000 !important;
+  border-color: #660000 !important;
+}
+.red-alert .bg-blue-5,
+.red-alert .bg-blue-5 > *:not([class*="bg-"]) {
+  background-color: #330000 !important;
+  border-color: #330000 !important;
+}
+
+/* Purple Group */
+.bg-purple-1,
+.bg-purple-1 > *:not([class*="bg-"]) {
+  background-color: #cc99cc !important;
+  border-color: #cc99cc !important;
+}
+.bg-purple-2,
+.bg-purple-2 > *:not([class*="bg-"]) {
+  background-color: #ccbbff !important;
+  border-color: #ccbbff !important;
+}
+.bg-purple-3,
+.bg-purple-3 > *:not([class*="bg-"]) {
+  background-color: #aa99ee !important;
+  border-color: #aa99ee !important;
+}
+.bg-purple-4,
+.bg-purple-4 > *:not([class*="bg-"]) {
+  background-color: #6677bb !important;
+  border-color: #6677bb !important;
+}
+.bg-purple-5,
+.bg-purple-5 > *:not([class*="bg-"]) {
+  background-color: #666699 !important;
+  border-color: #666699 !important;
+}
+.red-alert .bg-purple-1,
+.red-alert .bg-purple-1 > *:not([class*="bg-"]) {
+  background-color: #ff0000 !important;
+  border-color: #ff0000 !important;
+}
+.red-alert .bg-purple-2,
+.red-alert .bg-purple-2 > *:not([class*="bg-"]) {
+  background-color: #ffff66 !important;
+  border-color: #ffff66 !important;
+}
+.red-alert .bg-purple-3,
+.red-alert .bg-purple-3 > *:not([class*="bg-"]) {
+  background-color: #ff0000 !important;
+  border-color: #ff0000 !important;
+}
+.red-alert .bg-purple-4,
+.red-alert .bg-purple-4 > *:not([class*="bg-"]) {
+  background-color: #cc0000 !important;
+  border-color: #cc0000 !important;
+}
+.red-alert .bg-purple-5,
+.red-alert .bg-purple-5 > *:not([class*="bg-"]) {
+  background-color: #cc0000 !important;
+  border-color: #cc0000 !important;
+}
+
+/* Orange Group */
+.bg-orange-1,
+.bg-orange-1 > *:not([class*="bg-"]) {
+  background-color: #ccddbb !important;
+  border-color: #ccddbb !important;
+}
+.bg-orange-2,
+.bg-orange-2 > *:not([class*="bg-"]) {
+  background-color: #bbbb77 !important;
+  border-color: #bbbb77 !important;
+}
+.bg-orange-3,
+.bg-orange-3 > *:not([class*="bg-"]) {
+  background-color: #ddbb77 !important;
+  border-color: #ddbb77 !important;
+}
+.bg-orange-4,
+.bg-orange-4 > *:not([class*="bg-"]) {
+  background-color: #dd8844 !important;
+  border-color: #dd8844 !important;
+}
+.bg-orange-5,
+.bg-orange-5 > *:not([class*="bg-"]) {
+  background-color: #cc6600 !important;
+  border-color: #cc6600 !important;
+}
+.red-alert .bg-orange-1,
+.red-alert .bg-orange-1 > *:not([class*="bg-"]) {
+  background-color: #cccccc !important;
+  border-color: #cccccc !important;
+}
+.red-alert .bg-orange-2,
+.red-alert .bg-orange-2 > *:not([class*="bg-"]) {
+  background-color: #ffff66 !important;
+  border-color: #ffff66 !important;
+}
+.red-alert .bg-orange-3,
+.red-alert .bg-orange-3 > *:not([class*="bg-"]) {
+  background-color: #ff0000 !important;
+  border-color: #ff0000 !important;
+}
+.red-alert .bg-orange-4,
+.red-alert .bg-orange-4 > *:not([class*="bg-"]) {
+  background-color: #cc0000 !important;
+  border-color: #cc0000 !important;
+}
+.red-alert .bg-orange-5,
+.red-alert .bg-orange-5 > *:not([class*="bg-"]) {
+  background-color: #999999 !important;
+  border-color: #999999 !important;
+}
+
+/* Red Group -- sem variacao red-alert (ja e vermelho) */
+.bg-red-1,
+.bg-red-1 > *:not([class*="bg-"]) {
+  background-color: #ff0000 !important;
+  border-color: #ff0000 !important;
+}
+.bg-red-2,
+.bg-red-2 > *:not([class*="bg-"]) {
+  background-color: #cc0000 !important;
+  border-color: #cc0000 !important;
+}
+.bg-red-3,
+.bg-red-3 > *:not([class*="bg-"]) {
+  background-color: #990000 !important;
+  border-color: #990000 !important;
+}
+.bg-red-4,
+.bg-red-4 > *:not([class*="bg-"]) {
+  background-color: #660000 !important;
+  border-color: #660000 !important;
+}
+.bg-red-5,
+.bg-red-5 > *:not([class*="bg-"]) {
+  background-color: #330000 !important;
+  border-color: #330000 !important;
+}
+
+/* Grey Group -- sem variacao red-alert (neutro de chrome) */
+.bg-grey-1,
+.bg-grey-1 > *:not([class*="bg-"]) {
+  background-color: #cccccc !important;
+  border-color: #cccccc !important;
+}
+.bg-grey-2,
+.bg-grey-2 > *:not([class*="bg-"]) {
+  background-color: #999999 !important;
+  border-color: #999999 !important;
+}
+.bg-grey-3,
+.bg-grey-3 > *:not([class*="bg-"]) {
+  background-color: #777777 !important;
+  border-color: #777777 !important;
+}
+.bg-grey-4,
+.bg-grey-4 > *:not([class*="bg-"]) {
+  background-color: #555555 !important;
+  border-color: #555555 !important;
+}
+.bg-grey-5,
+.bg-grey-5 > *:not([class*="bg-"]) {
+  background-color: #333333 !important;
+  border-color: #333333 !important;
+}
