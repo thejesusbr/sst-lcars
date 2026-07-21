@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch, onUnmounted } from "vue";
 import { useLcarsColors } from "@/composables/useLcarsColors";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
@@ -8,9 +8,9 @@ import LcarsBar from "@/components/elements/LcarsBar.vue";
 import LcarsCap from "@/components/elements/LcarsCap.vue";
 import LcarsElbow from "@/components/elements/LcarsElbow.vue";
 import LcarsText from "@/components/elements/LcarsText.vue";
-import LcarsButton from "@/components/elements/LcarsButton.vue";
 import LcarsComplexButton from "@/components/elements/LcarsComplexButton.vue";
 import LcarsWrapper from "@/components/elements/LcarsWrapper.vue";
+import LcarsToggleSwitch from "../elements/LcarsToggleSwitch.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -59,6 +59,21 @@ const warpCoreColor = computed(() => {
   if (props.warpCoreStatus === "Damaged") return "golden-tanoi-bg";
   return "caribbean-green-bg";
 });
+
+// Mesmo mecanismo do app legado (src/modules/situation-panel.js:182-187):
+// so alterna a classe "red-alert" no body. O resto (botoes com randColor()
+// mudando pra tons de vermelho) ja vem do CSS portado em theme.css
+// (.red-alert .primary-interactive etc), sem precisar de logica extra aqui.
+const redAlert = ref(false);
+
+watch(redAlert, (value) => {
+  document.body.classList.toggle("red-alert", value);
+  emit("toggle-red-alert");
+});
+
+onUnmounted(() => {
+  document.body.classList.remove("red-alert");
+});
 </script>
 
 <template>
@@ -79,7 +94,7 @@ const warpCoreColor = computed(() => {
         version="horizontal"
         direction="bottom-left"
         size="medium"
-        :color="lcarsColors.primary[5]"
+        :color="lcarsColors.primary[2]"
       />
     </LcarsColumn>
 
@@ -264,11 +279,24 @@ const warpCoreColor = computed(() => {
 
         <!-- Botão Toggle Red Alert -->
         <LcarsColumn>
-          <LcarsButton
-            label="Toggle Red Alert"
-            :color="randColor()"
-            @click="emit('toggle-red-alert')"
-          />
+          <LcarsComplexButton :color="randColor()">
+            <LcarsCap version="round-left" />
+            <LcarsBlock
+              label="ALERT"
+              :color="lcarsColors.primary[2]"
+              :style="{ flex: '1' }"
+            />
+            <LcarsText :text="redAlert ? 'RED' : 'GREEN'" />
+            <LcarsBlock version="decorator" :style="{ flex: '1' }" />
+            <LcarsToggleSwitch
+              :color="lcarsColors.primary[3]"
+              v-model="redAlert"
+            />
+            <LcarsCap version="round-right" :color="lcarsColors.primary[4]" />
+          </LcarsComplexButton>
+        </LcarsColumn>
+        <LcarsColumn
+          ><LcarsBlock :color="lcarsColors.primary[1]" />
         </LcarsColumn>
       </LcarsRow>
 
