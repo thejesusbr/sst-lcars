@@ -1,8 +1,8 @@
 # SST LCARS Edition — Dossiê de Especificações de Engine
 
 > \*\*Documento de revisão pré-Fase 4.\*\* Não implementar nada sem aprovação do autor.
-> Status: itens 1–15 da seção 9 revisados e decididos (2026-07-20). Item 16 (ícones)
-> ainda aberto. Fase 3.5 (ajustes de interface, seção 11) planejada antes da Fase 4.
+> Status: todos os 16 itens da seção 9 revisados e decididos (2026-07-20). Fase 3.5
+> (ajustes de interface, seção 11) planejada antes da Fase 4.
 
 \---
 
@@ -58,8 +58,8 @@ Cada célula do Short Range Scanner pode conter:
 |Nave Romulana|`ROMULAN\_SCOUT`|`romulan-Scout.png`|
 |StarBase (doca, resupply completo)|`STARBASE\_DOCK`|`space-Dock.png`|
 |Research Station (só life support)|`STARBASE\_SCIENCE`|`regula-1.png`|
-|Supply Depot (life support + torpedos)|`STARBASE\_SUPPLY`|**sem ícone ainda** — ver item 16|
-|Base Klingon (hostil, fora da contagem de bases)|`KLINGON\_BASE`|`k7.png` — ícone a revisar, ver item 16|
+|Supply Depot (life support + torpedos)|`STARBASE\_SUPPLY`|`k7.png`|
+|Base Klingon (hostil, fora da contagem de bases)|`KLINGON\_BASE`|`battelh.png`|
 |Planeta|`PLANET`|aleatório do pool|
 |Estrela|`STAR`|`★` (placeholder)|
 |Vazio|—|célula em branco|
@@ -668,7 +668,7 @@ própria camada de estado/adapter (Pinia, Zustand, o que for).
 
 ## 9\. Itens para Discussão
 
-> Revisão item a item concluída em 2026-07-20 (itens 1–15). Item 16 (ícones) segue aberto.
+> Revisão item a item concluída em 2026-07-20 (itens 1–16).
 
 1. ✅ **Starchart:** nova aba no TacticalConsole (6ª aba). Ver seção 7.1.
 2. ✅ **Combat Log:** painel fixo inferior, com scroll + auto-scroll, abas Captain's Log /
@@ -713,9 +713,12 @@ falha por pouco. Ver seção 10\.4.
 15. ✅ **HUD do SituationPanel:** requisitos especificados (revisão 2026-07-20, item 15
 da seção 9) — torpedos restantes, status do escudo, status do WC/sobrecarga, alerta de
 breach (contagem regressiva, urgente). Layout final fica pra Fase 3.5, ver seção 11.
-16. **Ícones de base pendentes** (surgiu na revisão do item 10): `STARBASE_SUPPLY` (Supply
-Depot) não tem ícone nenhum ainda — precisa de asset novo. `KLINGON_BASE` usa `k7.png`
-hoje, autor quer revisar se é o ícone certo depois.
+16. ✅ **Ícones de base:** `k7.png` (K-7, estação **federal** de "The Trouble with
+Tribbles" — nunca foi klingon) é reaproveitado pra `STARBASE_SUPPLY`, junto com
+`space-Dock.png` (StarBase) e `regula-1.png` (Research Station) — os 3 ícones de estação
+disponíveis no pool cobrem os 3 tipos federais. `KLINGON_BASE` passa a usar
+`battelh.png` (bat'leth), já que não há ícone de base klingon no estilo do pool. Ver
+seção 2\.2.
 
 \---
 
@@ -907,7 +910,7 @@ transição real ainda (item 3)
 
 \---
 
-*Fim do dossiê. Itens 1–15 da seção 9 revisados e decididos (2026-07-20). Item 16 (ícones
-de base pendentes) segue aberto. Próximo passo: Fase 3.5 (ajustes de interface, seção 11),
-depois Fase 4 (engine core + Pinia, seção 8\.4).*
+*Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20). Próximo
+passo: Fase 3.5 (ajustes de interface, seção 11), depois Fase 4 (engine core + Pinia,
+seção 8\.4).*
 
