@@ -11,6 +11,7 @@ import LcarsComplexButton from '@/components/elements/LcarsComplexButton.vue'
 import LcarsText from '@/components/elements/LcarsText.vue'
 import LcarsTitle from '@/components/elements/LcarsTitle.vue'
 import LcarsScanner from '@/components/elements/LcarsScanner.vue'
+import LcarsToggleSwitch from '@/components/elements/LcarsToggleSwitch.vue'
 import DefaultBracket from '@/components/widgets/DefaultBracket.vue'
 import SolidLevelBar from '@/components/widgets/SolidLevelBar.vue'
 
@@ -319,11 +320,11 @@ const fireTorpedoes = () => {
           :style="{ width: '7rem', flex: 'none' }"
           @click="loadTube(i)"
         />
-        <LcarsBlock
-          :color="tube.autoLoad ? 'bg-green-4' : 'bg-grey-3'"
-          :label="tube.autoLoad ? 'ON' : 'OFF'"
-          :style="{ flex: '1', cursor: 'pointer' }"
-          @click="toggleAutoLoad(i)"
+        <LcarsToggleSwitch
+          :model-value="tube.autoLoad"
+          :color="randColor()"
+          :style="{ flex: '1' }"
+          @update:model-value="toggleAutoLoad(i)"
         />
         <LcarsBlock
           :label="tube.status"
