@@ -1,7 +1,8 @@
 # SST LCARS Edition — Dossiê de Especificações de Engine
 
 > \*\*Documento de revisão pré-Fase 4.\*\* Não implementar nada sem aprovação do autor.
-> Status: rascunho para discussão — 2026-07-08
+> Status: itens 1–10 da seção 9 revisados e decididos (2026-07-20). Itens 11–15
+> (Warp Core) e item 16 (ícones) ainda abertos.
 
 \---
 
@@ -53,9 +54,10 @@ Cada célula do Short Range Scanner pode conter:
 |Klingon D7|`KLINGON\_D7`|`klingon-D7.png`|
 |Warbird Romulano|`ROMULAN\_WARBIRD`|`warbird.png`|
 |Nave Romulana|`ROMULAN\_SCOUT`|`romulan-Scout.png`|
-|Starbase (doca)|`STARBASE\_DOCK`|`space-Dock.png`|
-|Estação Científica|`STARBASE\_SCIENCE`|`regula-1.png`|
-|Base Klingon|`KLINGON\_BASE`|`k7.png`|
+|StarBase (doca, resupply completo)|`STARBASE\_DOCK`|`space-Dock.png`|
+|Research Station (só life support)|`STARBASE\_SCIENCE`|`regula-1.png`|
+|Supply Depot (life support + torpedos)|`STARBASE\_SUPPLY`|**sem ícone ainda** — ver item 16|
+|Base Klingon (hostil, fora da contagem de bases)|`KLINGON\_BASE`|`k7.png` — ícone a revisar, ver item 16|
 |Planeta|`PLANET`|aleatório do pool|
 |Estrela|`STAR`|`★` (placeholder)|
 |Vazio|—|célula em branco|
@@ -209,7 +211,11 @@ Warp Factor slider (1–8), botão Engage, canvas WarpSpeed.
 * **Todos os eventos do D-Pad** — apenas `up` tem listener e só faz `console.log`
 * **Lógica de movimento** — consumo de energia proporcional à distância
 * **Fórmula de Stardate** — deslocamento warp avança o stardate
-* **WarpSpeed no Vue** — `WarpSpeed` não é importado nem instanciado no canvas
+* **WarpSpeed no Vue (decidido, revisão 2026-07-20, item 6 da seção 9)** — reusar
+`src/js/warpspeed.min.js` como está: confirmado sem dependência de jQuery (Canvas API +
+DOM vanilla puro). Encapsular num componente Vue que instancia `new WarpSpeed(targetId,
+config)` e expõe prop `warpFactor` atualizando `config.targetSpeed` reativamente (o script
+já interpola via `speedAdjFactor`, sem precisar reimplementar nada)
 * **Botão Auto-Navigate** — ir automaticamente à Starbase mais próxima
 * **Validação de destino** — impedir movimento para célula ocupada ou fora de grade
 * **Atualização das coordenadas** após movimento bem-sucedido
@@ -238,6 +244,10 @@ calculam dano nos Klingons
 * **Cálculo de dano inimigo nos escudos** — nenhuma ligação com ShieldConsole
 * **Mira automática** — "Lock" existe mas não identifica inimigos reais do estado global
 * **Energia de phaser da energia principal** — disparo devia consumir `phaserPower` da Main Energy
+* **Mira de torpedo por clique (decidido, revisão 2026-07-20, item 9 da seção 9)** —
+substitui X,Y manual/"Cycle" atual: jogador clica na nave alvo no scanner de targeting
+(`LcarsScanner` já emite `cell-click` com `{ row, col, cellData }`, ver `LcarsScanner.vue:38`)
+e atribui tubo(s) ao alvo selecionado. Sem bearing 0-360°.
 
 \---
 
@@ -248,8 +258,10 @@ Shield Energy e Main Energy, SVG placeholder da Enterprise.
 
 **O que falta:**
 
-* **SVG real da Enterprise** — o legado `shield-console.js` tem um SVG técnico de 188 KB que
-mostra as linhas de força dos escudos; o atual é um placeholder simples
+* **SVG real da Enterprise (decidido, revisão 2026-07-20, item 5 da seção 9)** — extrair o
+SVG técnico de 188 KB do legado `shield-console.js` (sem problema conhecido, não redesenhar)
+e encapsular num componente Vue com props reativas: opacidade do escudo por nível de energia,
+cor de partes danificadas por subsistema
 * **Binding ao estado global** — `shieldEnergy` e `mainEnergy` são locais; precisam ser
 espelhados de/para `useGameState`
 * **Fadiga dos escudos por dano inimigo** — Klingons reduzem `shieldEnergy` em cada turno
@@ -388,19 +400,24 @@ score = klingonsDestroyed \* 10 - (startardate\_limit - currentStardate) \* 2
 ### 5.4. Atracagem em Starbase (Docking Sequence)
 
 O botão "Dock" existe no NavSensing, mas a sequência de atracagem não está especificada.
-No SST clássico, atracar em uma Starbase:
+Confirmado no manual oficial (revisão 2026-07-20, ver item 10 da seção 9): resupply varia
+**por tipo de base**, não é igual pra todas.
 
-1. Reabastece Main Energy até o máximo
-2. Reabastece Torpedos até o máximo
-3. Repara todos os sistemas danificados (instant)
-4. **Condição:** precisa estar em setor adjacente a uma Starbase
+|Tipo|Energia|Torpedos|Life Support|Reparo sistemas|
+|-|-|-|-|-|
+|`STARBASE\_DOCK` (StarBase)|✅ máximo|✅ máximo|✅|✅ instant, todos os sistemas|
+|`STARBASE\_SUPPLY` (Supply Depot)|❌|✅ máximo|✅|❌|
+|`STARBASE\_SCIENCE` (Research Station)|❌|❌|✅|❌|
 
-**Proposta:** Um evento `dock-complete` emitido por `useGameState` que:
+**Condição:** precisa estar em setor adjacente à base.
 
-* Atualiza `mainEnergy → 4500`
-* Atualiza `torpedoStock → 12`
-* Atualiza todos os subsistemas → 100%
-* Emite feedback visual no SituationPanel ("Docking complete. All systems nominal.")
+**Proposta:** Um evento `dock-complete` emitido por `useGameState`, com o resultado
+dependente do `ScannerEntity` da base — ex: `dock-complete({ type: 'STARBASE_DOCK' })` →
+`mainEnergy → 4500`, `torpedoStock → 12`, todos os subsistemas → 100%; já
+`dock-complete({ type: 'STARBASE_SCIENCE' })` só confirma life support (sem efeito
+mecânico hoje modelado — life support não tem contraparte no `GameState` ainda).
+Emite feedback visual no SituationPanel ("Docking complete. All systems nominal." /
+variante por tipo).
 
 \---
 
@@ -502,7 +519,7 @@ sem sobrecarregá-lo.
 └──────────────────────────────────────┘
 ```
 
-**Adicionado como 6ª aba no TacticalConsole.**
+**Adicionado como 6ª aba no TacticalConsole.** Decidido (revisão 2026-07-20, item 1 da seção 9).
 
 \---
 
@@ -511,14 +528,10 @@ sem sobrecarregá-lo.
 **Justificativa:** O SST de texto depende de mensagens para comunicar o que acontece. Sem um log,
 o jogador não sabe se seu disparo acertou, quantos escudos absorveu, se um Klingon morreu.
 
-**Proposta A — Painel fixo inferior:** Uma área de texto persistente abaixo do GameHud,
-sempre visível, com os últimos N eventos em ordem reversa.
-
-**Proposta B — Sobreposição de evento:** Um componente tipo "toast" que aparece por 3–5 segundos
-com a mensagem e desaparece. Múltiplas mensagens em sequência.
-
-**Proposta C — Painel no SituationPanel:** Uma 3ª seção expandível abaixo dos indicadores de
-status, com scroll, que mostra o log da missão atual.
+**Decidido (revisão 2026-07-20, item 2 da seção 9):** painel fixo inferior, abaixo do GameHud,
+sempre visível. Com scroll e **auto-scroll pra última mensagem**. Dividido em **abas** por
+categoria de entrada: **Captain's Log**, **General**, **Engineering** — ver `CombatLogEntry`
+na seção 8.1.
 
 \---
 
@@ -578,7 +591,7 @@ interface GameState {
 
   // Alertas
   alertLevel: 'normal' | 'yellow' | 'red'
-  combatLog: CombatLogEntry\[]
+  combatLog: CombatLogEntry\[]   // category: 'captain' | 'general' | 'engineering' — ver seção 7.2
 }
 ```
 
@@ -632,22 +645,54 @@ interface GameState {
 |Adequação ao projeto|✅ Estado complexo, multi-console|⚠️ OK para estados simples|
 
 **Recomendação:** Pinia, dado o volume de estado e a necessidade de inspeção durante
-desenvolvimento da engine.
+desenvolvimento da engine. **Decidido (revisão 2026-07-20, item 4 da seção 9).**
+
+\---
+
+### 8.4. Arquitetura: Engine Desacoplada da UI
+
+> Decidido em revisão 2026-07-20 (item 4 da seção 9). Motivação: reaproveitar a engine num
+> futuro **companion app tricorder** (mobile), fora da Vue app atual.
+
+* **Engine core em TS puro** — toda a lógica de regra (turno, combate, fórmulas do Warp Core,
+condições de vitória/derrota, docking) mora em módulo(s) sem import de Vue nem Pinia. Funções
+puras/classes que recebem estado e retornam novo estado (ou mutam um objeto plano).
+* **Pinia como camada de estado fina** — a store da Vue app chama o engine core e expõe o
+resultado como estado reativo. Pinia não implementa regra nenhuma, só adapta.
+* Qualquer client futuro (o tricorder, ou outro) importa o mesmo engine core e escreve sua
+própria camada de estado/adapter (Pinia, Zustand, o que for).
 
 \---
 
 ## 9\. Itens para Discussão
 
-1. **Starchart:** nova aba no TacticalConsole (6ª aba) ou painel no NavSensingConsole?
-2. **Combat Log:** toast efêmero, painel fixo inferior, ou seção no SituationPanel?
-3. **Tela de resultado:** componente GameScreen wrapping GameHud, ou overlay fullscreen?
-4. **Pinia vs. composable simples** para o estado global
-5. **SVG real do ShieldConsole:** extrair os \~188KB do legado, ou redesenhar?
-6. **WarpSpeed:** reusar `warpspeed.min.js` via `<script>` global, ou reimplementar em Canvas API?
-7. **IA Klingon:** turno simples (ataque após cada ação), ou sistema de pontos de ação?
-8. **Dificuldade:** o SST clássico tem dificuldades NOVICE/FAIR/GOOD/EXPERT/EMERITUS — implementar?
-9. **Torpedos:** manter mira X,Y (atual) ou adicionar também a opção de bearing 0-360° do clássico?
-10. **Starbases:** apenas STARBASE\_DOCK ou manter os dois tipos (Dock + Science)?
+> Revisão item a item concluída em 2026-07-20 (itens 1–10). Itens 11–15 (Warp Core)
+> seguem abertos.
+
+1. ✅ **Starchart:** nova aba no TacticalConsole (6ª aba). Ver seção 7.1.
+2. ✅ **Combat Log:** painel fixo inferior, com scroll + auto-scroll, abas Captain's Log /
+General / Engineering. Ver seção 7.2 e `CombatLogEntry` na seção 8.1.
+3. ✅ **Tela de resultado:** componente `GameScreen.vue` com 3 modos (briefing/playing/result),
+envolvendo o `GameHud`. Ver seção 7.3.
+4. ✅ **Pinia vs. composable simples:** Pinia confirmado, mas como camada fina — a lógica de
+regra vai num engine core em TS puro, desacoplado de Vue/Pinia, pensando em reaproveitamento
+futuro (companion app tricorder). Ver seção 8.4.
+5. ✅ **SVG real do ShieldConsole:** extrair o SVG do legado (sem problema conhecido),
+encapsular em componente com props reativas (opacidade do escudo, cor de dano por parte).
+Ver seção 4.4.
+6. ✅ **WarpSpeed:** reusar `warpspeed.min.js` (confirmado sem dependência de jQuery — Canvas
+API + DOM vanilla). Encapsular em componente com prop `warpFactor`. Ver seção 4.2.
+7. ✅ **IA Klingon (MVP):** turno simples pro MVP — mais próximo do clássico, upgrade pra
+sistema de pontos de ação fica pra depois, quando/se dificuldade (item 8) entrar. Ver
+comparativo de prós/contras discutido em sessão de revisão.
+8. ✅ **Dificuldade (MVP):** fora do MVP. Nível único fixo (FAIR) por ora; seletor
+NOVICE/FAIR/GOOD/EXPERT/EMERITUS é upgrade futuro, junto com item 7.
+9. ✅ **Torpedos:** mira por clique no scanner (usa `cell-click` já emitido por
+`LcarsScanner`), substitui X,Y manual/"Cycle" atual. Sem bearing 0-360°. Ver seção 4.3.
+10. ✅ **Starbases:** confirmado no manual oficial — **3 tipos de base federação**, não 2:
+`STARBASE_DOCK` (StarBase, resupply completo), `STARBASE_SCIENCE` (Research Station, só
+life support), `STARBASE_SUPPLY` (Supply Depot, life support + torpedos, **novo**).
+`KLINGON_BASE` é hostil, fora dessa contagem. Ver seção 2.2 e 5.4.
 11. **Sobrecarga do WC:** fórmula exata de dano/turno e de chance de explosão por % de
 sobrecarga — ainda não definida (ver seção 10\.2).
 12. **Balanceamento reparo vs. sobrecarga:** taxa de reparo focado (FIX 3x/5x) precisa
@@ -661,6 +706,9 @@ intermediários ou é resolvido/não-resolvido dentro da janela de 5 turnos.
 15. **HUD do SituationPanel:** acumulando pendências (torpedos restantes, status do
 escudo, status do WC/sobrecarga, alerta de radiação) — provável necessidade de
 reorganizar o layout quando os indicadores forem definidos.
+16. **Ícones de base pendentes** (surgiu na revisão do item 10): `STARBASE_SUPPLY` (Supply
+Depot) não tem ícone nenhum ainda — precisa de asset novo. `KLINGON_BASE` usa `k7.png`
+hoje, autor quer revisar se é o ícone certo depois.
 
 \---
 
@@ -718,5 +766,6 @@ equipes ainda não definida**, autor quer revisar antes de fechar (item 13 da se
 
 \---
 
-*Fim do dossiê. Aguardando revisão antes de iniciar implementação da Fase 4.*
+*Fim do dossiê. Itens 1–10 decididos (2026-07-20). Aguardando revisão dos itens 11–15
+(Warp Core) e 16 (ícones) antes de iniciar implementação da Fase 4.*
 
