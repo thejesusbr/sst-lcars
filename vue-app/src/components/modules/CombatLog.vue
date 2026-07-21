@@ -50,12 +50,8 @@ watch(entries, () => {
     label="Combat Log"
     :coloring="{ headerTitle: 'text-white' }"
     :style="{
-      position: 'fixed',
-      bottom: '0',
-      left: '0',
-      right: '0',
       height: '12rem',
-      zIndex: '100',
+      flex: 'none',
     }"
   >
     <template #header-controls-before>

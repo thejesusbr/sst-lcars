@@ -87,7 +87,7 @@ const toggleConsole = (console: ConsoleType) => {
         <LcarsCap version="round-right" size="small" :color="randColor()" />
       </LcarsRow>
 
-      <LcarsWrapper version="row" flexc="v" id="tct-cns-ctn" :style="{ 'justify-content': 'space-evenly' }">
+      <LcarsWrapper version="row" flexc="v" id="tct-cns-ctn" :style="{ 'justify-content': 'space-evenly', 'overflow-y': 'auto', 'min-height': '0' }">
         <HelmConsole v-show="activeConsole === 'helm'" />
         <ShieldConsole v-show="activeConsole === 'shield'" />
         <WeaponsConsole v-show="activeConsole === 'weapons'" />
