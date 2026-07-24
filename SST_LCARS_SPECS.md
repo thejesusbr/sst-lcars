@@ -998,10 +998,51 @@ atualiza a velocidade ao vivo (`watch(warpFactor, ...)`), guardado por `warpEnga
 * **Tipos:** `vite-env.d.ts` — `WarpSpeed` ganhou `SPEED_ADJ_FACTOR: number` na declaração
 (além de `TARGET_SPEED` que já existia).
 
+### 12.5. ShieldConsole — indicador do casco e mecânica de integridade (proposta, Fase 4)
+
+* Coluna do visor (`DefaultBracket` + `EnterpriseShieldSvg`) aumentada: 22rem → 34rem de
+largura, `minHeight` do bracket 14rem → 22rem — o casco/contorno estava pequeno demais.
+* **Contorno do escudo com gradiente contínuo de cor** (não mais degraus): preto
+(0%/desativado) → vermelho (25%) → laranja (50%) → amarelo (75%) → verde (100%),
+interpolado linearmente entre os stops mais próximos do valor atual (`SHIELD_COLOR_STOPS`
+em `EnterpriseShieldSvg.vue`). Opacidade (`shieldOpacity`, piso 0.15) soma a variação de
+brilho por cima da cor.
+* **Botão "Simulate Hit"** (`ShieldConsole.vue`) — sem mecânica de combate real ainda,
+escolhe uma zona aleatória entre as 8 (`SHIELD_ZONE_KEYS`) e aplica um flash branco
+momentâneo nela. Usa `:fill` direto + `transition: fill 0.25s ease-out` em vez da classe
+global `white-flash` — essa classe anima `background-color`/`color`, que não tem efeito em
+`fill` de elementos SVG (`<path>`/`<rect>`).
+* **Esclarecimento do usuário (2026-07-24) — separar as duas variáveis, importante pra
+Fase 4:**
+  * `shieldEnergy` (0-2500, já existe) é **energia**: afeta **quanto o escudo consegue
+  absorver** de dano e a **velocidade de regeneração**.
+  * `shieldIntegrity` (0-100%, **nova prop** em `EnterpriseShieldSvg.vue`, substituiu a
+  antiga `shieldLevel`) é o **resultado** dessa dinâmica de energia — é o que o gradiente
+  de cor do contorno do escudo representa, **não** a energia bruta.
+  * **Ainda não implementado** (fica pra Fase 4, junto do resto da lógica de combate):
+  a fórmula real de como energia (capacidade de absorção + regen) produz integridade ao
+  longo do tempo/turnos. Hoje `shieldIntegrity` em `ShieldConsole.vue` é só um `ref` mock
+  local (começa em 100, cai 5-15 a cada "Simulate Hit", sem regen) — suficiente pra
+  visualizar o gradiente, mas **não** é a mecânica de verdade.
+  * Ao implementar: `shieldIntegrity` deve ser derivada de `shieldEnergy` + histórico de
+  dano (não substituída por ele) — não reintroduzir o acoplamento direto que a revisão
+  desfez.
+* **Contorno mais grosso:** `stroke-width` do path de contorno subiu de `1.80028` pra `4`
+— em integridade baixa (perto do preto) o traço fino ficava difícil de enxergar.
+* **`shieldStatus` agora também depende de `shieldIntegrity`** (`ShieldConsole.vue`):
+`'UP'` só se `shieldEnergy > 0 && shieldIntegrity > 0`, senão `'DOWN'` — antes só olhava
+energia. Texto `shdStsIndTxt` pisca (`blink`) quando `DOWN`.
+* **Reset ao entrar no console:** `TacticalConsole.vue` usa `v-show` (todos os consoles
+ficam montados, só escondidos) — `ShieldConsole` ganhou prop `active` (recebe
+`activeConsole === 'shield'` do pai) e um `watch` que reseta `shieldIntegrity` pra 100
+toda vez que `active` vira `true`. Necessário porque ainda não existe regen: sem o reset,
+o dano acumulado do "Simulate Hit" ficaria preso pra sempre depois da primeira visita à
+aba. **Fase 4 remove esse reset** quando a regen de verdade existir.
+
 \---
 
 *Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20). Fase 3.5
 concluída, revisão de UX pré-Fase 4 em andamento (seção 12). Próximo passo: terminar a
-revisão painel-por-painel (Weapons, Shield, Engineering, Nav restantes), depois Fase 4
+revisão painel-por-painel (Weapons, Engineering, Nav restantes), depois Fase 4
 (engine core + Pinia, seção 8\.4).*
 

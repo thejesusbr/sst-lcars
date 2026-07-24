@@ -15,7 +15,7 @@ type Story = StoryObj<typeof meta>
 
 export const Nominal: Story = {
   args: {
-    shieldLevel: 2500,
+    shieldIntegrity: 100,
     systemIntegrity: {
       warp: 100, srs: 100, lrs: 100, phasers: 100, photons: 100, shields: 100, damage: 100, life: 100,
     },
@@ -29,7 +29,7 @@ export const Nominal: Story = {
 
 export const DamagedZones: Story = {
   args: {
-    shieldLevel: 900,
+    shieldIntegrity: 50,
     systemIntegrity: {
       warp: 100, srs: 45, lrs: 100, phasers: 60, photons: 100, shields: 100, damage: 100, life: 100,
     },
@@ -43,7 +43,7 @@ export const DamagedZones: Story = {
 
 export const WarpEnginesOffline: Story = {
   args: {
-    shieldLevel: 200,
+    shieldIntegrity: 15,
     systemIntegrity: {
       warp: 0, srs: 100, lrs: 100, phasers: 100, photons: 100, shields: 30, damage: 100, life: 100,
     },

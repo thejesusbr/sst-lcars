@@ -7,14 +7,21 @@ import { computed } from 'vue'
 export type ShieldZoneKey = 'warp' | 'srs' | 'lrs' | 'phasers' | 'photons' | 'shields' | 'damage' | 'life'
 
 const props = withDefaults(defineProps<{
-  shieldLevel?: number
+  // Integridade do escudo (0-100%) -- NAO e o nivel de energia. Energia afeta
+  // capacidade de absorcao e velocidade de regen (mecanica de Fase 4, ver
+  // SST_LCARS_SPECS.md 4.4); integridade e o resultado disso, e e o que
+  // aparece no contorno do escudo aqui.
+  shieldIntegrity?: number
   systemIntegrity?: Partial<Record<ShieldZoneKey, number>>
+  hitZone?: ShieldZoneKey | null
 }>(), {
-  shieldLevel: 1500,
+  shieldIntegrity: 100,
   systemIntegrity: () => ({}),
+  hitZone: null,
 })
 
 const integrityOf = (key: ShieldZoneKey) => props.systemIntegrity?.[key] ?? 100
+const isHit = (key: ShieldZoneKey) => props.hitZone === key
 
 // Mesmo idioma de 3 niveis do EngineeringConsole/getSystemStatus: nominal -> danificado -> offline
 const zoneColor = (key: ShieldZoneKey) => {
@@ -24,7 +31,38 @@ const zoneColor = (key: ShieldZoneKey) => {
   return '#ff3333'
 }
 
-const shieldOpacity = computed(() => Math.max(0.15, Math.min(1, props.shieldLevel / 2500)))
+const shieldOpacity = computed(() => Math.max(0.15, Math.min(1, props.shieldIntegrity / 100)))
+
+// Gradiente continuo (nao degraus): preto (0%/desativado) -> vermelho (25%) ->
+// laranja (50%) -> amarelo (75%) -> verde (100%), interpolado linear no par
+// de stops mais proximo do nivel atual.
+const SHIELD_COLOR_STOPS: [number, [number, number, number]][] = [
+  [0, [0, 0, 0]],
+  [25, [255, 0, 0]],
+  [50, [255, 136, 0]],
+  [75, [255, 255, 0]],
+  [100, [0, 255, 0]],
+]
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+
+const shieldColor = computed(() => {
+  const percent = Math.max(0, Math.min(100, props.shieldIntegrity))
+  let [lowerP, lowerRgb] = SHIELD_COLOR_STOPS[0]
+  let [upperP, upperRgb] = SHIELD_COLOR_STOPS[SHIELD_COLOR_STOPS.length - 1]
+  for (let i = 0; i < SHIELD_COLOR_STOPS.length - 1; i++) {
+    const [fromP, fromRgb] = SHIELD_COLOR_STOPS[i]
+    const [toP, toRgb] = SHIELD_COLOR_STOPS[i + 1]
+    if (percent >= fromP && percent <= toP) {
+      ;[lowerP, lowerRgb] = [fromP, fromRgb]
+      ;[upperP, upperRgb] = [toP, toRgb]
+      break
+    }
+  }
+  const t = (percent - lowerP) / (upperP - lowerP || 1)
+  const [r, g, b] = lowerRgb.map((c, i) => Math.round(lerp(c, upperRgb[i], t)))
+  return `rgb(${r}, ${g}, ${b})`
+})
 </script>
 
 <template>
@@ -49,15 +87,15 @@ const shieldOpacity = computed(() => Math.max(0.15, Math.min(1, props.shieldLeve
     <g clip-path="url(#enterprise-hull-clip)">
       <g transform="translate(17.390995,31.941346)">
         <g transform="matrix(1.4634143,0,0,1.4650067,8.0602879,14.851891)">
-        <path :class="{ blink: integrityOf('srs') === 0 }" d="M 82.00,68.00 L 82.00,-16.00 A 84.00,84.00 0 0,1 161.89,42.04 Z" :fill="zoneColor('srs')" fill-opacity="0.45" stroke="none" />
-        <path :class="{ blink: integrityOf('lrs') === 0 }" d="M 82.00,68.00 L 161.89,42.04 A 84.00,84.00 0 0,1 131.37,135.96 Z" :fill="zoneColor('lrs')" fill-opacity="0.45" stroke="none" />
-        <path :class="{ blink: integrityOf('shields') === 0 }" d="M 82.00,68.00 L 131.37,135.96 A 84.00,84.00 0 0,1 32.63,135.96 Z" :fill="zoneColor('shields')" fill-opacity="0.45" stroke="none" />
-        <path :class="{ blink: integrityOf('life') === 0 }" d="M 82.00,68.00 L 32.63,135.96 A 84.00,84.00 0 0,1 2.11,42.04 Z" :fill="zoneColor('life')" fill-opacity="0.45" stroke="none" />
-        <path :class="{ blink: integrityOf('damage') === 0 }" d="M 82.00,68.00 L 2.11,42.04 A 84.00,84.00 0 0,1 82.00,-16.00 Z" :fill="zoneColor('damage')" fill-opacity="0.45" stroke="none" />
-          <rect :class="{ blink: integrityOf('photons') === 0 }" x="160" y="15" width="45" height="100" :fill="zoneColor('photons')" fill-opacity="0.45" />
-          <rect :class="{ blink: integrityOf('phasers') === 0 }" x="205" y="15" width="75" height="100" :fill="zoneColor('phasers')" fill-opacity="0.45" />
-          <rect :class="{ blink: integrityOf('warp') === 0 }" x="178" y="-18" width="204" height="40" :fill="zoneColor('warp')" fill-opacity="0.45" />
-          <rect :class="{ blink: integrityOf('warp') === 0 }" x="178" y="108" width="204" height="32" :fill="zoneColor('warp')" fill-opacity="0.45" />
+        <path :class="{ blink: integrityOf('srs') === 0 }" d="M 82.00,68.00 L 82.00,-16.00 A 84.00,84.00 0 0,1 161.89,42.04 Z" :fill="isHit('srs') ? '#ffffff' : zoneColor('srs')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" stroke="none" />
+        <path :class="{ blink: integrityOf('lrs') === 0 }" d="M 82.00,68.00 L 161.89,42.04 A 84.00,84.00 0 0,1 131.37,135.96 Z" :fill="isHit('lrs') ? '#ffffff' : zoneColor('lrs')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" stroke="none" />
+        <path :class="{ blink: integrityOf('shields') === 0 }" d="M 82.00,68.00 L 131.37,135.96 A 84.00,84.00 0 0,1 32.63,135.96 Z" :fill="isHit('shields') ? '#ffffff' : zoneColor('shields')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" stroke="none" />
+        <path :class="{ blink: integrityOf('life') === 0 }" d="M 82.00,68.00 L 32.63,135.96 A 84.00,84.00 0 0,1 2.11,42.04 Z" :fill="isHit('life') ? '#ffffff' : zoneColor('life')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" stroke="none" />
+        <path :class="{ blink: integrityOf('damage') === 0 }" d="M 82.00,68.00 L 2.11,42.04 A 84.00,84.00 0 0,1 82.00,-16.00 Z" :fill="isHit('damage') ? '#ffffff' : zoneColor('damage')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" stroke="none" />
+          <rect :class="{ blink: integrityOf('photons') === 0 }" x="160" y="15" width="45" height="100" :fill="isHit('photons') ? '#ffffff' : zoneColor('photons')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" />
+          <rect :class="{ blink: integrityOf('phasers') === 0 }" x="205" y="15" width="75" height="100" :fill="isHit('phasers') ? '#ffffff' : zoneColor('phasers')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" />
+          <rect :class="{ blink: integrityOf('warp') === 0 }" x="178" y="-18" width="204" height="40" :fill="isHit('warp') ? '#ffffff' : zoneColor('warp')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" />
+          <rect :class="{ blink: integrityOf('warp') === 0 }" x="178" y="108" width="204" height="32" :fill="isHit('warp') ? '#ffffff' : zoneColor('warp')" style="transition: fill 0.25s ease-out" fill-opacity="0.45" />
         </g>
       </g>
     </g>
@@ -67,8 +105,8 @@ const shieldOpacity = computed(() => Math.max(0.15, Math.min(1, props.shieldLeve
       <g transform="matrix(1.4634143,0,0,1.4650067,8.0602879,14.851891)">
         <path
           fill="none"
-          stroke="#00ff00"
-          stroke-width="1.80028"
+          :stroke="shieldColor"
+          stroke-width="4"
           :style="{ opacity: shieldOpacity }"
           d="m 73.542463,167.07827 c -11.675656,-1.34213 -25.167881,-5.17212 -34.284005,-9.73208 -6.655299,-3.32903 -13.612032,-7.69602 -16.776995,-10.53152 -0.814418,-0.72963 -2.211067,-1.79335 -3.103668,-2.3638 -1.840077,-1.17595 -10.856625,-9.95879 -13.6023636,-13.24977 -2.3924876,-2.86758 -4.3716197,-5.66109 -6.75795712,-9.53875 -1.07508968,-1.74696 -2.63058908,-4.25524 -3.45666298,-5.57395 -1.5050921,-2.40266 -5.7916423,-12.29324 -6.9652663,-16.07132 -2.289253,-7.369442 -2.809026,-9.421303 -3.737561,-14.754427 -1.265056,-7.265963 -1.708405,-18.231338 -1.030088,-25.477212 0.922141,-9.850422 3.510237,-19.829879 7.8865746,-30.409888 C -5.2543892,22.047631 -1.2407468,15.298267 5.0623324,6.9297204 7.8424889,3.2385272 18.311607,-7.1842228 21.602176,-9.536871 c 1.407467,-1.006291 3.30854,-2.40999 4.224606,-3.119331 5.499689,-4.2586 18.830058,-11.099524 26.009242,-13.347512 10.578584,-3.312429 11.495311,-3.507501 21.07307,-4.484198 7.299614,-0.744381 11.41395,-0.740514 19.702578,0.01852 9.976578,0.91361 12.215288,1.37981 21.706438,4.52023 5.87843,1.945048 15.29626,6.237776 19.65208,8.957578 10.89258,6.801383 12.70788,8.8830314 22.02534,15.9221683 8.76817,6.8524619 15.49436,6.5180493 20.96886,3.0643965 7.97676,-5.0322282 10.67543,-5.5421759 13.38384,-6.0598443 6.4437,-1.2316069 11.41667,-1.5964739 15.31213,-1.5591778 8.44552,0.080859 20.0217,-0.1235941 23.78869,1.1968663 1.71061,0.5996263 11.84398,0.7590038 14.96518,0.6465538 2.10253,-0.075751 26.72853,0.6974292 55.40107,0.5420607 28.67257,-0.1553686 53.21363,-1.7500265 53.6622,-1.9057834 0.44857,-0.1557567 14.63141,-0.6772015 16.52328,-0.5510261 5.81245,0.1456579 4.8295,-0.8642356 8.4692,7.1763929 0.77306,-0.64735766 3.82364,0.2241935 7.95482,2.2000054 2.66798,1.9214984 10.36031,3.5172644 0.11083,8.2794497 -4.36147,0.961837 -10.1067,6.508632 -12.44739,7.40926 -5.50967,2.009381 -7.12603,2.656437 -36.03679,2.776689 l -30.39824,0.126441 -10.44457,0.01568 c -10.64276,0.276648 -19.52082,6.808193 -24.66582,11.475622 -1.9607,3.43537 -3.86208,8.161573 6.85136,17.331525 9.58779,5.603197 10.36955,7.203193 12.28896,11.629547 1.22762,2.781871 1.5691,8.522906 -2.8477,13.631306 -1.43481,1.871171 -6.04287,7.313782 -10.08958,9.683459 -14.25868,17.525433 3.11444,20.486443 17.14438,25.022293 l 26.50511,1.20242 c 15.1617,0.68783 28.38307,2.46298 28.9147,2.17785 0.51631,-0.27688 11.40828,1.21411 14.68261,1.51244 6.93336,1.13982 20.00853,2.63257 22.1901,10.13453 0.34644,2.03202 -2.43163,7.03286 -9.2609,8.65797 -0.99239,0.23613 -2.56643,2.88516 -3.56693,4.97952 -32.89088,0.45541 -35.12549,0.7907 -79.07513,0.73513 -51.97916,-0.0659 -66.5436,-0.15733 -68.78195,0.50171 -2.08337,0.61341 -10.10283,1.60213 -22.05939,1.58542 -15.14606,-0.0212 -19.54749,-2.20632 -32.45051,-11.76067 -11.08532,-7.31289 -14.34976,7.03005 -26.49123,13.76518 -0.15379,0.003 -1.1399,0.75023 -2.19135,1.66217 -3.68463,3.19573 -15.52171,10.5687 -19.47749,12.13195 -8.81989,3.48546 -12.98743,4.94328 -15.74959,5.50925 -1.76612,0.36189 -3.37217,0.75772 -3.56897,0.87958 -0.19679,0.12189 -2.85976,0.67983 -5.917703,1.23988 -4.701892,0.86112 -7.031281,1.03729 -15.094504,1.14157 -5.244031,0.0678 -10.173625,0.0498 -10.95465,-0.0399 z"
         />

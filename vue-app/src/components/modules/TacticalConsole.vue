@@ -95,7 +95,7 @@ const toggleConsole = (console: ConsoleType) => {
 
       <LcarsWrapper version="row" flexc="v" id="tct-cns-ctn" :style="{ 'justify-content': 'space-evenly', 'overflow-y': 'auto', 'min-height': '0' }">
         <HelmConsole v-show="activeConsole === 'helm'" />
-        <ShieldConsole v-show="activeConsole === 'shield'" />
+        <ShieldConsole v-show="activeConsole === 'shield'" :active="activeConsole === 'shield'" />
         <WeaponsConsole v-show="activeConsole === 'weapons'" />
         <NavSensingConsole v-show="activeConsole === 'nav'" />
         <EngineeringConsole v-show="activeConsole === 'engineering'" />
