@@ -203,24 +203,30 @@ Starbases Left, Toggle Red Alert.
 
 \---
 
-### 4.2. HelmConsole ⚠️ Quase completo (visual), sem lógica
+### 4.2. HelmConsole ⚠️ Visual e interação completos, sem estado global
 
-**O que cobre:** D-Pad 8 direções (visual), Current Location, Set Destination (System/Sector),
-Warp Factor slider (1–8), botão Engage, canvas WarpSpeed.
+**O que cobre (atualizado na revisão de UX pré-Fase 4, seção 12):** D-Pad 8 direções
+funcional (altera coordenada local `destination`), Current Location, Set Destination
+(toggle System/Sector com highlight de seleção), Warp Factor slider (1–8) sem redundância
+de label, botão Engage liga/desliga o efeito WarpSpeed de verdade (com aceleração/
+desaceleração assimétricas), Impulse Power (0-100%) com botão Boost (overdrive a 100%,
+cooldown, timeout de segurança).
 
-**O que falta:**
+**O que falta (fica pra Fase 4 — ver seção 12.4 pra não regredir o que já existe):**
 
-* **Todos os eventos do D-Pad** — apenas `up` tem listener e só faz `console.log`
-* **Lógica de movimento** — consumo de energia proporcional à distância
-* **Fórmula de Stardate** — deslocamento warp avança o stardate
-* **WarpSpeed no Vue (decidido, revisão 2026-07-20, item 6 da seção 9)** — reusar
-`src/js/warpspeed.min.js` como está: confirmado sem dependência de jQuery (Canvas API +
-DOM vanilla puro). Encapsular num componente Vue que instancia `new WarpSpeed(targetId,
-config)` e expõe prop `warpFactor` atualizando `config.targetSpeed` reativamente (o script
-já interpola via `speedAdjFactor`, sem precisar reimplementar nada)
+* **Todos os efeitos do D-Pad são locais** — só mudam o `destination` (mock), não
+o estado real da nave nem energia
+* **Lógica de movimento** — consumo de energia proporcional à distância, ainda não
+existe
+* **Fórmula de Stardate** — deslocamento warp avança o stardate, ainda não existe
+* **Current Location hardcoded** (`cur-loc-sys`/`cur-loc-sec`, sempre "3, 4") — precisa
+amarrar à posição real da nave no `useGameState.ts`, condizente com o que o
+NavSensingConsole mostrar
 * **Botão Auto-Navigate** — ir automaticamente à Starbase mais próxima
 * **Validação de destino** — impedir movimento para célula ocupada ou fora de grade
 * **Atualização das coordenadas** após movimento bem-sucedido
+* **Impulse Power sem efeito real** — não consome energia nem afeta velocidade de
+deslocamento sub-warp ainda
 
 **Proposta de integração (sem implementar):**
 
@@ -910,7 +916,92 @@ transição real ainda (item 3)
 
 \---
 
-*Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20). Próximo
-passo: Fase 3.5 (ajustes de interface, seção 11), depois Fase 4 (engine core + Pinia,
-seção 8\.4).*
+## 12\. Revisão de UX painel-por-painel (pré-Fase 4, 2026-07-24)
+
+> Depois da Fase 3.5, o usuário revisou os consoles um a um pedindo ajustes de UX pontuais
+> antes de começar a Fase 4 de fato (SituationPanel e TacticalConsole revisados e
+> aprovados, HelmConsole em detalhe abaixo). Tudo aqui é **mecânica de UI com estado
+> local** (`ref`/`computed` no próprio componente) — a Fase 4 deve **plugar o estado real
+> por cima disso sem redesenhar a interação**, os comportamentos abaixo já foram
+> validados com o usuário e não devem regredir.
+
+### 12.1. Padrão de destaque de seleção ativa
+
+Convenção consolidada nesta revisão, usada em toda aba/botão de seleção mútua exclusiva:
+
+* **Inativo:** `filter: brightness(0.6)` no elemento
+* **Ativo:** sem filtro (`''`)
+
+Aplicado em: abas do Combat Log (Cap./Ship/Eng. Log) no `SituationPanel.vue`, nos 6
+botões do menu do `TacticalConsole.vue` (Helm/Shields/Weapons/Nav/Engineering/Star
+Chart), e nos botões System/Sector do `set-dst-inp` no `HelmConsole.vue`.
+
+### 12.2. HelmConsole — D-Pad e Set Destination
+
+* Estado local: `destination = { sys: {x,y}, sec: {x,y} }`, cada eixo clampado 1-8.
+* `activeDstToggle` (`'sys' | 'sec'`) escolhido pelos botões System/Sector (highlight
+padrão da seção 12.1) — define qual dupla de coordenadas o D-Pad altera.
+* D-Pad (`adjustDestination(dx, dy)`, ligado via `bindPadButtons()` em `onMounted`):
+  * Cardeais: `xy_ctl_left/right` alteram X, `xy_ctl_up/down` alteram Y
+  * Diagonais alteram os dois eixos ao mesmo tempo: `NE`→(+1,-1), `SE`→(+1,+1),
+  `SW`→(-1,+1), `NW`→(-1,-1)
+* **Bug corrigido (herdado do legado `src/modules/helm-console.js`):** os ids
+`dst-sys-ind`/`dst-sec-ind` estavam trocados de posição (texto de `sys` renderizava do
+lado do label "Sector" e vice-versa). Corrigido — sem outras referências no código a
+esses ids, seguro de ter corrigido.
+* **Current Location continua mock** (ver 4.2) — a ligação real é trabalho de Fase 4.
+
+### 12.3. HelmConsole — Impulse Power e Boost
+
+* `impulsePower` (0-100%, passo 5 nos botões -/+) é a base; `boostedImpulsePower`
+(computed) retorna **100% fixo** enquanto `impulseBoost` estiver ativo (não 120% —
+correção do usuário sobre o pedido original de "afterburner").
+* **Esclarecimento do usuário (2026-07-24), importante pra Fase 4:** o indicador é um
+medidor de **potência nominal**, por isso trava em 100% mesmo com boost — ele nunca deve
+mostrar acima disso. A **potência real do motor**, porém, vai a **120%** enquanto o boost
+está ativo, e é esse valor real (não o exibido) que deve entrar na fórmula de tempo de
+deslocamento dentro de um sistema quando a Fase 4 implementar isso — não usar
+`boostedImpulsePower` (que é só de display) pra esse cálculo, e sim algo como
+`impulseBoost ? 120 : impulsePower`.
+* Boost (`toggleBoost()`):
+  * Duração máxima **60s** (auto-desliga via `setTimeout`, `BOOST_MAX_DURATION`)
+  * Cooldown = `30s mínimo + max(0, segundos_ativo − 30)` (`BOOST_COOLDOWN_BASE = 30`) —
+  ou seja, cooldown máximo é 60s (boost usado pelo tempo máximo permitido)
+  * Não pode reativar durante o cooldown (`canActivateBoost`)
+  * Barra de cooldown (`SolidLevelBar`) ao lado do botão, drena de `boostCooldownTotal`
+  até 0
+* **Efeitos visuais (pedido explícito do usuário, não inverter sem confirmar de novo):**
+  * Boost **ativo** → classe `white-flash` (`lcars-sdk.css`, já existente)
+  * **Cooldown** (não ativo, `boostCooldownRemaining > 0`) → classe `blink`
+  * Filtro de brightness foi removido do botão de Boost — redundante com o `white-flash`
+
+### 12.4. HelmConsole — Warp Engage/desengate
+
+* `WARP_SPEED_SCALE = 15` — a lib `WarpSpeed` não trava `TARGET_SPEED` (só `SPEED >= 0`),
+mas o default da lib (`SPEED=0.7`) é pensado pra um fundo parado sutil. `warpFactor` (1-8)
+é multiplicado por esse fator antes de virar `TARGET_SPEED`, senão o rastro
+(`WARP_EFFECT_LENGTH * SPEED`) fica imperceptível. `warpEffectLength` também subiu de 5
+(default da lib) pra 8 na config do `new WarpSpeed(...)`.
+* **`SPEED_ADJ_FACTOR` é mutável na instância** (não só no construtor) e é trocado
+dinamicamente pelo `engageWarp()`:
+  * Engajando: `WARP_ACCEL_FACTOR = 0.08` (entrada suave em warp)
+  * Desengajando: `WARP_DECEL_FACTOR = 0.2` (ajustado manualmente pelo usuário; 0.25
+  testado e achado rápido demais) — decaimento bem mais rápido que o acelerar, pra não
+  deixar a animação "arrastando" depois que o jogador desengata. Motivo: o capitão só
+  pode agir de novo depois que a nave sai do warp de verdade, então o dropout não pode
+  ficar lento.
+* `TARGET_SPEED` só é setado pra `warpFactor * WARP_SPEED_SCALE` quando `warpEngaged`
+é `true`; ao desengatar vai pra `0`. Mudar `warpFactor` (Set Warp) enquanto engajado
+atualiza a velocidade ao vivo (`watch(warpFactor, ...)`), guardado por `warpEngaged`.
+* Botão Engage: classe `white-flash` enquanto `warpEngaged` (mesmo padrão do Boost, seção
+12.3) — sem filtro de brightness (removido pelo usuário, redundante com o flash).
+* **Tipos:** `vite-env.d.ts` — `WarpSpeed` ganhou `SPEED_ADJ_FACTOR: number` na declaração
+(além de `TARGET_SPEED` que já existia).
+
+\---
+
+*Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20). Fase 3.5
+concluída, revisão de UX pré-Fase 4 em andamento (seção 12). Próximo passo: terminar a
+revisão painel-por-painel (Weapons, Shield, Engineering, Nav restantes), depois Fase 4
+(engine core + Pinia, seção 8\.4).*
 

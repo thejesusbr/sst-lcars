@@ -37,34 +37,39 @@ const toggleConsole = (console: ConsoleType) => {
         id="hlm-cns-btn"
         label="Helm"
         :color="randColor()"
+        :style="{ filter: activeConsole === 'helm' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('helm')"
       />
-      
+
       <LcarsButton
         id="shd-cns-btn"
         label="Shields"
         :color="randColor()"
+        :style="{ filter: activeConsole === 'shield' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('shield')"
       />
-      
+
       <LcarsButton
         id="wpn-cns-btn"
         label="Weapons"
         :color="randColor()"
+        :style="{ filter: activeConsole === 'weapons' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('weapons')"
       />
-      
+
       <LcarsButton
         id="nav-cns-btn"
         label="Nav & Sensing"
         :color="randColor()"
+        :style="{ filter: activeConsole === 'nav' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('nav')"
       />
-      
+
       <LcarsButton
         id="eng-cns-btn"
         label="Engineering"
         :color="randColor()"
+        :style="{ filter: activeConsole === 'engineering' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('engineering')"
       />
 
@@ -72,6 +77,7 @@ const toggleConsole = (console: ConsoleType) => {
         id="str-cns-btn"
         label="Star Chart"
         :color="randColor()"
+        :style="{ filter: activeConsole === 'starchart' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('starchart')"
       />
 

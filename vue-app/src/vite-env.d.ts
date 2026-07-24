@@ -3,5 +3,6 @@
 declare class WarpSpeed {
   constructor(targetId: string, config?: Record<string, unknown>)
   TARGET_SPEED: number
+  SPEED_ADJ_FACTOR: number
   destroy(): void
 }

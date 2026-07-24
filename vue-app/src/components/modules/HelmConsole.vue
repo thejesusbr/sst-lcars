@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useLcarsColors } from "@/composables/useLcarsColors";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
@@ -21,6 +21,17 @@ const activeDstToggle = ref<"sec" | "sys">("sec");
 
 const toggleSysSec = (opt: "sec" | "sys") => {
   activeDstToggle.value = opt;
+};
+
+const destination = ref({
+  sys: { x: 2, y: 5 },
+  sec: { x: 4, y: 3 },
+});
+
+const adjustDestination = (dx: number, dy: number) => {
+  const target = destination.value[activeDstToggle.value];
+  target.x = Math.min(8, Math.max(1, target.x + dx));
+  target.y = Math.min(8, Math.max(1, target.y + dy));
 };
 
 const dirPadSvg = `<svg width="70mm" height="70mm" 
@@ -58,29 +69,125 @@ const dirPadSvg = `<svg width="70mm" height="70mm"
 </svg>`;
 
 const bindPadButtons = () => {
-  const xyCtlUp = document.getElementById("xy_ctl_up");
-  if (xyCtlUp) {
-    xyCtlUp.addEventListener("click", (e) => {
-      console.log("Up clicked", e);
-    });
+  const bind = (id: string, handler: () => void) => {
+    document.getElementById(id)?.addEventListener("click", handler);
+  };
+  // Botoes horizontais alteram X, verticais alteram Y, diagonais alteram
+  // ambas -- tudo no eixo (sys/sec) escolhido pelo toggle System/Sector.
+  bind("xy_ctl_left", () => adjustDestination(-1, 0));
+  bind("xy_ctl_right", () => adjustDestination(1, 0));
+  bind("xy_ctl_up", () => adjustDestination(0, -1));
+  bind("xy_ctl_down", () => adjustDestination(0, 1));
+  bind("xy_ctl_NE", () => adjustDestination(1, -1));
+  bind("xy_ctl_SE", () => adjustDestination(1, 1));
+  bind("xy_ctl_SW", () => adjustDestination(-1, 1));
+  bind("xy_ctl_NW", () => adjustDestination(-1, -1));
+};
+
+const impulsePower = ref(50);
+const impulseBoost = ref(false);
+const boostedImpulsePower = computed(() =>
+  impulseBoost.value ? 100 : impulsePower.value
+);
+
+const BOOST_MAX_DURATION = 60; // segundos
+const BOOST_COOLDOWN_BASE = 30; // segundos, minimo
+
+const boostCooldownTotal = ref(0);
+const boostCooldownRemaining = ref(0);
+const canActivateBoost = computed(
+  () => !impulseBoost.value && boostCooldownRemaining.value === 0
+);
+
+let boostActivatedAt = 0;
+let boostTimer: ReturnType<typeof setTimeout> | undefined;
+let cooldownInterval: ReturnType<typeof setInterval> | undefined;
+
+const startCooldown = (seconds: number) => {
+  clearInterval(cooldownInterval);
+  boostCooldownTotal.value = seconds;
+  boostCooldownRemaining.value = seconds;
+  cooldownInterval = setInterval(() => {
+    boostCooldownRemaining.value = Math.max(
+      0,
+      boostCooldownRemaining.value - 0.1
+    );
+    if (boostCooldownRemaining.value === 0) clearInterval(cooldownInterval);
+  }, 100);
+};
+
+const deactivateBoost = () => {
+  if (!impulseBoost.value) return;
+  impulseBoost.value = false;
+  clearTimeout(boostTimer);
+  const activeSeconds = (Date.now() - boostActivatedAt) / 1000;
+  startCooldown(
+    BOOST_COOLDOWN_BASE + Math.max(0, activeSeconds - BOOST_COOLDOWN_BASE)
+  );
+};
+
+const toggleBoost = () => {
+  if (impulseBoost.value) {
+    deactivateBoost();
+    return;
   }
+  if (!canActivateBoost.value) return;
+  impulseBoost.value = true;
+  boostActivatedAt = Date.now();
+  boostTimer = setTimeout(deactivateBoost, BOOST_MAX_DURATION * 1000);
 };
 
 const warpFactor = ref(2);
+const warpEngaged = ref(false);
 let warpEffect: WarpSpeed | undefined;
+
+// A lib nao trava TARGET_SPEED (so floor em 0) -- default da lib e SPEED=0.7,
+// pensado pra um fundo sutil parado. O rastro de cada estrela usa
+// WARP_EFFECT_LENGTH * SPEED, entao com warpFactor (1-8) mapeado 1:1 pra
+// TARGET_SPEED o rastro mal aparece. Escalado aqui pra dar variacao visivel
+// entre os niveis de warp.
+const WARP_SPEED_SCALE = 15;
+// SPEED_ADJ_FACTOR e mutavel na instancia (nao so no construtor) -- usado
+// pra ter uma entrada em warp mais suave (nave acelerando) e uma saida bem
+// mais rapida (o capitao so pode agir depois que a nave sai do warp de
+// verdade, entao o dropout nao pode ficar arrastando).
+const WARP_ACCEL_FACTOR = 0.08;
+const WARP_DECEL_FACTOR = 0.2;
+
+const engageWarp = () => {
+  warpEngaged.value = !warpEngaged.value;
+  if (!warpEffect) return;
+  if (warpEngaged.value) {
+    warpEffect.SPEED_ADJ_FACTOR = WARP_ACCEL_FACTOR;
+    warpEffect.TARGET_SPEED = warpFactor.value * WARP_SPEED_SCALE;
+  } else {
+    warpEffect.SPEED_ADJ_FACTOR = WARP_DECEL_FACTOR;
+    warpEffect.TARGET_SPEED = 0;
+  }
+};
 
 onMounted(() => {
   bindPadButtons();
-  warpEffect = new WarpSpeed("vwrScrDsp");
-  warpEffect.TARGET_SPEED = warpFactor.value;
+  // TARGET_SPEED comeca em 0 (parado) -- so acelera ao clicar Engage. A lib
+  // ja suaviza a transicao sozinha (SPEED_ADJ_FACTOR faz lerp exponencial de
+  // SPEED em direcao a TARGET_SPEED a cada frame em WarpSpeed.move()), entao
+  // e um ease-out "de fabrica".
+  warpEffect = new WarpSpeed("vwrScrDsp", {
+    warpEffectLength: 8,
+    speedAdjFactor: WARP_ACCEL_FACTOR,
+  });
+  warpEffect.TARGET_SPEED = 0;
 });
 
 onUnmounted(() => {
   warpEffect?.destroy();
+  clearTimeout(boostTimer);
+  clearInterval(cooldownInterval);
 });
 
 watch(warpFactor, (value) => {
-  if (warpEffect) warpEffect.TARGET_SPEED = value;
+  if (warpEngaged.value && warpEffect)
+    warpEffect.TARGET_SPEED = value * WARP_SPEED_SCALE;
 });
 </script>
 
@@ -104,7 +211,7 @@ watch(warpFactor, (value) => {
 
       <LcarsTitle
         version="small centered"
-        text="Set Destination"
+        text="Helm Controls"
         color="text-white"
       />
 
@@ -122,19 +229,98 @@ watch(warpFactor, (value) => {
         :style="{ 'justify-content': 'center' }"
       >
         <LcarsCap version="round-left" />
+        <LcarsBlock label="Set Destination" :style="{ width: '7.5rem' }" />
         <LcarsButton
           label="System"
-          :style="{ width: '3.75rem', flex: 'none' }"
+          :style="{
+            width: '3.75rem',
+            flex: 'none',
+            filter: activeDstToggle === 'sys' ? '' : 'brightness(0.6)',
+          }"
           @click="toggleSysSec('sys')"
         />
-        <LcarsText id="dst-sec-ind" color="text-white" text="4, 3" />
+        <LcarsText
+          id="dst-sys-ind"
+          color="text-white"
+          :text="`${destination.sys.x}, ${destination.sys.y}`"
+        />
         <LcarsButton
           label="Sector"
-          :style="{ width: '3.75rem', flex: 'none' }"
+          :style="{
+            width: '3.75rem',
+            flex: 'none',
+            filter: activeDstToggle === 'sec' ? '' : 'brightness(0.6)',
+          }"
           @click="toggleSysSec('sec')"
         />
-        <LcarsText id="dst-sys-ind" color="text-white" text="2, 5" />
+        <LcarsText
+          id="dst-sec-ind"
+          color="text-white"
+          :text="`${destination.sec.x}, ${destination.sec.y}`"
+        />
         <LcarsCap version="round-right" />
+      </LcarsComplexButton>
+
+      <LcarsComplexButton id="impPwrInd" :color="randColor()">
+        <LcarsCap version="round-left" />
+        <LcarsBlock label="Impulse Power" :style="{ width: '7.5rem' }" />
+        <LcarsText id="impPwr" :text="`${boostedImpulsePower}%`" />
+        <LcarsCap version="round-right" />
+      </LcarsComplexButton>
+
+      <LcarsComplexButton id="impPwrSel">
+        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsBlock
+          label="Set Impulse"
+          :style="{ width: '7.5rem' }"
+          :color="randColor()"
+        />
+        <LcarsButton
+          version="round-left"
+          :color="randColor()"
+          label="-"
+          :style="{ width: '1.5rem', flex: 'none' }"
+          @click="impulsePower = Math.max(0, impulsePower - 5)"
+        />
+        <SolidLevelBar
+          id="impPwrSelBar"
+          version="horizontal"
+          :max="120"
+          :min="0"
+          color="primary-static"
+          :level="boostedImpulsePower"
+        />
+        <LcarsButton
+          version="round-right"
+          :color="randColor()"
+          label="+"
+          :style="{ width: '1.5rem', flex: 'none' }"
+          @click="impulsePower = Math.min(100, impulsePower + 5)"
+        />
+      </LcarsComplexButton>
+
+      <LcarsComplexButton id="impBoostCtn">
+        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsButton
+          id="impBoost"
+          label="Boost"
+          :color="randColor()"
+          :class="{
+            'white-flash': impulseBoost,
+            blink: boostCooldownRemaining > 0,
+          }"
+          :style="{ width: '7.5rem', flex: 'none' }"
+          @click="toggleBoost"
+        />
+        <SolidLevelBar
+          id="impBoostCooldownBar"
+          version="horizontal"
+          :max="Math.max(boostCooldownTotal, 1)"
+          :min="0"
+          color="primary-static"
+          :level="boostCooldownRemaining"
+        />
+        <LcarsCap version="round-right" :color="randColor()" />
       </LcarsComplexButton>
     </LcarsColumn>
 
@@ -149,7 +335,6 @@ watch(warpFactor, (value) => {
         <LcarsText id="wrpFct" :text="warpFactor.toFixed(1)" />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
-
       <LcarsComplexButton id="wrpFctSel">
         <LcarsCap version="round-left" :color="randColor()" />
         <LcarsBlock
@@ -171,7 +356,6 @@ watch(warpFactor, (value) => {
           :min="1"
           color="primary-static"
           :level="warpFactor"
-          :label="String(warpFactor)"
         />
         <LcarsButton
           version="round-right"
@@ -187,7 +371,12 @@ watch(warpFactor, (value) => {
         version="round"
         label="Engage"
         :color="randColor()"
-        :style="{ width: '15rem', flex: 'none' }"
+        :class="{ 'white-flash': warpEngaged }"
+        :style="{
+          width: '15rem',
+          flex: 'none',
+        }"
+        @click="engageWarp"
       />
 
       <DefaultBracket

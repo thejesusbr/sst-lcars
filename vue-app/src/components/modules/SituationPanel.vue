@@ -112,7 +112,7 @@ const logEntries = ref<CombatLogEntry[]>([
   {
     stardate: 3600.5,
     category: "engineering",
-    text: "Warp Core overload at 12%. Damage control team dispatched.",
+    text: "Warp Core overload at 12%. Damage control team dispatched to warp core.",
   },
 ]);
 
@@ -367,7 +367,7 @@ watch(
             />
           </LcarsRow>
         </LcarsColumn>
-        <LcarsColumn>
+        <LcarsColumn flex="v" :style="{ width: 'fit-content' }">
           <LcarsComplexButton :color="randColor()">
             <LcarsCap version="round-left" />
             <LcarsButton
@@ -399,40 +399,23 @@ watch(
             />
             <LcarsCap version="round-right" :color="lcarsColors.primary[4]" />
           </LcarsComplexButton>
-          <div
-            :style="{
-              display: 'grid',
-              'grid-template-columns': 'minmax(0, max-content)',
-            }"
-          >
-            <div
-              ref="logContent"
-              class="log-content"
-              :style="{
-                flex: '1',
-                minHeight: '0',
-                minWidth: '0',
-                maxWidth: '100%',
-                'overflow-wrap': 'break-word',
-              }"
+          <div ref="logContent" class="log-content">
+            <p
+              v-for="(entry, i) in filteredLogEntries"
+              :key="i"
+              class="log-entry"
             >
-              <p
-                v-for="(entry, i) in filteredLogEntries"
-                :key="i"
-                class="log-entry"
+              <span class="log-stardate"
+                >[{{ entry.stardate.toFixed(1) }}]</span
               >
-                <span class="log-stardate"
-                  >[{{ entry.stardate.toFixed(1) }}]</span
-                >
-                {{ entry.text }}
-              </p>
-              <p
-                v-if="filteredLogEntries.length === 0"
-                class="log-entry log-empty"
-              >
-                No entries.
-              </p>
-            </div>
+              {{ entry.text }}
+            </p>
+            <p
+              v-if="filteredLogEntries.length === 0"
+              class="log-entry log-empty"
+            >
+              No entries.
+            </p>
           </div>
         </LcarsColumn>
       </LcarsRow>
@@ -469,8 +452,11 @@ watch(
 
 <style scoped>
 .log-content {
-  width: 100%;
+  width: 0;
+  min-width: 100%;
+  max-height: 7.5rem;
   box-sizing: border-box;
+  padding: 0.5rem 1rem;
   overflow-y: auto;
   overflow-x: hidden;
   font-family: "LCARS-Mono", monospace;
@@ -480,9 +466,6 @@ watch(
 .log-entry {
   overflow-wrap: break-word;
   word-break: break-word;
-}
-
-.log-entry {
   margin: 0 0 0.35rem 0;
 }
 
