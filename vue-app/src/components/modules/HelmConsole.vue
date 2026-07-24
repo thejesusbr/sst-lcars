@@ -85,6 +85,13 @@ const bindPadButtons = () => {
 };
 
 const impulsePower = ref(50);
+const impulsePresets = [
+  { label: "Off", value: 0 },
+  { label: "25%", value: 25 },
+  { label: "50%", value: 50 },
+  { label: "75%", value: 75 },
+  { label: "100%", value: 100 },
+];
 const impulseBoost = ref(false);
 const boostedImpulsePower = computed(() =>
   impulseBoost.value ? 100 : impulsePower.value
@@ -285,7 +292,7 @@ watch(warpFactor, (value) => {
         <SolidLevelBar
           id="impPwrSelBar"
           version="horizontal"
-          :max="120"
+          :max="100"
           :min="0"
           color="primary-static"
           :level="boostedImpulsePower"
@@ -297,6 +304,19 @@ watch(warpFactor, (value) => {
           :style="{ width: '1.5rem', flex: 'none' }"
           @click="impulsePower = Math.min(100, impulsePower + 5)"
         />
+      </LcarsComplexButton>
+
+      <LcarsComplexButton id="impPwrPresets" :style="{ justifyContent: 'center' }">
+        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsButton
+          v-for="preset in impulsePresets"
+          :key="preset.value"
+          :label="preset.label"
+          :color="randColor()"
+          :style="{ flex: '1' }"
+          @click="impulsePower = preset.value"
+        />
+        <LcarsCap version="round-right" :color="randColor()" />
       </LcarsComplexButton>
 
       <LcarsComplexButton id="impBoostCtn">
