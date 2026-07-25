@@ -195,14 +195,19 @@ onUnmounted(() => {
             {{ getBorderLabel(i - 1, j - 1) }}
           </span>
           <!-- Central cells content display -->
-          <img
-            v-else-if="!isBorderCell(i - 1, j - 1) && getCentralCellData(i - 1, j - 1)?.img"
-            :src="getCentralCellData(i - 1, j - 1)!.img"
-            style="width: 90%; height: 90%; object-fit: contain; image-rendering: pixelated;"
-          />
-          <span v-else-if="!isBorderCell(i - 1, j - 1) && getCentralCellData(i - 1, j - 1)?.text">
-            {{ getCentralCellData(i - 1, j - 1)?.text }}
-          </span>
+          <template v-else-if="!isBorderCell(i - 1, j - 1) && getCentralCellData(i - 1, j - 1)">
+            <img
+              v-if="getCentralCellData(i - 1, j - 1)?.img"
+              :src="getCentralCellData(i - 1, j - 1)!.img"
+              style="width: 90%; height: 90%; object-fit: contain; image-rendering: pixelated;"
+            />
+            <span
+              v-if="getCentralCellData(i - 1, j - 1)?.text"
+              :class="getCentralCellData(i - 1, j - 1)?.img ? 'scanner-cell-badge' : undefined"
+            >
+              {{ getCentralCellData(i - 1, j - 1)?.text }}
+            </span>
+          </template>
         </slot>
       </div>
     </template>
@@ -211,11 +216,27 @@ onUnmounted(() => {
 
 <style scoped>
 .scanner > .item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
   font-family: "LCARS", sans-serif;
   font-weight: bold;
+}
+
+/* Badge sobre um icone (ex: numero de tubo de torpedo mirando o alvo) */
+.scanner-cell-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  min-width: 1em;
+  padding: 0 0.15em;
+  background: #000;
+  color: #fff;
+  font-size: 0.65em;
+  line-height: 1.3;
+  text-align: center;
+  border-radius: 2px;
 }
 </style>

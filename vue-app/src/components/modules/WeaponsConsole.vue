@@ -32,8 +32,7 @@ const { randColor } = useLcarsColors();
 const { getIcon } = useScannerIcons();
 
 interface Tube {
-  targetX: number;
-  targetY: number;
+  targetIndex: number;
   status: "Empty" | "Loaded";
   autoLoad: boolean;
 }
@@ -43,11 +42,23 @@ const phaserPower = ref(1500);
 const lockedTargets = ref(props.initialTargets);
 const torpedoStock = ref(props.initialStock);
 
-const tubes = ref<Tube[]>([
-  { targetX: 3, targetY: 2, status: "Empty", autoLoad: false },
-  { targetX: 6, targetY: 7, status: "Empty", autoLoad: false },
-  { targetX: 2, targetY: 5, status: "Empty", autoLoad: false },
+// Alvos disponiveis no setor (mock local -- vira parte do estado real dos
+// Klingons na Fase 4). Independente dos tubos: o computador de mira cicla
+// entre esses alvos, o capitao decide livremente como distribuir os tubos
+// entre eles (todos num alvo, um em cada, 2:1 etc), ver SST_LCARS_SPECS.md 12.6.
+const enemyTargets = ref([
+  { x: 3, y: 2 },
+  { x: 6, y: 7 },
+  { x: 2, y: 5 },
 ]);
+
+const tubes = ref<Tube[]>([
+  { targetIndex: 0, status: "Empty", autoLoad: false },
+  { targetIndex: 1, status: "Empty", autoLoad: false },
+  { targetIndex: 2, status: "Empty", autoLoad: false },
+]);
+
+const targetOf = (tube: Tube) => enemyTargets.value[tube.targetIndex];
 
 watch(
   () => props.initialPhaserTemp,
@@ -85,14 +96,19 @@ const torpedoStockColor = computed(() => {
 });
 
 const scannerGrid = computed(() => {
-  const grid: Record<string, { img?: string }> = {
+  const grid: Record<string, { img?: string; text?: string }> = {
     "4,4": { img: getIcon(ScannerEntity.PLAYER) },
   };
-  tubes.value.forEach((tube) => {
-    const key = `${tube.targetY},${tube.targetX}`;
-    if (key !== "4,4") {
-      grid[key] = { img: getIcon(ScannerEntity.KLINGON_CRUISER) };
-    }
+  enemyTargets.value.forEach((target, targetIndex) => {
+    const key = `${target.y},${target.x}`;
+    if (key === "4,4") return;
+    const assignedTubes = tubes.value
+      .map((tube, i) => (tube.targetIndex === targetIndex ? i + 1 : null))
+      .filter((n): n is number => n !== null);
+    grid[key] = {
+      img: getIcon(ScannerEntity.KLINGON_CRUISER),
+      text: assignedTubes.length ? assignedTubes.join(",") : undefined,
+    };
   });
   return grid;
 });
@@ -115,8 +131,8 @@ const lockTargets = () => {
 };
 
 const cycleTubeTarget = (index: number) => {
-  tubes.value[index].targetX = Math.floor(Math.random() * 8) + 1;
-  tubes.value[index].targetY = Math.floor(Math.random() * 8) + 1;
+  const tube = tubes.value[index];
+  tube.targetIndex = (tube.targetIndex + 1) % enemyTargets.value.length;
 };
 
 const loadTube = (index: number) => {
@@ -157,7 +173,7 @@ const fireTorpedoes = () => {
         'justify-content': 'flex-start',
         'align-items': 'center',
         gap: '0.75rem',
-        width: '22rem',
+        minWidth: '30rem',
       }"
     >
       <LcarsTitle
@@ -205,6 +221,22 @@ const fireTorpedoes = () => {
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
+      <!-- Power Output indicator -->
+      <LcarsComplexButton
+        :color="randColor()"
+        size="large"
+        :style="{ width: '100%' }"
+      >
+        <LcarsCap version="round-left" />
+        <LcarsBlock label="Phaser Power" :style="{ width: '8.5rem' }" />
+        <LcarsText
+          :text="String(phaserPower)"
+          color="text-white"
+          :style="{ flex: '1', textAlign: 'center' }"
+        />
+        <LcarsCap version="round-right" />
+      </LcarsComplexButton>
+
       <!-- Set Power Output -->
       <LcarsComplexButton
         :color="randColor()"
@@ -214,7 +246,7 @@ const fireTorpedoes = () => {
         <LcarsCap version="round-left" />
         <LcarsBlock label="Set Power" :style="{ width: '6rem' }" />
         <LcarsButton
-          version="round"
+          version="round-left"
           :color="randColor()"
           label="-"
           :style="{ width: '3rem', flex: 'none' }"
@@ -226,7 +258,6 @@ const fireTorpedoes = () => {
           :min="0"
           color="bg-blue-3"
           :level="phaserPower"
-          :label="String(phaserPower)"
         />
         <LcarsButton
           version="round-right"
@@ -276,7 +307,7 @@ const fireTorpedoes = () => {
         'justify-content': 'flex-start',
         'align-items': 'center',
         gap: '0.75rem',
-        width: '26rem',
+        minWidth: '30rem',
       }"
     >
       <LcarsTitle
@@ -311,13 +342,13 @@ const fireTorpedoes = () => {
         <LcarsBlock :label="`Tube ${i + 1}`" :style="{ width: '5.5rem' }" />
         <LcarsBlock label="X" :style="{ width: '2rem' }" />
         <LcarsText
-          :text="String(tube.targetX)"
+          :text="String(targetOf(tube).x)"
           color="text-white"
           :style="{ width: '2.5rem', 'text-align': 'center' }"
         />
         <LcarsBlock label="Y" :style="{ width: '2rem' }" />
         <LcarsText
-          :text="String(tube.targetY)"
+          :text="String(targetOf(tube).y)"
           color="text-white"
           :style="{ width: '2.5rem', 'text-align': 'center' }"
         />
@@ -339,7 +370,7 @@ const fireTorpedoes = () => {
         'justify-content': 'flex-start',
         'align-items': 'center',
         gap: '0.75rem',
-        width: '24rem',
+        minWidth: '30rem',
       }"
     >
       <LcarsTitle

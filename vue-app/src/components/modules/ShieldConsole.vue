@@ -208,6 +208,7 @@ const raiseShields = () => {
       >
         <EnterpriseShieldSvg
           :shield-integrity="shieldIntegrity"
+          :shield-active="shieldEnergy > 0"
           :system-integrity="mockIntegrity"
           :hit-zone="hitZone"
         />

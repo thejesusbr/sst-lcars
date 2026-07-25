@@ -239,23 +239,26 @@ deslocamento sub-warp ainda
 
 ### 4.3. WeaponsConsole ⚠️ Funcional localmente, sem efeito no estado global
 
-**O que cobre:** Controle de temperatura e efetividade dos phasers, seletor de potência, Lock,
-Fire Phasers; Load/Unload torpedos, Auto-load, mira X,Y no scanner com ícones,
-Fire Torpedoes.
+**O que cobre:** Controle de temperatura e efetividade dos phasers, seletor de potência
+(indicador + Set Power na mesma linguagem visual do Impulse Power do Helm, ver 12.6), Lock,
+Fire Phasers; Load torpedos, Auto-load, Cycle de mira entre alvos reais do setor com
+etiqueta de tubo(s) no scanner, Fire Torpedoes.
 
 **O que falta:**
 
 * **Cálculo de dano real** — `firePhasers()` e `fireTorpedoes()` não deduzem energia nem
 calculam dano nos Klingons
 * **Binding ao inventário global de torpedos** — `torpedoStock` é local e não sincroniza com `useGameState`
+* **`enemyTargets` é mock local** (`WeaponsConsole.vue`) — precisa vir do estado real dos
+Klingons no setor (`useGameState`) na Fase 4, não uma lista fixa de 3 posições
 * **Resposta dos Klingons** — após disparo, IA inimiga não executa contra-ataque
 * **Cálculo de dano inimigo nos escudos** — nenhuma ligação com ShieldConsole
 * **Mira automática** — "Lock" existe mas não identifica inimigos reais do estado global
 * **Energia de phaser da energia principal** — disparo devia consumir `phaserPower` da Main Energy
-* **Mira de torpedo por clique (decidido, revisão 2026-07-20, item 9 da seção 9)** —
-substitui X,Y manual/"Cycle" atual: jogador clica na nave alvo no scanner de targeting
-(`LcarsScanner` já emite `cell-click` com `{ row, col, cellData }`, ver `LcarsScanner.vue:38`)
-e atribui tubo(s) ao alvo selecionado. Sem bearing 0-360°.
+* **Unload de torpedo** — só existe `loadTube()`; não há como descarregar um tubo carregado
+de volta pro estoque
+* ~~Mira de torpedo por clique~~ — **decidido e depois revertido** (revisão 2026-07-20 item 9,
+revertido 2026-07-25). Ver 12.6 pro mecanismo final (Cycle entre alvos reais).
 
 \---
 
@@ -694,8 +697,11 @@ sistema de pontos de ação fica pra depois, quando/se dificuldade (item 8) entr
 comparativo de prós/contras discutido em sessão de revisão.
 8. ✅ **Dificuldade (MVP):** fora do MVP. Nível único fixo (FAIR) por ora; seletor
 NOVICE/FAIR/GOOD/EXPERT/EMERITUS é upgrade futuro, junto com item 7.
-9. ✅ **Torpedos:** mira por clique no scanner (usa `cell-click` já emitido por
-`LcarsScanner`), substitui X,Y manual/"Cycle" atual. Sem bearing 0-360°. Ver seção 4.3.
+9. ✅ **Torpedos:** ~~mira por clique no scanner~~ **superado, revisão 2026-07-25** — fica
+com botão "Cycle" por tubo, mas cicla entre os **alvos disponíveis de verdade** (não mais
+coordenada aleatória): dá liberdade tática pro capitão distribuir os tubos como quiser
+(todos num alvo, um em cada, 2:1...). Etiqueta no scanner mostra o(s) número(s) do(s) tubo(s)
+mirando cada alvo. Sem bearing 0-360°. Ver seção 4.3 e 12.6.
 10. ✅ **Starbases:** confirmado no manual oficial — **3 tipos de base federação**, não 2:
 `STARBASE_DOCK` (StarBase, resupply completo), `STARBASE_SCIENCE` (Research Station, só
 life support), `STARBASE_SUPPLY` (Supply Depot, life support + torpedos, **novo**).
@@ -1039,10 +1045,40 @@ toda vez que `active` vira `true`. Necessário porque ainda não existe regen: s
 o dano acumulado do "Simulate Hit" ficaria preso pra sempre depois da primeira visita à
 aba. **Fase 4 remove esse reset** quando a regen de verdade existir.
 
+### 12.6. WeaponsConsole — Set Power e mira por Cycle entre alvos reais
+
+* **Set Power do Phaser na linguagem visual do Impulse Power (Helm, seção 12.3):**
+indicador dedicado acima (`LcarsComplexButton` "Phaser Power" + `LcarsText` com o valor)
+e a `SolidLevelBar` do "Set Power" sem `:label` — mesma correção de redundância aplicada
+no warp/impulse (texto pequeno demais dentro da barra pra ler bem).
+* **Mira por Cycle revista (reverte a decisão de mira-por-clique do item 9/seção 9):** o
+usuário lembrou que já tinha trocado a mira por clique pelo mecanismo de **Cycle**, e a
+mecânica correta é:
+  * `enemyTargets` (mock local, `WeaponsConsole.vue`) é uma lista **independente** dos
+  tubos — os alvos de verdade no setor (Fase 4: vem do estado real dos Klingons).
+  * Cada `Tube` guarda `targetIndex` (índice em `enemyTargets`), não mais `targetX/targetY`
+  soltos.
+  * Botão **"Cycle"** por tubo avança `targetIndex` pro próximo alvo da lista
+  (`(targetIndex + 1) % enemyTargets.length`), dando **liberdade tática** pro capitão:
+  todos os tubos no mesmo alvo, um em cada, 2:1, como preferir — sem ficar preso a 1
+  tubo = 1 alvo fixo.
+  * `scannerGrid` agora renderiza os alvos a partir de `enemyTargets` (não mais derivado
+  da posição dos tubos) — os inimigos aparecem no scanner independente de qualquer tubo
+  estar mirando neles.
+  * **Etiqueta do(s) número(s) de tubo no alvo:** célula do scanner com inimigo mostra um
+  badge (`.scanner-cell-badge` em `LcarsScanner.vue`) com os tubos mirando ali (ex: `"1,3"`
+  se os tubos 1 e 3 miram o mesmo Klingon).
+  * **Mudança na `LcarsScanner.vue` (componente compartilhado):** antes `img` e `text` de
+  uma `ScannerCell` eram mutuamente exclusivos (`v-else-if`) — agora renderizam juntos
+  quando os dois existem (ícone + badge sobreposto no canto). `.item` ganhou
+  `position: relative` pra ancorar o badge absolute. Não quebra uso existente (Nav/
+  StarChart só usam um ou outro campo, nunca os dois).
+
 \---
 
-*Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20). Fase 3.5
-concluída, revisão de UX pré-Fase 4 em andamento (seção 12). Próximo passo: terminar a
-revisão painel-por-painel (Weapons, Engineering, Nav restantes), depois Fase 4
+*Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20; item 9
+revisto 2026-07-25, seção 12.6). Fase 3.5 concluída, revisão de UX pré-Fase 4 em andamento
+(seção 12). Próximo passo: terminar a
+revisão painel-por-painel (Weapons — falta Unload, Engineering, Nav restantes), depois Fase 4
 (engine core + Pinia, seção 8\.4).*
 

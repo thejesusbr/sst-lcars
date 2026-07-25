@@ -12,10 +12,14 @@ const props = withDefaults(defineProps<{
   // SST_LCARS_SPECS.md 4.4); integridade e o resultado disso, e e o que
   // aparece no contorno do escudo aqui.
   shieldIntegrity?: number
+  // Erguido/baixado (SHE UP/DOWN) -- independente de integridade. Escudo
+  // baixado mas 100% integro ainda deve sumir do visor, so nao ha dano.
+  shieldActive?: boolean
   systemIntegrity?: Partial<Record<ShieldZoneKey, number>>
   hitZone?: ShieldZoneKey | null
 }>(), {
   shieldIntegrity: 100,
+  shieldActive: true,
   systemIntegrity: () => ({}),
   hitZone: null,
 })
@@ -31,7 +35,10 @@ const zoneColor = (key: ShieldZoneKey) => {
   return '#ff3333'
 }
 
-const shieldOpacity = computed(() => Math.max(0.15, Math.min(1, props.shieldIntegrity / 100)))
+const shieldOpacity = computed(() => {
+  if (!props.shieldActive) return 0
+  return Math.max(0.15, Math.min(1, props.shieldIntegrity / 100))
+})
 
 // Gradiente continuo (nao degraus): preto (0%/desativado) -> vermelho (25%) ->
 // laranja (50%) -> amarelo (75%) -> verde (100%), interpolado linear no par
