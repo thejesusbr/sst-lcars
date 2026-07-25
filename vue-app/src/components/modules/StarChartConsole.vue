@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useLcarsColors } from '@/composables/useLcarsColors'
 import LcarsRow from '@/components/elements/LcarsRow.vue'
 import LcarsColumn from '@/components/elements/LcarsColumn.vue'
@@ -10,6 +10,7 @@ import LcarsComplexButton from '@/components/elements/LcarsComplexButton.vue'
 import LcarsCap from '@/components/elements/LcarsCap.vue'
 import LcarsBlock from '@/components/elements/LcarsBlock.vue'
 import LcarsText from '@/components/elements/LcarsText.vue'
+import LcarsButton from '@/components/elements/LcarsButton.vue'
 
 const props = withDefaults(defineProps<{
   galaxyGrid?: Record<string, ScannerCell>
@@ -34,11 +35,28 @@ const demoGalaxyGrid: Record<string, ScannerCell> = {
   '8,8': { text: '???', color: 'text-light' },
 }
 
-const activeGalaxyGrid = ref<Record<string, ScannerCell>>(
+const baseGalaxyGrid = ref<Record<string, ScannerCell>>(
   props.galaxyGrid ?? demoGalaxyGrid
 )
 
-const selectedQuadrant = ref('3,4')
+// Mesmo mock de posicao usado no LRS (NavSensingConsole.vue) -- moldura
+// marcando o quadrante onde a nave esta agora, mesma convencao das duas
+// telas. Ver SST_LCARS_SPECS.md 12.7.
+const playerQuadrant = ref({ row: 4, col: 4 })
+const PLAYER_MARKER_STYLE = { boxShadow: 'inset 0 0 0 3px #ffffff' }
+
+const activeGalaxyGrid = computed(() => {
+  const playerKey = `${playerQuadrant.value.row},${playerQuadrant.value.col}`
+  return {
+    ...baseGalaxyGrid.value,
+    [playerKey]: {
+      ...baseGalaxyGrid.value[playerKey],
+      style: PLAYER_MARKER_STYLE,
+    },
+  }
+})
+
+const selectedSystem = ref('3,4')
 
 const handleCellClick = (data: {
   row: number
@@ -49,8 +67,12 @@ const handleCellClick = (data: {
   event: MouseEvent
 }) => {
   if (!data.isBorder) {
-    selectedQuadrant.value = `${data.row},${data.col}`
+    selectedSystem.value = `${data.row},${data.col}`
   }
+}
+
+const sendSystemToHelm = () => {
+  console.log(`Sending system ${selectedSystem.value} to Helm`)
 }
 </script>
 
@@ -62,7 +84,7 @@ const handleCellClick = (data: {
       <LcarsRow :style="{ 'justify-content': 'center' }">
         <DefaultBracket
           id="str-cht-vwr"
-          :style="{ height: '21rem', width: '24rem' }"
+          :style="{ height: '21rem', width: '42rem' }"
           :coloring="{
             elbow: 'tertiary-static',
             column1: ['primary-static', 'tertiary-static', 'primary-static'],
@@ -83,16 +105,25 @@ const handleCellClick = (data: {
         </DefaultBracket>
       </LcarsRow>
 
-      <!-- Selected Quadrant -->
-      <LcarsComplexButton :color="randColor()" :style="{ width: '24rem', flex: 'none' }">
-        <LcarsCap version="round-left" />
-        <LcarsBlock label="Selected Quadrant" :style="{ width: '10rem' }" />
-        <LcarsText :text="selectedQuadrant" :style="{ flex: '1', 'text-align': 'center' }" />
-        <LcarsBlock version="decorator" :style="{ width: '2rem' }" />
-      </LcarsComplexButton>
+      <!-- Selected System -->
+      <LcarsRow :style="{ 'justify-content': 'center', gap: '0.5rem', width: '42rem' }">
+        <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+          <LcarsCap version="round-left" />
+          <LcarsBlock label="Selected System" :style="{ width: '10rem' }" />
+          <LcarsText :text="selectedSystem" :style="{ flex: '1', 'text-align': 'center' }" />
+          <LcarsBlock version="decorator" :style="{ width: '2rem' }" />
+        </LcarsComplexButton>
+        <LcarsButton
+          version="round"
+          :color="randColor()"
+          label="Snd to Helm"
+          :style="{ width: '10rem' }"
+          @click="sendSystemToHelm"
+        />
+      </LcarsRow>
 
       <!-- Legenda -->
-      <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '24rem' }">
+      <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '42rem' }">
         <LcarsText text="K = Klingon" color="text-white" />
         <LcarsText text="B = Base" color="text-white" />
         <LcarsText text="S = Star" color="text-white" />

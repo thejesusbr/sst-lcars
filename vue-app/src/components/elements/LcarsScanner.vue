@@ -203,7 +203,7 @@ onUnmounted(() => {
             />
             <span
               v-if="getCentralCellData(i - 1, j - 1)?.text"
-              :class="getCentralCellData(i - 1, j - 1)?.img ? 'scanner-cell-badge' : undefined"
+              :class="getCentralCellData(i - 1, j - 1)?.img ? 'scanner-cell-badge' : 'scanner-cell-text'"
             >
               {{ getCentralCellData(i - 1, j - 1)?.text }}
             </span>
@@ -223,6 +223,14 @@ onUnmounted(() => {
   user-select: none;
   font-family: "LCARS", sans-serif;
   font-weight: bold;
+}
+
+/* line-height global (1.25x) sobra espaco abaixo do glifo em fontes como
+   "LCARS Lower" -- o texto fica visualmente colado no topo da celula mesmo
+   com align-items:center no flex pai. line-height:1 aperta a caixa de linha
+   ao redor do glifo de verdade, daí o align-items:center do flex funciona certo. */
+.scanner-cell-text {
+  line-height: 1;
 }
 
 /* Badge sobre um icone (ex: numero de tubo de torpedo mirando o alvo) */

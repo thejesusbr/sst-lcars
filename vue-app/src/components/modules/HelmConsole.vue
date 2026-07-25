@@ -209,10 +209,10 @@ watch(warpFactor, (value) => {
       <LcarsComplexButton id="cur-pos-ind" :color="randColor()">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Current Location" :style="{ width: '7.5rem' }" />
-        <LcarsBlock label="System" :style="{ width: '3.75rem' }" />
-        <LcarsText id="cur-loc-sys" color="text-white" text="3, 4" />
         <LcarsBlock label="Sector" :style="{ width: '3.75rem' }" />
         <LcarsText id="cur-loc-sec" color="text-white" text="3, 4" />
+        <LcarsBlock label="System" :style="{ width: '3.75rem' }" />
+        <LcarsText id="cur-loc-sys" color="text-white" text="3, 4" />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
@@ -238,20 +238,6 @@ watch(warpFactor, (value) => {
         <LcarsCap version="round-left" />
         <LcarsBlock label="Set Destination" :style="{ width: '7.5rem' }" />
         <LcarsButton
-          label="System"
-          :style="{
-            width: '3.75rem',
-            flex: 'none',
-            filter: activeDstToggle === 'sys' ? '' : 'brightness(0.6)',
-          }"
-          @click="toggleSysSec('sys')"
-        />
-        <LcarsText
-          id="dst-sys-ind"
-          color="text-white"
-          :text="`${destination.sys.x}, ${destination.sys.y}`"
-        />
-        <LcarsButton
           label="Sector"
           :style="{
             width: '3.75rem',
@@ -264,6 +250,20 @@ watch(warpFactor, (value) => {
           id="dst-sec-ind"
           color="text-white"
           :text="`${destination.sec.x}, ${destination.sec.y}`"
+        />
+        <LcarsButton
+          label="System"
+          :style="{
+            width: '3.75rem',
+            flex: 'none',
+            filter: activeDstToggle === 'sys' ? '' : 'brightness(0.6)',
+          }"
+          @click="toggleSysSec('sys')"
+        />
+        <LcarsText
+          id="dst-sys-ind"
+          color="text-white"
+          :text="`${destination.sys.x}, ${destination.sys.y}`"
         />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>

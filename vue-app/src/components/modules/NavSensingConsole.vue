@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useLcarsColors } from '@/composables/useLcarsColors'
 import { useScannerIcons, ScannerEntity } from '@/composables/useScannerIcons'
 import LcarsRow from '@/components/elements/LcarsRow.vue'
@@ -41,11 +41,62 @@ const activeShortRangeGrid = ref<Record<string, ScannerCell>>(
   props.shortRangeGrid ?? demoShortRangeGrid
 )
 
-const longRangeGrid = ref<Record<string, { text: string; color?: string }>>({
-  '2,2': { text: '003', color: 'golden-tanoi-fg' },
-  '3,4': { text: '104', color: 'alert-fg' },
-  '4,4': { text: '012', color: 'anakiwa-fg' },
-  '5,6': { text: '001', color: 'golden-tanoi-fg' }
+// Codigo LRS: KBS (Klingons/Bases/Stars, ver SST_LCARS_SPECS.md 2.1). Cor
+// deriva do conteudo, nao e fixada por celula: inimigo (K>0) chama mais
+// atencao que base aliada (B>0); sem nenhum dos dois, so estrelas, nada de
+// interesse -- branco neutro.
+const lrsCodeColor = (code: string) => {
+  const klingons = Number(code[0] ?? 0)
+  const bases = Number(code[1] ?? 0)
+  if (klingons > 0) return 'alert-fg'
+  if (bases > 0) return 'anakiwa-fg'
+  return 'text-white'
+}
+
+// LRS classico so cobre os quadrantes VIZINHOS (bloco 3x3 ao redor da nave)
+// e nao tem memoria -- some de novo ate o proximo Scan. Isso que o distingue
+// do Star Chart (COM 4, StarChartConsole.vue), que e o mapa acumulado de tudo
+// ja explorado na galaxia inteira e nao precisa ser re-escaneado. Grid
+// continua 8x8 cheio (mesmo tamanho/posicoes absolutas do Star Chart) pra
+// nao quebrar a mecanica de clicar no sistema e mandar a coordenada real pro
+// Helm -- so os 9 quadrantes vizinhos tem dado, o resto fica em branco.
+// Ver SST_LCARS_SPECS.md 3.2/5.2/12.7.
+const playerQuadrant = ref({ row: 4, col: 4 })
+const longRangeScanned = ref(false)
+
+// Moldura na celula da posicao atual da nave -- so a nave sempre sabe onde
+// ela esta, isso nao depende do Scan revelar o conteudo dos vizinhos.
+const PLAYER_MARKER_STYLE = { boxShadow: 'inset 0 0 0 3px #ffffff' }
+
+// Codigos por quadrante absoluto (galaxia 1-8x1-8), so os vizinhos do
+// jogador tem entrada aqui -- o resto da galaxia esta fora do alcance do LRS.
+const LRS_DEMO_CODES: Record<string, string> = {
+  '3,3': '000',
+  '3,4': '104',
+  '4,3': '012',
+  '4,4': '003',
+  '4,5': '001',
+  '5,4': '201',
+  '5,5': '000',
+}
+
+const longRangeGrid = computed(() => {
+  const grid: Record<string, ScannerCell> = {}
+  if (longRangeScanned.value) {
+    for (let dRow = -1; dRow <= 1; dRow++) {
+      for (let dCol = -1; dCol <= 1; dCol++) {
+        const absRow = playerQuadrant.value.row + dRow
+        const absCol = playerQuadrant.value.col + dCol
+        if (absRow < 1 || absRow > 8 || absCol < 1 || absCol > 8) continue
+        const code = LRS_DEMO_CODES[`${absRow},${absCol}`]
+        if (!code) continue
+        grid[`${absRow},${absCol}`] = { text: code, color: lrsCodeColor(code) }
+      }
+    }
+  }
+  const playerKey = `${playerQuadrant.value.row},${playerQuadrant.value.col}`
+  grid[playerKey] = { ...grid[playerKey], style: PLAYER_MARKER_STYLE }
+  return grid
 })
 
 const handleShortRangeCellClick = (data: {
@@ -91,7 +142,7 @@ const sendParty = () => {
 }
 
 const scanLongRange = () => {
-  console.log('Performing long-range scan...')
+  longRangeScanned.value = true
 }
 
 const sendSystemToHelm = () => {
@@ -209,6 +260,18 @@ const sendProbe = () => {
           />
         </DefaultBracket>
       </LcarsRow>
+
+      <!-- LRS code legend -->
+      <LcarsText
+        text="Code: KBS — K=Klingons  B=Starbases  S=Stars"
+        color="text-white"
+        :style="{
+          width: '42rem',
+          textAlign: 'center',
+          fontSize: '1.15rem',
+          opacity: '0.75',
+        }"
+      />
 
       <!-- Controls row: Scan, Selected System, Snd to Helm -->
       <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '42rem' }">

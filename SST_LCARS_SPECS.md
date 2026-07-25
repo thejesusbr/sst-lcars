@@ -317,12 +317,16 @@ LRS, Probe Control (contador + status + envio).
 **O que falta:**
 
 * **Dados reais** — ambos os grids precisam receber dados do `useGameState`
-* **Decodificação KBS** — o LRS precisa de um tooltip ou legenda explicando o formato `KBS`
+* ~~Decodificação KBS~~ — **feito** (revisão 2026-07-25, ver 12.7): legenda fixa abaixo do
+LRS + cor do código derivada do conteúdo (`alert-fg` se K>0, `anakiwa-fg` se B>0, senão
+`text-white`)
 * **Snd Helm real** → emitir evento que atualiza o destino no HelmConsole
 * **Hail** → lógica de comunicação (com Klingons: tentativa de rendição; com Starbase: status)
 * **Dock** → sequência de atracagem com resultado (reabastecimento, reparos)
 * **Probe** → delay real proporcional à distância, resultado ao chegar
-* **Starchart** — mapa completo da galáxia 8×8 (ver Seção 5.2)
+* ~~Starchart~~ — **feito na Fase 3.5**, `StarChartConsole.vue` (6ª aba do
+`TacticalConsole`). Ver 5.2 (seção desatualizada, corrigida) — falta só dados reais e
+destaque da posição atual do jogador (hoje só mostra o quadrante clicado)
 
 \---
 
@@ -355,26 +359,29 @@ aparece brevemente (tipo modal não-bloqueante) mostrando:
 
 \---
 
-### 5.2. Starchart / Mapa Galáctico
+### 5.2. Starchart / Mapa Galáctico ✅ Implementado na Fase 3.5 (`StarChartConsole.vue`)
+
+> **Seção desatualizada — corrigida em 2026-07-25.** O texto abaixo (proposta original) foi
+> mantido por referência, mas o console **já existe**: decisão do item 1/seção 9 (Starchart
+> = 6ª aba do `TacticalConsole`), implementado na Fase 3.5. Ver `StarChartConsole.vue`.
 
 O comando `COM 4` do SST clássico exibe um mapa da galáxia inteira (8×8 quadrantes) mostrando:
 
-* Quadrantes já explorados (com código KBS)
-* Quadrantes inexplorados (`---`)
-* Posição atual do jogador (destacada)
-* Localização das Starbases conhecidas
+* Quadrantes já explorados (com código KBS) — ✅ feito, mesma lógica de cor do LRS (12.7)
+* Quadrantes inexplorados (`???` em vez de `---`) — ✅ feito
+* Posição atual do jogador (destacada) — ⚠️ falta: só existe "Selected Quadrant" (último
+clique), não uma marcação fixa da posição real do jogador
+* Localização das Starbases conhecidas — ⚠️ dados demo (`demoGalaxyGrid`), precisa de
+`useGameState` real (Fase 4)
 
-**Não existe nenhum console ou componente para isso.**
+**Proposta A (implementada):** 6º console no `TacticalConsole`, **"Star Chart"**, com:
 
-**Proposta A:** Adicionar como nova aba no `TacticalConsole` — um 6º console chamado
-**"Navigation Computer"** ou **"Star Chart"** com:
+* Grid 8×8 usando `LcarsScanner` — ✅ feito
+* Células que mostram código KBS ou `???` para inexplorado — ✅ feito
+* Posição do jogador destacada — ⚠️ falta (ver acima)
+* Filtros: mostrar só Klingons, só Starbases, etc. — ⚠️ falta, não crítico pro MVP
 
-* Grid 8×8 usando `LcarsScanner` em versão extra-large (ou componente novo)
-* Células que mostram código KBS ou `???` para inexplorado
-* Posição do jogador destacada
-* Filtros: mostrar só Klingons, só Starbases, etc.
-
-**Proposta B:** Integrar como painel secundário no `NavSensingConsole` (3ª coluna ou aba
+**Proposta B (não usada):** Integrar como painel secundário no `NavSensingConsole` (3ª coluna ou aba
 dentro do console), mantendo a estrutura de 5 consoles no Tactical.
 
 \---
@@ -1094,9 +1101,106 @@ um seletor mutuamente exclusivo.
 
 \---
 
+### 12.7. NavSensingConsole — legenda do LRS; HelmConsole — ordem Sector/System
+
+* **Legenda do LRS** (`NavSensingConsole.vue`, item pendente desde a seção 6.3) — linha de
+texto fixa abaixo do grid de longo alcance: `"Code: KBS — K=Klingons  B=Starbases
+S=Stars"`, `fontSize: 1.15rem`, `opacity: 0.75` (tamanho pequeno demais na 1ª tentativa,
+ajustado a pedido do usuário).
+* **Cor do código LRS derivada do conteúdo, não fixada por célula** — `lrsCodeColor(code)`
+lê o 1º dígito (Klingons) e o 2º (Bases) do código `KBS`: `alert-fg` se K>0 (inimigo,
+prioridade de leitura), senão `anakiwa-fg` se B>0 (base aliada), senão `text-white` (só
+estrelas, nada de interesse). `longRangeGrid` agora é gerado a partir de
+`LRS_DEMO_CODES` (mapa código-por-célula) + essa função, em vez de cor manual por entrada
+— **mesma função de cor reaproveitada implicitamente** no `StarChartConsole.vue` (já usava
+a mesma convenção `alert-fg`/`anakiwa-fg`/`text-light`, ver seção 5.2).
+* **`HelmConsole.vue` — ordem Sector antes de System:** usuário notou que a convenção dos
+sensores (Nav/LRS: sempre setor primeiro) não batia com o Helm, que mostrava System antes
+de Sector tanto no indicador "Current Location" quanto no "Set Destination". Trocada a
+ordem visual nos dois blocos (`cur-loc-sec`/`cur-loc-sys`, `dst-sec-ind`/`dst-sys-ind`) —
+só reordenação de template, o estado (`activeDstToggle` default `'sec'`, `destination.sec`/
+`destination.sys`) já seguia essa convenção internamente.
+* **Doc corrigida:** seção 4.6 e seção 5.2 estavam desatualizadas — item "Starchart" listado
+como pendente, mas já tinha sido implementado na Fase 3.5 (`StarChartConsole.vue`, 6ª aba
+do `TacticalConsole`). Ver 5.2 pro que realmente falta lá (posição do jogador destacada,
+dados reais, filtros).
+* **LRS redesenhado pra não ser redundante com o Star Chart:** usuário notou que os dois
+painéis pareciam fazer a mesma coisa. Diferença real do clássico (confirmada contra a
+seção 3.2): **LRS** = sensor ao vivo, só cobre os quadrantes **vizinhos** (bloco 3×3 ao
+redor da nave), **sem memória** (some de novo até o próximo Scan); **Star Chart** = mapa
+**acumulado** da galáxia inteira (8×8), memória permanente de tudo já explorado, não
+precisa reescanear.
+  * **1ª tentativa (revertida):** encolher o grid do LRS pra 3×3 de verdade. Quebrou a
+  mecânica de clicar num sistema e mandar a coordenada real pro Helm (usuário apontou:
+  "o sensor reduzido prejudica essa mecânica") — grid pequeno não bate mais 1:1 com
+  coordenada absoluta da galáxia sem tradução local↔absoluto.
+  * **Versão final:** grid do `LcarsScanner` continua **8×8 cheio** (mesmo tamanho/posições
+  absolutas do Star Chart, clique manda coordenada real direto, sem tradução) — só que
+  `longRangeGrid` (computed) só popula os **9 quadrantes vizinhos** de `playerQuadrant`
+  (mock local, `{row:4,col:4}`), e só **depois do botão "Scan"** (`longRangeScanned` ref,
+  `scanLongRange()` liga). Antes de escanear ou fora do alcance = célula em branco (não
+  `???` — isso é conceito do Star Chart/"inexplorado", aqui é "fora de alcance dos
+  sensores", coisa diferente).
+  * `LRS_DEMO_CODES` mock só tem entrada pra células dentro do alcance (vizinhos de 4,4) —
+  fora disso não tem dado nenhum, de propósito.
+  * **Achado do bug de CSS ao testar a 1ª tentativa (3×3):** `.scanner.long` (`lcars-sdk.css`)
+  tem `width: 38rem` **fixo via classe**, não calculado a partir das props `width`/`height`
+  — o grid é um único flex container com `flex-wrap`, e o wrap pra próxima linha depende de
+  quantos itens de `4rem` cabem nos 38rem do container bater exatamente com o número de
+  colunas (border + N). Pra 8 colunas isso by design cabe certo (9×4rem≈36rem). Reduzir
+  `width`/`height` pra 3 sem also sobrescrever o `:style` do próprio `LcarsScanner` (que
+  repassa direto pro elemento raiz) faz o wrap quebrar — texto de células de linhas
+  diferentes cai na mesma linha visual. Confirmado com screenshot via Playwright antes de
+  reverter a abordagem. Registrado aqui porque qualquer futuro uso de `version="long"` com
+  `width`/`height` ≠ 8 no `LcarsScanner` **precisa** de `:style="{ width: '<N+1>*4.1rem' }"`
+  pra não quebrar — a classe CSS não escala sozinha.
+* **Bug irmão encontrado no `StarChartConsole.vue`:** mesma classe `.scanner.long`
+(38rem fixo), mas dessa vez o `DefaultBracket` (moldura) é que estava pequeno demais —
+`width: '24rem'` pra um scanner `version="long"` 8×8 que renderiza 38rem de largura de
+verdade. Moldura não cobria a extensão inteira do grid (colunas da direita ficavam fora/
+cortadas). Corrigido pra `42rem` (mesmo valor já usado no bracket do LRS,
+`NavSensingConsole.vue`, pro mesmo tipo de scanner) — junto com a `LcarsComplexButton`
+"Selected Quadrant" e a `LcarsRow` da legenda, que também estavam em 24rem e ficariam
+desalinhadas com o bracket mais largo. Confirmado com screenshot via Playwright.
+* **Moldura na posição atual da nave (Star Chart e LRS)** — resolve o item "posição do
+jogador destacada" pendente na seção 5.2. `PLAYER_MARKER_STYLE = { boxShadow: 'inset 0 0
+0 3px #ffffff' }` (mesmo valor nos dois arquivos, sem composable novo — só 2 usos) aplicado
+via `ScannerCell.style` na célula de `playerQuadrant` (mock local `{row:4,col:4}` em cada
+componente, ainda não sincronizado entre os dois nem com estado real — Fase 4). `boxShadow`
+em vez de `border` pra não alterar o box-model da célula (`.scanner > .item` já tem
+tamanho fixo via CSS, `border` somaria ao tamanho sem `box-sizing:border-box`).
+  * **No LRS:** a moldura aparece **sempre**, mesmo antes do Scan — a nave sempre sabe onde
+  ela está, isso não depende do sensor revelar o conteúdo dos vizinhos (`longRangeGrid`
+  computed monta o grid vazio/escaneado primeiro, depois sempre sobrescreve o estilo da
+  célula do jogador por cima, preservando texto/cor se já existir).
+  * **No Star Chart:** `activeGalaxyGrid` virou `computed` (era `ref` direto de
+  `props.galaxyGrid ?? demoGalaxyGrid`, renomeado pra `baseGalaxyGrid`) que sempre
+  sobrepõe o estilo da célula do jogador por cima do grid base, preservando o código
+  KBS que já estava lá.
+  * **SRS não precisou de mudança** — já mostra a nave com ícone real
+  (`getIcon(ScannerEntity.PLAYER)`), não precisa de moldura adicional.
+* **Bug de centralização vertical no `LcarsScanner.vue` (compartilhado):** texto de célula
+central (`.item`, flex `align-items:center`) ficava colado no topo da célula. Causa: a regra
+global `line-height: 1.25` (font-size 24px → line-height 30px computado) cria uma caixa de
+linha quase do tamanho da célula (32px), e a fonte `"LCARS Lower"` renderiza o glifo com o
+grosso do espaço reservado abaixo da linha de base — resultado visual é texto "subindo"
+mesmo com o flex centralizando a caixa de linha corretamente. Fix: nova classe
+`.scanner-cell-text` (`line-height: 1`) no `<span>` de texto central (não afeta o badge, que
+já tinha seu próprio `line-height`, nem os labels de borda). Achado ao investigar a moldura
+do jogador, mas é bug pré-existente, independente dela — afeta qualquer célula com `text`
+em qualquer consumidor do `LcarsScanner` (SRS/LRS/Star Chart/Weapons targeting).
+* **`StarChartConsole.vue` — nomenclatura e ação:** "Selected Quadrant" renomeado pra
+"Selected System" (`selectedQuadrant` → `selectedSystem`), consistente com a convenção já
+usada no LRS (`NavSensingConsole.vue`) e no Helm (`destination.sys`) — "quadrante" no jogo
+clássico é chamado de "system" nessa UI. Adicionado botão "Snd to Helm"
+(`sendSystemToHelm()`, mesmo stub `console.log` do LRS) do lado do indicador — antes a
+seleção de sistema no Star Chart não tinha nenhuma ação associada.
+
+\---
+
 *Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20; item 9
 revisto 2026-07-25, seção 12.6). Fase 3.5 concluída, revisão de UX pré-Fase 4 em andamento
 (seção 12). Próximo passo: terminar a
-revisão painel-por-painel (Weapons — falta Unload, Engineering, Nav restantes), depois Fase 4
+revisão painel-por-painel (Engineering restante), depois Fase 4
 (engine core + Pinia, seção 8\.4).*
 
