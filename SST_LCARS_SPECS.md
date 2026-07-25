@@ -239,10 +239,13 @@ deslocamento sub-warp ainda
 
 ### 4.3. WeaponsConsole ⚠️ Funcional localmente, sem efeito no estado global
 
-**O que cobre:** Controle de temperatura e efetividade dos phasers, seletor de potência
-(indicador + Set Power na mesma linguagem visual do Impulse Power do Helm, ver 12.6), Lock,
-Fire Phasers; Load torpedos, Auto-load, Cycle de mira entre alvos reais do setor com
-etiqueta de tubo(s) no scanner, Fire Torpedoes.
+**O que cobre:** Controle de temperatura e efetividade dos phasers (efetividade exibida
+como inteiro, valor real usado em cálculo continua decimal — bug do `SolidLevelBar`
+corrigido, ver 12.6), seletor de potência com presets 25/50/75/100% (indicador + Set Power
+na mesma linguagem visual do Impulse Power do Helm), Lock; Load/Unload de torpedos,
+Auto-load (recarrega o tubo sozinho ao disparar, desligado ao descarregar manualmente),
+Cycle de mira entre alvos reais do setor com etiqueta de tubo(s) no scanner, Fire
+Torpedoes.
 
 **O que falta:**
 
@@ -255,8 +258,6 @@ Klingons no setor (`useGameState`) na Fase 4, não uma lista fixa de 3 posiçõe
 * **Cálculo de dano inimigo nos escudos** — nenhuma ligação com ShieldConsole
 * **Mira automática** — "Lock" existe mas não identifica inimigos reais do estado global
 * **Energia de phaser da energia principal** — disparo devia consumir `phaserPower` da Main Energy
-* **Unload de torpedo** — só existe `loadTube()`; não há como descarregar um tubo carregado
-de volta pro estoque
 * ~~Mira de torpedo por clique~~ — **decidido e depois revertido** (revisão 2026-07-20 item 9,
 revertido 2026-07-25). Ver 12.6 pro mecanismo final (Cycle entre alvos reais).
 
@@ -1073,6 +1074,23 @@ mecânica correta é:
   quando os dois existem (ícone + badge sobreposto no canto). `.item` ganhou
   `position: relative` pra ancorar o badge absolute. Não quebra uso existente (Nav/
   StarChart só usam um ou outro campo, nunca os dois).
+* **Unload + Auto-load:** botão de tubo vira `Load N` ↔ `Unload N` conforme `tube.status`
+(mesmo botão, não dois). `unloadTube()` devolve o torpedo ao `torpedoStock` e **desliga**
+`autoLoad` (esvaziar manualmente é uma decisão explícita do capitão, não deve continuar
+recarregando sozinho). `fireTorpedoes()` recarrega na hora os tubos com `autoLoad` ativo
+e estoque disponível — dispara e já deixa `Loaded` de novo no mesmo ciclo, sem passo manual.
+* **Bug corrigido no `SolidLevelBar.vue` (componente compartilhado):** `displayLabel`
+ignorava o conteúdo de `props.label` e sempre re-renderizava `currentLevel` bruto
+(`if (props.label) return currentLevel.value.toString()`) — qualquer label formatado
+diferente do valor cru (ex: `Math.round()`) nunca aparecia. Corrigido pra usar
+`props.label` de verdade. Afetava a Effectiveness dos Phasers (queria inteiro, mostrava
+decimal) e o Overload do `EngineeringConsole` (queria `"20%"`, mostrava `"20"` sem o `%`)
+— achado de bônus ao corrigir. `:level` continua sempre o valor decimal/cru (preenchimento
+da barra e cálculo de dano futuro não mudam, só o texto exibido).
+* **Presets de potência do Phaser:** 4 botões (25/50/75/100%) abaixo do "Set Power" —
+mostram a porcentagem, calculam `phaserPower = (percent/100) * PHASER_POWER_MAX`. Mesmo
+padrão dos presets do Impulse Power (12.3): **sem** highlight de seleção, são atalhos, não
+um seletor mutuamente exclusivo.
 
 \---
 

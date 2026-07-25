@@ -38,7 +38,12 @@ interface Tube {
 }
 
 const phaserTemp = ref(props.initialPhaserTemp);
+const PHASER_POWER_MAX = 3000;
 const phaserPower = ref(1500);
+const phaserPowerPresets = [25, 50, 75, 100].map((percent) => ({
+  label: `${percent}%`,
+  value: Math.round((percent / 100) * PHASER_POWER_MAX),
+}));
 const lockedTargets = ref(props.initialTargets);
 const torpedoStock = ref(props.initialStock);
 
@@ -142,6 +147,23 @@ const loadTube = (index: number) => {
   }
 };
 
+const unloadTube = (index: number) => {
+  const tube = tubes.value[index];
+  if (tube.status === "Loaded") {
+    torpedoStock.value += 1;
+    tube.status = "Empty";
+    tube.autoLoad = false;
+  }
+};
+
+const toggleTubeLoad = (index: number) => {
+  if (tubes.value[index].status === "Loaded") {
+    unloadTube(index);
+  } else {
+    loadTube(index);
+  }
+};
+
 const toggleAutoLoad = (index: number) => {
   tubes.value[index].autoLoad = !tubes.value[index].autoLoad;
 };
@@ -152,6 +174,10 @@ const fireTorpedoes = () => {
     tubes.value.forEach((tube) => {
       if (tube.status === "Loaded") {
         tube.status = "Empty";
+        if (tube.autoLoad && torpedoStock.value > 0) {
+          torpedoStock.value -= 1;
+          tube.status = "Loaded";
+        }
       }
     });
     lockedTargets.value = Math.max(0, lockedTargets.value - 1);
@@ -254,7 +280,7 @@ const fireTorpedoes = () => {
         />
         <SolidLevelBar
           version="horizontal"
-          :max="3000"
+          :max="PHASER_POWER_MAX"
           :min="0"
           color="bg-blue-3"
           :level="phaserPower"
@@ -264,8 +290,22 @@ const fireTorpedoes = () => {
           :color="randColor()"
           label="+"
           :style="{ width: '3rem', flex: 'none' }"
-          @click="phaserPower = Math.min(3000, phaserPower + 100)"
+          @click="phaserPower = Math.min(PHASER_POWER_MAX, phaserPower + 100)"
         />
+      </LcarsComplexButton>
+
+      <!-- Power presets -->
+      <LcarsComplexButton :style="{ width: '100%', justifyContent: 'center' }">
+        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsButton
+          v-for="preset in phaserPowerPresets"
+          :key="preset.value"
+          :label="preset.label"
+          :color="randColor()"
+          :style="{ flex: '1' }"
+          @click="phaserPower = preset.value"
+        />
+        <LcarsCap version="round-right" :color="randColor()" />
       </LcarsComplexButton>
 
       <!-- Lock + Targets locked -->
@@ -427,10 +467,12 @@ const fireTorpedoes = () => {
         <LcarsButton
           version="round"
           :color="randColor()"
-          :label="`Load ${i + 1}`"
-          :disabled="torpedoStock === 0 || tube.status === 'Loaded'"
+          :label="
+            tube.status === 'Loaded' ? `Unload ${i + 1}` : `Load ${i + 1}`
+          "
+          :disabled="tube.status === 'Empty' && torpedoStock === 0"
           :style="{ width: '7rem', flex: 'none' }"
-          @click="loadTube(i)"
+          @click="toggleTubeLoad(i)"
         />
         <LcarsToggleSwitch
           :model-value="tube.autoLoad"
@@ -441,7 +483,11 @@ const fireTorpedoes = () => {
         <LcarsBlock
           :label="tube.status"
           :version="tube.status === 'Empty' ? 'red-dark-light' : undefined"
-          :color="tube.status === 'Loaded' ? 'bg-green-5' : undefined"
+          :color="
+            tube.status === 'Loaded'
+              ? useLcarsColors().lcarsColors.primary[0]
+              : undefined
+          "
           :style="{ width: '7rem', flex: 'none' }"
         />
       </LcarsRow>

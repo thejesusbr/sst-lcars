@@ -67,7 +67,7 @@ const wrapperTransform = computed(() => {
 })
 
 const displayLabel = computed(() => {
-  if (props.label) return currentLevel.value.toString()
+  if (props.label) return props.label
   if (props.altLabel !== undefined) return currentLevel.value
   return undefined
 })
