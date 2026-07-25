@@ -9,7 +9,6 @@ const meta: Meta<typeof EngineeringConsole> = {
     layout: 'fullscreen',
   },
   argTypes: {
-    initialEnergy: { control: { type: 'number', min: 0, max: 4500 } },
     warpIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     srsIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     lrsIntegrity: { control: { type: 'number', min: 0, max: 100 } },
@@ -27,7 +26,6 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
-    initialEnergy: 4500,
     warpIntegrity: 100,
     srsIntegrity: 100,
     lrsIntegrity: 100,
@@ -47,7 +45,6 @@ export const Default: Story = {
 
 export const DamagedSystems: Story = {
   args: {
-    initialEnergy: 3200,
     warpIntegrity: 45,
     srsIntegrity: 100,
     lrsIntegrity: 0,

@@ -281,23 +281,30 @@ espelhados de/para `useGameState`
 
 \---
 
-### 4.5. EngineeringConsole ✅ Visual completo, sem estado global
+### 4.5. EngineeringConsole ✅ Visual completo, mecânica de energia definida (mock), sem estado global
 
-**O que cobre:** Main Energy SolidLevelBar, tabela de 8 subsistemas (Warp, SRS, LRS, Phasers,
-Photons, Shields, Damage Control, Life Support) com barra de integridade e status
-OPERATIONAL/DAMAGED/OFFLINE, controles de simulação DRAIN/CHARGE/SIMULATE/REPAIR.
+**O que cobre:** Layout 3 colunas (Energy Matrix à esquerda / Damage Control Teams ao
+centro / Subsystem Integrity à direita, revisão 2026-07-25, ver 12.8). Main Energy como
+indicador de output nominal fixo do WC (não mais um recurso que drena). Subsystem Load
+(mock de consumo total roteado aos subsistemas) com sobrecarga automática por excesso.
+Overload manual na mesma linguagem visual do Set Power/Set Impulse (indicador + Set
+control + presets, incluindo atalho 0% pra desligar rápido). Tabela de 9 subsistemas
+(Warp, SRS, LRS, Phasers, Photons, Shields, Damage Control, Life Support, **Warp Core**)
+com integridade e status OPERATIONAL/DAMAGED/OFFLINE, SIMULATE DAMAGE/REPAIR ALL. 6
+equipes de CdD com dispatch cíclico.
 
 **O que falta:**
 
 * **Binding ao estado global** — todos os valores são locais
+* **Alocação de energia por subsistema de verdade** — `subsystemDraw` é um único número
+mockado (ver 12.8); a soma real por subsistema (Phasers/Impulse/Shields/etc, cada um hoje
+com seu próprio estado local em outro console) é trabalho de Fase 4 (`useGameState`)
 * **Repair over time** — no SST clássico, sistemas danificados se reparam com o passar do
 Stardate (taxa proporcional à integridade danificada)
 * **Botão "Rest"** — equivalente ao comando `REST`, avança Stardate e acelera reparos; poderia
 ser adicionado aqui
 * **Starbase repair** — ao atracar em Starbase, todos os subsistemas voltam a 100% e energia
 é reabastecida; isso precisa ser acionado a partir de Engineering ou de um evento global
-* **Warp Core (WC) como 9º subsistema** — nova mecânica proposta (sobrecarga + core breach),
-ainda não representada na tabela de subsistemas; ver seção 10\.
 
 **Proposta de integração (sem implementar):**
 
@@ -1198,9 +1205,43 @@ seleção de sistema no Star Chart não tinha nenhuma ação associada.
 
 \---
 
+### 12.8. EngineeringConsole — layout 3 colunas e nova mecânica de energia (WC output/routing)
+
+* **Layout 3 colunas** (era 2, com Damage Control e CdD Teams empilhados na mesma coluna):
+Energy Matrix (esquerda) / Damage Control Teams (centro) / **Subsystem Integrity**
+(direita, renomeado — antes "Damage Control", confundia com "Damage Control **Teams**").
+* **Mecânica de energia nova, substitui o antigo Main Energy dreno/carga:**
+  * `WARP_CORE_OUTPUT = 4500` (constante) — o WC entrega um output nominal fixo. **Main
+  Energy sempre mostra esse valor** (indicador simples, sem barra — deixou de ser um
+  recurso que esvazia). Botões DRAIN/CHARGE removidos, não faziam sentido na mecânica nova.
+  * **Regra:** soma de energia roteada aos subsistemas deve ser ≤ output do WC, senão
+  sobrecarga automática. Sobrecarga automática = `max(1, round((consumo - output) /
+  output * 100))` quando `consumo > output`, senão `0` — mínimo 1% assim que estourar,
+  escala com o quanto passou.
+  * **`subsystemDraw` é mock local** (`EngineeringConsole.vue`) — um único número
+  representando o consumo total, não alocação por subsistema de verdade. Ainda não existe
+  comunicação entre consoles (Weapons/Helm/Shield cada um com seu próprio estado local);
+  a soma real por subsistema é trabalho de Fase 4 (`useGameState`). Controle "Subsystem
+  Load": indicador + Set control (-/+250) + presets 25/50/75/100% do output, barra fica
+  vermelha (`alert-bg`) quando ultrapassa o output.
+  * **Overload manual + automático se somam:** `overload = manualOverload + autoOverload`.
+  Manual é o dial que o engenheiro roda de propósito (0-20%, mesma curva de risco da
+  seção 10.2); automático é consequência de rotear energia demais. Os dois empurram o
+  core além da capacidade, cada um por um motivo diferente — por isso somam em vez de
+  um substituir o outro.
+  * **Controles de Overload manual na linguagem visual do Set Power/Set Impulse**
+  (indicador dedicado + Set control -/+ sem label redundante na barra + presets) — pedido
+  explícito do usuário. Presets: **0%** (atalho pra desligar rápido, "muito necessário"
+  segundo o usuário — sobrecarga alta sem jeito fácil de zerar é frustração pura), 25%,
+  50%, 75%, 100% do `OVERLOAD_MAX` (20).
+* **`initialEnergy` prop removida** (não fazia mais sentido, Main Energy não é mais
+configurável de fora) — `EngineeringConsole.stories.ts` atualizado.
+
+\---
+
 *Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20; item 9
 revisto 2026-07-25, seção 12.6). Fase 3.5 concluída, revisão de UX pré-Fase 4 em andamento
-(seção 12). Próximo passo: terminar a
-revisão painel-por-painel (Engineering restante), depois Fase 4
-(engine core + Pinia, seção 8\.4).*
+(seção 12) — Situation Panel, Tactical, Helm, Shield, Weapons, Nav/Sensing e Engineering
+todos revisados. Próximo passo: Fase 4 (engine core + Pinia, seção 8\.4), começando pela
+alocação real de energia por subsistema (12.8) já que várias mecânicas dependem dela.*
 
