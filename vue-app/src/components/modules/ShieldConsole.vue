@@ -113,7 +113,7 @@ const shieldStatus = computed(() =>
   shieldEnergy.value > 0 && shieldIntegrity.value > 0 ? "UP" : "DOWN"
 );
 const statusColor = computed(() =>
-  shieldEnergy.value > 0 ? "anakiwa-fg" : "alert-fg"
+  semanticStatusColor(shieldEnergy.value > 0 ? "nominal" : "critical", "fg")
 );
 
 const mainEnergyColor = computed(() => {
@@ -216,7 +216,7 @@ const raiseShields = () => {
 
       <LcarsButton
         label="Simulate Hit"
-        color="alert-bg"
+        :color="semanticStatusColor('critical')"
         :style="{ width: '100%', marginTop: '0.75rem' }"
         @click="simulateHit"
       />
@@ -294,7 +294,7 @@ const raiseShields = () => {
       >
         <LcarsButton
           label="Lower Shields"
-          color="alert-bg"
+          :color="semanticStatusColor('critical')"
           :style="{ flex: '1' }"
           @click="lowerShields"
         />

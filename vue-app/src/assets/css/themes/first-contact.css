@@ -2,19 +2,21 @@
 
 /* First Contact (ST:VIII) -- Okudagrams Color Complete Set v4.1,
    lcarsmania.com. Metodologia completa em SST_LCARS_SPECS.md secao 13.3:
-   um tema so redeclara as vars que muda -- o resto herda de colors.css. */
+   um tema so redeclara as vars que muda -- o resto herda de colors.css.
+   Sobrescreve --role-* (o PAPEL), nunca a cor nomeada em si -- ver secao
+   13.7. */
 [data-theme="first-contact"] {
-  --pale-canary: var(--bg-purple-2);
-  --golden-tanoi: var(--husk);
-  /* --lilac: papel tertiary bateu com a propria --lilac existente, sem troca */
-  --rust: var(--fawn);
-  --medium-carmine: var(--bourbon); /* highlight-dark, 5o papel (secao 13) */
+  --role-primary: var(--bg-purple-2);
+  --role-secondary: var(--husk);
+  /* --role-tertiary: bate com o proprio default (--lilac), sem troca */
+  --role-highlight: var(--fawn);
+  --role-highlight-dark: var(--bourbon); /* 5o papel (secao 13) */
 }
 [data-theme="first-contact"].red-alert {
-  --alert: var(--ra-vivid-red);
-  --warning: var(--ra-dark-red);
-  --tamarillo: var(--ra-crimson);
-  --red-damask: var(--ra-maroon);
+  --role-primary-alert: var(--ra-vivid-red);
+  --role-secondary-alert: var(--ra-dark-red);
+  --role-tertiary-alert: var(--ra-crimson);
+  --role-highlight-alert: var(--ra-maroon);
   /* Progressao semantica nominal>damaged>critical, independente dos 4
      papeis acima (secao 13.4) -- mesmos 3 vermelhos oficiais em todo tema
      novo: o mais vivido, um medio, o mais escuro. */

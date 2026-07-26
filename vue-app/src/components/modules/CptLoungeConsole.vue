@@ -16,7 +16,7 @@ const { themes, activeTheme, setTheme } = useTheme();
 
 // Catalogo de cores do tema ativo, por categoria -- mesmas 2 categorias
 // reais da arquitetura de tema (documentation/design/COLOR_REFERENCE.md,
-// SST_LCARS_SPECS.md secao 13.1): frames+botoes (os 4 papeis de
+// SST_LCARS_SPECS.md secao 13.1): frames+botoes (os 5 papeis --role-* de
 // theme.css) e status (semantica nominal/damaged/critical). Cada item
 // mostra o par normal/red-alert -- a versao alerta e a var que o
 // `.red-alert` do tema realmente sobrescreve (ver colors.css/themes/*.css),
@@ -33,11 +33,11 @@ const categories = ref<{ title: string; items: Swatch[] }[]>([
   {
     title: "Frames & Buttons",
     items: [
-      { label: "Primary", varName: "--pale-canary", hex: "", alertVarName: "--alert", alertHex: "" },
-      { label: "Secondary", varName: "--golden-tanoi", hex: "", alertVarName: "--warning", alertHex: "" },
-      { label: "Tertiary", varName: "--lilac", hex: "", alertVarName: "--tamarillo", alertHex: "" },
-      { label: "Highlight", varName: "--rust", hex: "", alertVarName: "--red-damask", alertHex: "" },
-      { label: "Highlight Dark", varName: "--medium-carmine", hex: "", alertVarName: "--tamarillo", alertHex: "" },
+      { label: "Primary", varName: "--role-primary", hex: "", alertVarName: "--role-primary-alert", alertHex: "" },
+      { label: "Secondary", varName: "--role-secondary", hex: "", alertVarName: "--role-secondary-alert", alertHex: "" },
+      { label: "Tertiary", varName: "--role-tertiary", hex: "", alertVarName: "--role-tertiary-alert", alertHex: "" },
+      { label: "Highlight", varName: "--role-highlight", hex: "", alertVarName: "--role-highlight-alert", alertHex: "" },
+      { label: "Highlight Dark", varName: "--role-highlight-dark", hex: "", alertVarName: "--role-tertiary-alert", alertHex: "" },
     ],
   },
   {
@@ -144,7 +144,7 @@ watch(activeTheme, () => {
           />
           <LcarsButton
             label="Close"
-            color="alert-bg"
+            color="tertiary-interactive"
             :style="{ width: '7rem' }"
             @click="showCatalog = false"
           />

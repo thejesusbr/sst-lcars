@@ -1,19 +1,21 @@
 @import "../colors.css";
 
 /* Seculo XXIII -- Okudagrams Color Complete Set v4.1, lcarsmania.com.
-   Metodologia completa em SST_LCARS_SPECS.md secao 13.3. */
+   Metodologia completa em SST_LCARS_SPECS.md secao 13.3.
+   Sobrescreve --role-* (o PAPEL), nunca a cor nomeada em si -- ver secao
+   13.7. */
 [data-theme="23rd-century"] {
-  --pale-canary: var(--pear);
-  /* --golden-tanoi: papel secondary bateu com a propria --golden-tanoi existente, sem troca */
-  --lilac: var(--anakiwa);
-  --rust: var(--cerulean);
-  --medium-carmine: var(--cobalt); /* highlight-dark, 5o papel (secao 13) */
+  --role-primary: var(--pear);
+  /* --role-secondary: bate com o proprio default (--golden-tanoi), sem troca */
+  --role-tertiary: var(--anakiwa);
+  --role-highlight: var(--cerulean);
+  --role-highlight-dark: var(--cobalt); /* 5o papel (secao 13) */
 }
 [data-theme="23rd-century"].red-alert {
-  --alert: var(--ra-crimson);
-  --warning: var(--ra-vivid-red);
-  --tamarillo: var(--ra-dark-red);
-  --red-damask: var(--ra-maroon);
+  --role-primary-alert: var(--ra-crimson);
+  --role-secondary-alert: var(--ra-vivid-red);
+  --role-tertiary-alert: var(--ra-dark-red);
+  --role-highlight-alert: var(--ra-maroon);
   --status-nominal-alert: var(--ra-vivid-red);
   --status-damaged-alert: var(--ra-dark-red);
   --status-critical: var(--ra-maroon);

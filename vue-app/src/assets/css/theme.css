@@ -7,7 +7,7 @@
 * Static are framing and displays.
 * Colors are defined in the colors.css file as variables.
 * There is a normal and a red-alert theme. Changing to red-alert is done by adding
-* the red-alert class to the root element. Each theme has a primary, a secondary and 
+* the red-alert class to the root element. Each theme has a primary, a secondary and
 * a tertiary color for both interactive and static elements, a light and a dark
 * text-color with the respective red-alert counterparts.
 * The overall theme was based on the colors shown in the LCARS interface of the first
@@ -16,74 +16,75 @@
 */
 @import "colors.css";
 
-/* Theme classes */
+/* Theme classes -- leem --role-* (colors.css), nunca uma cor nomeada
+   direto. Isso e o que deixa um tema livre pra apontar qualquer papel
+   pra qualquer cor sem editar este arquivo. Ver SST_LCARS_SPECS.md
+   secao 13.7. */
 .primary-static,
-.primary-static > *:not([class*="-bg"]) {
-  fill: var(--pale-canary);
-  background-color: var(--pale-canary);
-  border-color: var(--pale-canary);
+.primary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-primary);
+  background-color: var(--role-primary);
+  border-color: var(--role-primary);
 }
 
 .secondary-static,
-.secondary-static > *:not([class*="-bg"]) {
-  fill: var(--golden-tanoi);
-  background-color: var(--golden-tanoi);
-  border-color: var(--golden-tanoi);
+.secondary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-secondary);
+  background-color: var(--role-secondary);
+  border-color: var(--role-secondary);
 }
 
 .tertiary-static,
-.tertiary-static > *:not([class*="-bg"]) {
-  fill: var(--lilac);
-  background-color: var(--lilac);
-  border-color: var(--lilac);
+.tertiary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-tertiary);
+  background-color: var(--role-tertiary);
+  border-color: var(--role-tertiary);
 }
 
 .primary-interactive,
-.primary-interactive > *:not([class*="-bg"]) {
-  fill: var(--pale-canary);
-  background-color: var(--pale-canary);
-  border-color: var(--pale-canary);
+.primary-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-primary);
+  background-color: var(--role-primary);
+  border-color: var(--role-primary);
 }
 
 .secondary-interactive,
-.secondary-interactive > *:not([class*="-bg"]) {
-  fill: var(--golden-tanoi);
-  background-color: var(--golden-tanoi);
-  border-color: var(--golden-tanoi);
+.secondary-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-secondary);
+  background-color: var(--role-secondary);
+  border-color: var(--role-secondary);
 }
 
 .tertiary-interactive,
-.tertiary-interactive > *:not([class*="-bg"]) {
-  fill: var(--lilac);
-  background-color: var(--lilac);
-  border-color: var(--lilac);
+.tertiary-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-tertiary);
+  background-color: var(--role-tertiary);
+  border-color: var(--role-tertiary);
 }
 
 .highlight-interactive,
-.highlight-interactive > *:not([class*="-bg"]) {
-  fill: var(--rust);
-  background-color: var(--rust);
-  border-color: var(--rust);
+.highlight-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-highlight);
+  background-color: var(--role-highlight);
+  border-color: var(--role-highlight);
 }
 
 /* 5o papel de tema (2026-07-25) -- acento extra, nao precisa ser variacao
    de brilho da mesma cor de --highlight-interactive, pode ser cor
-   diferente por tema. Slot nomeado --medium-carmine (cor padrao do TOS
-   pra esse papel), mesmo padrao dos outros 4 papeis. Ver
-   SST_LCARS_SPECS.md secao 13. */
+   diferente por tema. Ver SST_LCARS_SPECS.md secao 13. */
 .highlight-dark-interactive,
-.highlight-dark-interactive > *:not([class*="-bg"]) {
-  fill: var(--medium-carmine);
-  background-color: var(--medium-carmine);
-  border-color: var(--medium-carmine);
+.highlight-dark-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-highlight-dark);
+  background-color: var(--role-highlight-dark);
+  border-color: var(--role-highlight-dark);
 }
 
 .text-light {
-  color: var(--pale-canary);
+  color: var(--role-primary);
 }
 
 .text-dark {
-  color: var(--red-damask);
+  color: var(--role-highlight-alert);
 }
 
 .text-white {
@@ -94,78 +95,77 @@
   color: black;
 }
 
-.red-alert .primary-static,
-.red-alert .primary-static > *:not([class*="-bg"]) {
-  fill: var(--alert);
-  background-color: var(--alert);
-  border-color: var(--alert);
-}
-
-.red-alert .secondary-static,
-.red-alert .secondary-static > *:not([class*="-bg"]) {
-  fill: var(--alert);
-  background-color: var(--alert);
-  border-color: var(--alert);
-}
-
-.red-alert .tertiary-static,
-.red-alert .tertiary-static > *:not([class*="-bg"]) {
-  fill: var(--alert);
-  background-color: var(--alert);
-  border-color: var(--alert);
-}
-
-.red-alert .primary-interactive,
-.red-alert .primary-interactive > *:not([class*="-bg"]) {
-  fill: var(--alert);
-  background-color: var(--alert);
-  border-color: var(--alert);
-}
-
-.red-alert .secondary-interactive,
-.red-alert .secondary-interactive > *:not([class*="-bg"]) {
-  fill: var(--warning);
-  background-color: var(--warning);
-  border-color: var(--warning);
-}
-
-.red-alert .tertiary-interactive,
-.red-alert .tertiary-interactive > *:not([class*="-bg"]) {
-  fill: var(--tamarillo);
-  background-color: var(--tamarillo);
-  border-color: var(--tamarillo);
-}
-
-.red-alert .highlight-interactive,
-.red-alert .highlight-interactive > *:not([class*="-bg"]) {
-  fill: var(--red-damask);
-  background-color: var(--red-damask);
-  border-color: var(--red-damask);
-}
-
-/* Reusa --tamarillo (mesma cor do red-alert de tertiary) de proposito --
-   TOS ja tinha essa cor livre pra isso; cada tema so precisa sobrescrever
-   --tamarillo 1x (ja faz isso pro tertiary) e o highlight-dark acompanha
-   de graca. */
-.red-alert .highlight-dark-interactive,
-.red-alert .highlight-dark-interactive > *:not([class*="-bg"]) {
-  fill: var(--tamarillo);
-  background-color: var(--tamarillo);
-  border-color: var(--tamarillo);
-}
-
 .red-alert .text-light {
   color: white;
 }
 
 .red-alert .text-dark {
-  color: var(--red-damask);
+  color: var(--role-highlight-alert);
 }
 
 .red-alert .text-white {
-  color: var(--pale-canary);
+  color: var(--role-primary);
 }
 
 .red-alert .text-black {
   color: black;
+}
+
+.red-alert .primary-static,
+.red-alert .primary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-primary-alert);
+  background-color: var(--role-primary-alert);
+  border-color: var(--role-primary-alert);
+}
+
+.red-alert .secondary-static,
+.red-alert .secondary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-primary-alert);
+  background-color: var(--role-primary-alert);
+  border-color: var(--role-primary-alert);
+}
+
+.red-alert .tertiary-static,
+.red-alert .tertiary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-primary-alert);
+  background-color: var(--role-primary-alert);
+  border-color: var(--role-primary-alert);
+}
+
+.red-alert .primary-interactive,
+.red-alert .primary-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-primary-alert);
+  background-color: var(--role-primary-alert);
+  border-color: var(--role-primary-alert);
+}
+
+.red-alert .secondary-interactive,
+.red-alert .secondary-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-secondary-alert);
+  background-color: var(--role-secondary-alert);
+  border-color: var(--role-secondary-alert);
+}
+
+.red-alert .tertiary-interactive,
+.red-alert .tertiary-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-tertiary-alert);
+  background-color: var(--role-tertiary-alert);
+  border-color: var(--role-tertiary-alert);
+}
+
+.red-alert .highlight-interactive,
+.red-alert .highlight-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-highlight-alert);
+  background-color: var(--role-highlight-alert);
+  border-color: var(--role-highlight-alert);
+}
+
+/* Reusa --role-tertiary-alert (mesma cor do red-alert de tertiary) de
+   proposito -- todo tema ja sobrescreve essa var pro tertiary, entao
+   highlight-dark acompanha de graca, sem precisar de um 5o vermelho. */
+.red-alert .highlight-dark-interactive,
+.red-alert .highlight-dark-interactive > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
+  fill: var(--role-tertiary-alert);
+  background-color: var(--role-tertiary-alert);
+  border-color: var(--role-tertiary-alert);
 }

@@ -17,20 +17,16 @@ const lcarsColors: LcarsColors = reactive({
 })
 
 export type SystemStatus = 'nominal' | 'damaged' | 'critical' | 'disabled'
-
-const STATUS_CLASS: Record<SystemStatus, string> = {
-  nominal: 'status-nominal-bg',
-  damaged: 'status-damaged-bg',
-  critical: 'status-critical-bg',
-  disabled: 'status-disabled-bg'
-}
+export type StatusColorVariant = 'bg' | 'fg'
 
 export function useLcarsColors() {
-  // Classe de cor semantica (nominal/damaged/critical), theme-aware e com
-  // variante .red-alert -- ver colors.css. Cada console mantem seus
+  // Classe de cor semantica (nominal/damaged/critical/disabled), theme-aware
+  // e com variante .red-alert -- ver colors.css. Cada console mantem seus
   // proprios limiares/direcao de calculo, so troca o literal de classe por
-  // isso.
-  const statusColor = (status: SystemStatus): string => STATUS_CLASS[status]
+  // isso. `variant: 'fg'` pra rotulo de texto sobre fundo transparente
+  // (mesmo par -bg/-fg que toda cor nomeada ja tem).
+  const statusColor = (status: SystemStatus, variant: StatusColorVariant = 'bg'): string =>
+    `status-${status}-${variant}`
 
   return {
     lcarsColors,

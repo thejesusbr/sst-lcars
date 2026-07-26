@@ -37,6 +37,22 @@
   --black: #000;
   --white: #fff;
 
+  /* Papeis de tema (2026-07-26) -- desacoplados das cores nomeadas acima.
+     --pale-canary etc continuam existindo pra quem quer uma cor FIXA de
+     proposito (pale-canary-bg no scanner animado etc); --role-* e o que
+     theme.css/themes/*.css realmente leem/sobrescrevem. TOS = default,
+     "primary aponta pra pale-canary" -- exatamente como qualquer outro
+     tema aponta pra qualquer outra cor. Ver SST_LCARS_SPECS.md secao 13.7. */
+  --role-primary: var(--pale-canary);
+  --role-secondary: var(--golden-tanoi);
+  --role-tertiary: var(--lilac);
+  --role-highlight: var(--rust);
+  --role-highlight-dark: var(--medium-carmine);
+  --role-primary-alert: var(--alert);
+  --role-secondary-alert: var(--warning);
+  --role-tertiary-alert: var(--tamarillo);
+  --role-highlight-alert: var(--red-damask);
+
   /* Legacy "Group" palette (ported from the LCARS SDK's own default theme,
      see comment at the Green Group below) -- var-indirected so a future
      [data-theme] block can override a frame color without touching the
@@ -146,219 +162,219 @@
 /* Color classes */
 
 .anakiwa-bg,
-.anakiwa-bg > *:not([class*="-bg"]) {
+.anakiwa-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--anakiwa);
   background-color: var(--anakiwa);
   border-color: var(--anakiwa);
 }
 .atomic-tangerine-bg,
-.atomic-tangerine-bg > *:not([class*="-bg"]) {
+.atomic-tangerine-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--atomic-tangerine);
   background-color: var(--atomic-tangerine);
   border-color: var(--atomic-tangerine);
 }
 .bahama-blue-bg,
-.bahama-blue-bg > *:not([class*="-bg"]) {
+.bahama-blue-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--bahama-blue);
   background-color: var(--bahama-blue);
   border-color: var(--bahama-blue);
 }
 .bourbon-bg,
-.bourbon-bg > *:not([class*="-bg"]) {
+.bourbon-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--bourbon);
   background-color: var(--bourbon);
   border-color: var(--bourbon);
 }
 .blue-bell-bg,
-.blue-bell-bg > *:not([class*="-bg"]) {
+.blue-bell-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--blue-bell);
   background-color: var(--blue-bell);
   border-color: var(--blue-bell);
 }
 .caribbean-green-bg,
-.caribbean-green-bg > *:not([class*="-bg"]) {
+.caribbean-green-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--caribbean-green);
   background-color: var(--caribbean-green);
   border-color: var(--caribbean-green);
 }
 .chestnut-rose-bg,
-.chestnut-rose-bg > *:not([class*="-bg"]) {
+.chestnut-rose-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--chestnut-rose);
   background-color: var(--chestnut-rose);
   border-color: var(--chestnut-rose);
 }
 .cosmic-bg,
-.cosmic-bg > *:not([class*="-bg"]) {
+.cosmic-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--cosmic);
   background-color: var(--cosmic);
   border-color: var(--cosmic);
 }
 .danub-bg,
-.danub-bg > *:not([class*="-bg"]) {
+.danub-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--danub);
   background-color: var(--danub);
   border-color: var(--danub);
 }
 .dodger-pale-bg,
-.dodger-pale-bg > *:not([class*="-bg"]) {
+.dodger-pale-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--dodger-pale);
   background-color: var(--dodger-pale);
   border-color: var(--dodger-pale);
 }
 .dodger-soft-bg,
-.dodger-soft-bg > *:not([class*="-bg"]) {
+.dodger-soft-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--dodger-soft);
   background-color: var(--dodger-soft);
   border-color: var(--dodger-soft);
 }
 .eggplant-bg,
-.eggplant-bg > *:not([class*="-bg"]) {
+.eggplant-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--eggplant);
   background-color: var(--eggplant);
   border-color: var(--eggplant);
 }
 .golden-tanoi-bg,
-.golden-tanoi-bg > *:not([class*="-bg"]) {
+.golden-tanoi-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--golden-tanoi);
   background-color: var(--golden-tanoi);
   border-color: var(--golden-tanoi);
 }
 .hopbush-bg,
-.hopbush-bg > *:not([class*="-bg"]) {
+.hopbush-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--hopbush);
   background-color: var(--hopbush);
   border-color: var(--hopbush);
 }
 .husk-bg,
-.husk-bg > *:not([class*="-bg"]) {
+.husk-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--husk);
   background-color: var(--husk);
   border-color: var(--husk);
 }
 .indigo-bg,
-.indigo-bg > *:not([class*="-bg"]) {
+.indigo-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--indigo);
   background-color: var(--indigo);
   border-color: var(--indigo);
 }
 .lavender-purple-bg,
-.lavender-purple-bg > *:not([class*="-bg"]) {
+.lavender-purple-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--lavender-purple);
   background-color: var(--lavender-purple);
   border-color: var(--lavender-purple);
 }
 .lilac-bg,
-.lilac-bg > *:not([class*="-bg"]) {
+.lilac-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--lilac);
   background-color: var(--lilac);
   border-color: var(--lilac);
 }
 .mariner-bg,
-.mariner-bg > *:not([class*="-bg"]) {
+.mariner-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--mariner);
   background-color: var(--mariner);
   border-color: var(--mariner);
 }
 .medium-carmine-bg,
-.medium-carmine-bg > *:not([class*="-bg"]) {
+.medium-carmine-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--medium-carmine);
   background-color: var(--medium-carmine);
   border-color: var(--medium-carmine);
 }
 .melrose-bg,
-.melrose-bg > *:not([class*="-bg"]) {
+.melrose-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--melrose);
   background-color: var(--melrose);
   border-color: var(--melrose);
 }
 .navy-blue-bg,
-.navy-blue-bg > *:not([class*="-bg"]) {
+.navy-blue-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--navy-blue);
   background-color: var(--navy-blue);
   border-color: var(--navy-blue);
 }
 .near-blue-bg,
-.near-blue-bg > *:not([class*="-bg"]) {
+.near-blue-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--near-blue);
   background-color: var(--near-blue);
   border-color: var(--near-blue);
 }
 .neon-carrot-bg,
-.neon-carrot-bg > *:not([class*="-bg"]) {
+.neon-carrot-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--neon-carrot);
   background-color: var(--neon-carrot);
   border-color: var(--neon-carrot);
 }
 .orange-peel-bg,
-.orange-peel-bg > *:not([class*="-bg"]) {
+.orange-peel-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--orange-peel);
   background-color: var(--orange-peel);
   border-color: var(--orange-peel);
 }
 .pale-canary-bg,
-.pale-canary-bg > *:not([class*="-bg"]) {
+.pale-canary-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--pale-canary);
   background-color: var(--pale-canary);
   border-color: var(--pale-canary);
 }
 .periwinkle-bg,
-.periwinkle-bg > *:not([class*="-bg"]) {
+.periwinkle-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--periwinkle);
   background-color: var(--periwinkle);
   border-color: var(--periwinkle);
 }
 .alert-bg,
-.alert-bg > *:not([class*="-bg"]) {
+.alert-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--alert);
   background-color: var(--alert);
   border-color: var(--alert);
 }
 .red-damask-bg,
-.red-damask-bg > *:not([class*="-bg"]) {
+.red-damask-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--red-damask);
   background-color: var(--red-damask);
   border-color: var(--red-damask);
 }
 .rust-bg,
-.rust-bg > *:not([class*="-bg"]) {
+.rust-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--rust);
   background-color: var(--rust);
   border-color: var(--rust);
 }
 .sandy-brown-bg,
-.sandy-brown-bg > *:not([class*="-bg"]) {
+.sandy-brown-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--sandy-brown);
   background-color: var(--sandy-brown);
   border-color: var(--sandy-brown);
 }
 .tamarillo-bg,
-.tamarillo-bg > *:not([class*="-bg"]) {
+.tamarillo-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--tamarillo);
   background-color: var(--tamarillo);
   border-color: var(--tamarillo);
 }
 .tanoi-bg,
-.tanoi-bg > *:not([class*="-bg"]) {
+.tanoi-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--tanoi);
   background-color: var(--tanoi);
   border-color: var(--tanoi);
 }
 .warning-bg,
-.warning-bg > *:not([class*="-bg"]) {
+.warning-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--warning);
   background-color: var(--warning);
   border-color: var(--warning);
 }
 .black-bg,
-.black-bg > *:not([class*="-bg"]) {
+.black-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--black);
   background-color: var(--black);
   border-color: var(--black);
 }
 .white-bg,
 .bg-white,
-.white-bg > *:not([class*="-bg"]),
-.bg-white > *:not([class*="-bg"]) {
+.white-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]),
+.bg-white > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--white);
   background-color: var(--white);
   border-color: var(--white);
@@ -562,40 +578,62 @@
    (override na MESMA especificidade que o consumo), so' que sem acoplar
    a mais nenhum outro papel. */
 .status-nominal-bg,
-.status-nominal-bg > *:not([class*="-bg"]) {
+.status-nominal-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--status-nominal);
   background-color: var(--status-nominal);
   border-color: var(--status-nominal);
 }
 .status-damaged-bg,
-.status-damaged-bg > *:not([class*="-bg"]) {
+.status-damaged-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--status-damaged);
   background-color: var(--status-damaged);
   border-color: var(--status-damaged);
 }
 .status-critical-bg,
-.status-critical-bg > *:not([class*="-bg"]) {
+.status-critical-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--status-critical);
   background-color: var(--status-critical);
   border-color: var(--status-critical);
 }
 .status-disabled-bg,
-.status-disabled-bg > *:not([class*="-bg"]) {
+.status-disabled-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--status-disabled);
   background-color: var(--status-disabled);
   border-color: var(--status-disabled);
 }
 .red-alert .status-nominal-bg,
-.red-alert .status-nominal-bg > *:not([class*="-bg"]) {
+.red-alert .status-nominal-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--status-nominal-alert);
   background-color: var(--status-nominal-alert);
   border-color: var(--status-nominal-alert);
 }
 .red-alert .status-damaged-bg,
-.red-alert .status-damaged-bg > *:not([class*="-bg"]) {
+.red-alert .status-damaged-bg > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
   fill: var(--status-damaged-alert);
   background-color: var(--status-damaged-alert);
   border-color: var(--status-damaged-alert);
+}
+
+/* Variante -fg (so cor de texto, sem fundo) -- pra rotulo de status sobre
+   fundo transparente (ex.: "UP"/"DOWN" do ShieldConsole), mesmo par -bg/-fg
+   que toda cor nomeada ja tem. */
+.status-nominal-fg {
+  color: var(--status-nominal);
+}
+.status-damaged-fg {
+  color: var(--status-damaged);
+}
+.status-critical-fg {
+  color: var(--status-critical);
+}
+.status-disabled-fg {
+  color: var(--status-disabled);
+}
+.red-alert .status-nominal-fg {
+  color: var(--status-nominal-alert);
+}
+.red-alert .status-damaged-fg {
+  color: var(--status-damaged-alert);
 }
 
 /* Blue/Purple/Orange/Red/Grey Groups -- usados por lcarsColors.pool

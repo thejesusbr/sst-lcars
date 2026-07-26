@@ -1298,8 +1298,10 @@ cálculo — só o nome da classe de saída virou compartilhado.
 ### 13.2. Mecanismo `[data-theme]` + `.red-alert`
 
 Um tema é um bloco `[data-theme="<id>"]` que só redeclara as vars que muda — o resto herda
-do `:root` de `colors.css` (que É o tema TOS/padrão, sem atributo nenhum, zero mudança
-visual pro tema atual). `useTheme.ts` escreve `document.body.dataset.theme` (mesmo
+do `:root` de `colors.css`. TOS também tem seu próprio arquivo (`themes/tos.css`, desde
+2026-07-25) por simetria com os outros 5 — os valores lá são **redundantes** com o
+`:root` (TOS *é* o default, zero mudança visual), mantido explícito só pra dar pra
+comparar os 6 temas lado a lado sem abrir `colors.css`. `useTheme.ts` escreve `document.body.dataset.theme` (mesmo
 elemento que já hospeda a classe `.red-alert`, ver `SituationPanel.vue`), então a
 combinação tema+alerta vira um bloco composto `[data-theme="<id>"].red-alert` que
 sobrescreve as MESMAS vars (`--alert`/`--warning`/`--tamarillo`/`--red-damask`) que as
@@ -1492,6 +1494,105 @@ achado na sessão de criação dos temas).
 
 `lcarsColors.primary/secondary/tertiary/custom` (índices fixos, ex.: `lcarsColors.primary[7]`)
 **não foi tocado** — já era determinístico, nunca usava `randColor()`.
+
+### 13.7. Desacoplar papel de tema do nome da cor (2026-07-26)
+
+Usuário apontou uma desconexão semântica: a expectativa era referenciar cor **por
+papel** e o tema trocar a cor associada por trás; na prática, `theme.css` lia
+`var(--pale-canary)` pro papel `primary`, `var(--golden-tanoi)` pro `secondary` etc — o
+"papel" **era** literalmente uma cor específica do TOS emprestada. Funcionava (cada tema
+sobrescrevia essas mesmas vars), mas pra pintar de outra cor cada tema tinha que
+hijackar uma cor que tinha nome de outra coisa — e pra usar uma cor decorativa fixa sem
+papel nenhum, só dava pra escrever o nome de uma cor real.
+
+**Fix:** 9 novas vars `--role-{primary,secondary,tertiary,highlight,highlight-dark}`
+(+ `-alert` pros 4 primeiros) em `colors.css :root`, cada uma apontando por padrão pra
+cor que o TOS já usava (`--role-primary: var(--pale-canary)` etc) — **aditivo, não
+rename**: as 33 cores nomeadas continuam existindo exatamente como estavam, ainda
+disponíveis via `-bg`/`-fg` pra quem quer uma cor fixa de propósito. `theme.css` passou a
+ler `var(--role-primary)` etc em vez da cor nomeada direto; os 6 `themes/*.css` passaram
+a sobrescrever `--role-primary: var(--bg-purple-2)` em vez de `--pale-canary: var(--bg-purple-2)`
+— a fonte não muda, só o alvo do override.
+
+**Benefício colateral:** como papel e cor nomeada viraram namespaces separados, os 2
+workarounds de hex literal contra autossombreamento (`nemesis.css`, `29th-century.css`,
+seção 13.3) deixaram de ser necessários — voltaram a usar `var(--rust)`/
+`var(--golden-tanoi)`/`var(--lilac)` limpo, porque a var que cada tema sobrescreve
+(`--role-*`) nunca é a mesma que ele lê como fonte.
+
+**Migração necessária pra não regredir:** pontos que usavam `alert-bg`/`alert-fg`
+direto dependiam de `--alert` ser sobrescrito por tema — depois do desacoplamento,
+`--alert` vira fixo (só `--role-primary-alert` é sobrescrito). Migrados pra
+`statusColor('critical')` (já theme+alert-aware de verdade): botões de ação de risco
+(`ShieldConsole` "Simulate Hit"/"Lower Shields", `WeaponsConsole` "Fire Phasers"/"Fire
+Torpedoes"), alerta de Core Breach (`SituationPanel`), texto de overload
+(`EngineeringConsole`), texto "Defeat" (`ResultScreen`). Achado de bônus: `ShieldConsole`
+tinha um `statusColor` computed LOCAL (UP/DOWN do escudo) que duplicava a lógica do
+`semanticStatusColor` já importado no mesmo arquivo — migrado também. Precisou de uma
+variante `-fg` nova pra `statusColor()` (`status-nominal-fg` etc, `useLcarsColors.ts`
+ganhou 2º parâmetro `variant: 'bg'|'fg'`) já que os pontos migrados eram texto sobre
+fundo transparente, não preenchimento sólido. Botão "Close" do catálogo (`CptLoungeConsole`)
+não é bem "crítico" semanticamente — virou `tertiary-interactive` em vez de
+`statusColor('critical')`.
+
+**Fora de escopo, achado à parte:** a legenda KBS do scanner (`alert-fg`=inimigo,
+`anakiwa-fg`=base aliada, `golden-tanoi-fg`=estrela, em `NavSensingConsole`/
+`StarChartConsole`) também usa cor nomeada direto, mas é semântica de CONTEÚDO (tipo de
+contato), não papel de tema — candidato futuro a um helper dedicado tipo `scanColor()`,
+não implementado agora. Mesma coisa pra `lcarsColors.primary[n]`/`.pool.*` (grupos
+legados `bg-blue/orange/purple-N` indexados em `TacticalConsole`/`SituationPanel`/
+`WeaponsConsole`) — mesmo sintoma (cor fixa entre temas), mecanismo mais antigo e
+separado, não mexido.
+
+### 13.8. Bug: cor do filho não vencia cor herdada do `LcarsComplexButton` (2026-07-26)
+
+Usuário reportou: definir cor num `LcarsComplexButton` é herdada pelos filhos (correto),
+mas uma cor diferente definida EM UM FILHO não conseguia sobrepor a herdada (errado). O
+esperado é o oposto: cor própria do filho sempre vence.
+
+**Causa raiz:** toda classe de cor (nomeada, papel, status) tem 2 seletores — o elemento
+em si, e `.pai > *:not([class*="-bg"])` pra empurrar a cor aos filhos sem cor própria. O
+guard `:not([class*="-bg"])` só exclui filhos com outra cor NOMEADA (`anakiwa-bg`) —
+não exclui filhos com papel de tema (`secondary-static`, `primary-interactive`, sufixos
+`-static`/`-interactive`, sem `-bg` no nome) nem com `-fg`. Um `<LcarsCap
+color="secondary-static">` dentro de um `<LcarsComplexButton color="primary-interactive">`
+não era excluído pelo guard do pai — e a regra composta do pai
+(`.primary-interactive > *:not(...)`, especificidade ~0-2-0) é mais específica que a
+regra do próprio cap (`.secondary-static`, ~0-1-0), então o pai vencia sempre,
+independente da ordem no CSS.
+
+**Fix:** guard alargado pra excluir as 4 famílias de classe de cor que competem por
+`background-color`/`fill`/`border-color`. **1ª tentativa** (efêmera, revertida no mesmo
+dia): 4 `:not()` encadeados —
+`:not([class*="-bg"]):not([class*="-fg"]):not([class*="-static"]):not([class*="-interactive"])`.
+Funcionava pro caso reportado, mas **causou uma regressão nova**: cada `:not([class*=...])`
+soma especificidade (0-1-0 cada), então a regra do pai pulou de ~0-2-0 pra ~0-5-0 —
+específica o bastante pra passar a vencer OUTRAS regras no app que tinham 4 classes
+próprias e antes venciam com folga (achado: `LcarsToggleSwitch` quebrou — o bloco
+`.block.check.transparent`, que depende de vencer via especificidade contra a cascata do
+pai já que "transparent"/"check"/"block" não têm nenhum dos 4 sufixos guardados, parou de
+ficar transparente). **Fix final:** um único `:not()` com **lista separada por vírgula**
+— `:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"])` —
+por spec (Selectors L4), a especificidade de um `:not()` com lista é a do membro MAIS
+específico da lista, não a soma; volta a ~0-2-0 (igual ao original) mantendo a mesma
+exclusão funcional. Aplicado em toda `colors.css`/`theme.css` (59 ocorrências, mesma
+string literal, troca mecânica). Root-cause fix: o guard é compartilhado por toda classe
+de cor do sistema nomeado/papel/status, não precisou tocar em nenhum componente Vue nem
+em nenhum dos 6 temas. Grupos legados `bg-*-N` têm guard próprio (`:not([class*="bg-"])`,
+padrão diferente) e não foram tocados — já usam `!important`, que sempre vence
+independente de especificidade (comportamento documentado à parte, ver lição repetida
+sobre não colorir `LcarsComplexButton` segmentado com `bg-*`).
+
+**Lição:** `:not()` encadeado (`:not(A):not(B):not(C)`) SOMA especificidade a cada
+cláusula; `:not(A, B, C)` (lista única) usa só a do membro mais específico. Pra guard de
+exclusão que só precisa "não bater com nenhuma destas classes", lista é sempre a forma
+certa — encadear é um jeito fácil de inflar especificidade sem querer e quebrar alguma
+outra regra que dependia do nível antigo.
+
+Validado: `SituationPanel`'s "Energy Level" (`primary-interactive`) com um `LcarsCap
+secondary-static` agora renderiza a cor própria (golden-tanoi) em vez de herdar a do pai
+(pale-canary); filho sem cor própria continua herdando normalmente; os 61
+`LcarsComplexButton` da app inteira seguem pintados sem exceção após a troca.
 
 \---
 

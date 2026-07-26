@@ -1,0 +1,32 @@
+@import "../colors.css";
+
+/* TOS -- tema padrao, paleta original quente (amarelo/laranja), validada
+   contra o Okudagrams Color Complete Set v4.1 (SST_LCARS_SPECS.md secao
+   13.3). Diferente dos outros 5 temas, aqui os valores abaixo sao
+   REDUNDANTES com os defaults do :root em colors.css -- nao tem delta
+   nenhum, TOS *e* o default. Mantido como arquivo explicito mesmo assim
+   por simetria com os outros temas (todo tema em 1 lugar so, dá pra
+   comparar os 6 lado a lado sem precisar abrir colors.css) e pra
+   `useTheme.ts` poder aplicar "tos" como um `[data-theme]` de verdade
+   (ele já faz isso desde sempre, `activeTheme` começa em 'tos' e o watch
+   com `immediate:true` seta o atributo no primeiro render).
+
+   Sobrescreve --role-* (o PAPEL), nunca a cor nomeada em si (--pale-canary
+   etc continuam intocadas, disponiveis pra quem quer aquela cor fixa por
+   nome -- ver secao 13.7). */
+[data-theme="tos"] {
+  --role-primary: var(--pale-canary);
+  --role-secondary: var(--golden-tanoi);
+  --role-tertiary: var(--lilac);
+  --role-highlight: var(--rust);
+  --role-highlight-dark: var(--medium-carmine);
+}
+[data-theme="tos"].red-alert {
+  --role-primary-alert: var(--alert);
+  --role-secondary-alert: var(--warning);
+  --role-tertiary-alert: var(--tamarillo);
+  --role-highlight-alert: var(--red-damask);
+  --status-nominal-alert: var(--vermillion);
+  --status-damaged-alert: var(--red-damask);
+  --status-critical: var(--warning);
+}

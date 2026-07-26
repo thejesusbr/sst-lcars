@@ -333,7 +333,7 @@ const fireTorpedoes = () => {
       <!-- Fire Phasers -->
       <LcarsButton
         version="round dark-light"
-        color="alert-bg"
+        :color="statusColor('critical')"
         label="Fire Phasers"
         :style="{ width: '100%' }"
         @click="firePhasers"
@@ -495,7 +495,7 @@ const fireTorpedoes = () => {
       <!-- Fire Torpedoes -->
       <LcarsButton
         version="round dark-light"
-        color="alert-bg"
+        :color="statusColor('critical')"
         label="Fire Torpedoes"
         :disabled="!tubes.some((t) => t.status === 'Loaded')"
         :style="{ width: '100%' }"

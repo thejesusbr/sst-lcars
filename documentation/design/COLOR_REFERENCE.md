@@ -4,70 +4,167 @@ Fonte central: `vue-app/src/assets/css/colors.css` (`:root`). Mecanismo de tema 
 em `SST_LCARS_SPECS.md` seção 13 — este documento é só o catálogo visual/de uso, não
 duplica a metodologia.
 
+**Arquivos:** `colors.css` define toda cor (nomeada, grupos legados, semântica). Cada
+tema mora no próprio arquivo em `vue-app/src/assets/css/themes/<id>.css` — inclusive
+`tos.css` (redundante com o `:root`, mantido só por simetria com os outros 5). `theme.css`
+define os 5 papéis (`primary/secondary/tertiary/highlight/highlight-dark` ×
+`static/interactive`) que todo tema alimenta.
+
+**Papel ≠ nome da cor (2026-07-26):** `--role-primary`, `--role-secondary`,
+`--role-tertiary`, `--role-highlight`, `--role-highlight-dark` (+ os 4 `--role-*-alert`
+pro estado sob Red Alert) são o **papel** de verdade — é nisso que `theme.css` e cada
+`themes/<id>.css` mexem. Os 33 nomes de cor (`--pale-canary`, `--anakiwa` etc.) continuam
+existindo do jeito que sempre estiveram, só que agora são **só tinta**: o papel `primary`
+do TOS aponta pra `--pale-canary` (`--role-primary: var(--pale-canary)`), mas isso é só o
+valor do TOS — outro tema aponta `--role-primary` pra qualquer outra cor, sem tocar em
+`--pale-canary`. Antes dessa mudança, `theme.css` lia `var(--pale-canary)` direto, então
+o "papel" **era** literalmente uma cor do TOS emprestada — pra pintar de outra cor, cada
+tema tinha que hijackar essa cor emprestada. Motivo da mudança: seção 13.7 do specs.
+
+## Como aplicar cor num elemento
+
+Regra rápida — qual família usar:
+
+| Se a cor... | Use |
+|---|---|
+| é só decoração, sem significado (moldura, cap, botão neutro) | **papel de tema** (`primary-interactive`, `secondary-static` etc.) |
+| representa um estado (saudável/danificado/crítico/desabilitado) | **`statusColor()`** (`useLcarsColors.ts`) |
+| é um destaque pontual, sem relação com papel nem status (ex.: código de setor por conteúdo) | **cor nomeada direta** (`anakiwa-fg`, `golden-tanoi-bg`) |
+| é uma barra/botão **flat de peça única** (`SolidLevelBar`, `LcarsButton` sólido) | **grupo legado** `bg-{cor}-N` (`bg-green-3` etc.) |
+
+**1. Papel de tema** — todo elemento LCARS (`LcarsCap`, `LcarsBlock`, `LcarsButton`,
+`LcarsComplexButton`, `LcarsBar`, `LcarsElbow`) aceita `color`/`:color` como string de
+classe. Pra decoração neutra (a maioria dos caps/botões de frame), usa um dos 5 papéis:
+
+```vue
+<LcarsComplexButton color="primary-interactive">
+  <LcarsCap version="round-left" />
+  <LcarsBlock label="Stardate" />
+</LcarsComplexButton>
+```
+
+`-interactive` é pra controle (botão, algo clicável); `-static` é pra moldura/display
+(sem `highlight-static` — esse papel só existe como `-interactive`, mesma assimetria
+desde a SDK original). Cor muda sozinha com o tema ativo e com Red Alert — **não precisa
+fazer nada extra pra isso funcionar**, é só escolher o papel certo. Repare que você
+**nunca** escreve `--pale-canary` nem `--role-primary` no template — a classe
+`primary-interactive` já é a ponte, o CSS por trás é que resolve qual `--role-*` ler e
+qual cor esse papel aponta hoje. Como não há mais `randColor()` (seção 13.6 do specs),
+prefira `color="..."` **estático** (sem `:`) quando o valor não muda — só usa
+`:color="expressão"` quando a cor realmente depende de estado reativo (ver item 2).
+
+**2. Status semântico** — quando a cor tem SIGNIFICADO (nominal/danificado/crítico/
+desabilitado), nunca escreva a classe na mão (`"caribbean-green-bg"`, `"alert-bg"` etc.).
+Sempre passe pelo helper, que já é theme-aware e tem `.red-alert` embutido:
+
+```ts
+const { statusColor } = useLcarsColors()
+const tempColor = computed(() => {
+  if (temp.value < 100) return statusColor('nominal')
+  if (temp.value < 200) return statusColor('damaged')
+  return statusColor('critical')
+})
+```
+
+```vue
+<SolidLevelBar :color="tempColor" :level="temp" />
+```
+
+Cada console mantém seu próprio limiar/direção de cálculo (o "quando" é decisão de
+gameplay) — só o nome da classe de saída vem do helper.
+
+**3. Cor nomeada direta** — pra um destaque pontual que não é nem papel de tema nem
+status (ex.: cor do código LRS variando por conteúdo da célula, não por saúde de
+sistema). Use com moderação — a maioria dos casos cai em (1) ou (2):
+
+```vue
+<LcarsText :text="code" :color="klingons > 0 ? 'alert-fg' : 'anakiwa-fg'" />
+```
+
+Esse exemplo específico (legenda KBS do scanner, `NavSensingConsole`/`StarChartConsole`)
+é candidato a virar um helper dedicado tipo `statusColor()` (achado documentado, ainda não
+implementado, ver seção 13.7 do specs) — hoje é cor fixa de propósito por decisão
+consciente, mas se algum tema quiser recolori-lo no futuro vai precisar desse helper.
+
+**4. Grupos legados `bg-{cor}-N`** — só em elemento **flat de peça única**
+(`SolidLevelBar`, `LcarsButton` sólido avulso, `LcarsBlock` solto). **Nunca** num
+`LcarsComplexButton` segmentado (cap+block+text+cap) nem em algo com parte transparente
+(`LcarsToggleSwitch`): essas classes usam `!important` (herdado do tema padrão da LCARS
+SDK) e forçam a MESMA cor em cima de qualquer filho, inclusive o que devia ficar
+transparente. Nesses casos, use papel de tema ou cor nomeada (sem `!important`) — lição
+já registrada 3× na migração (`useLcarsColors`/`LcarsToggleSwitch`/`SituationPanel`).
+
+**5. Cascata dentro de `LcarsComplexButton`** — a classe de cor vai no wrapper
+(`<LcarsComplexButton color="...">`), mas o CSS (`.foo-bg > *:not([class*="-bg"])`)
+empurra a cor pros filhos que **não têm classe de cor própria**. Se um filho precisa de
+cor diferente do resto do botão (ex.: um `LcarsBlock` de status dentro de uma linha),
+dê a ele sua PRÓPRIA classe — ela sempre vence a cascata do pai.
+
 ## Cores nomeadas (`colors.css :root`)
 
 | Nome | Hex | Usada em |
 |---|---|---|
-| `anakiwa` | `#9cf` | Papel `tertiary` do tema **Século XXIII**, `primary` do **Nemesis**; `anakiwa-fg` direto em `NavSensingConsole`/`ShieldConsole`/`StarChartConsole` (status "UP", código LRS de base aliada) |
-| `atomic-tangerine` | `#f90` | `atomic-tangerine-bg` direto — cor do `LcarsToggleSwitch` de Red Alert (`SituationPanel`) |
+| `anakiwa` | `#9cf` | Fonte de `--role-tertiary` no **Século XXIII**, `--role-primary` no **Nemesis**; `anakiwa-fg` direto em `NavSensingConsole`/`StarChartConsole` (código LRS de base aliada) |
+| `atomic-tangerine` | `#f90` | Sem uso hoje |
 | `bahama-blue` | `#069` | Sem uso hoje (disponível pro pool decorativo) |
-| `bourbon` | `#b62` | Papel `highlight-dark` do **First Contact** |
+| `bourbon` | `#b62` | Fonte de `--role-highlight-dark` no **First Contact** |
 | `blue-bell` | `#99c` | Sem uso hoje |
-| `caribbean-green` | `#0c9` | Fonte de `--status-nominal` (ver cores semânticas abaixo); papel `highlight-dark` do **Século XXIX** |
-| `chestnut-rose` | `#c66` | Papel `highlight` do tema **Enterprise (NX-01)** (quase idêntica ao swatch original, dist. ~5) |
+| `caribbean-green` | `#0c9` | Fonte de `--status-nominal` (status "nominal"/"UP" em qualquer tema, ver cores semânticas abaixo) e de `--role-highlight-dark` no **Século XXIX** |
+| `chestnut-rose` | `#c66` | Fonte de `--role-highlight` no **Enterprise (NX-01)** (quase idêntica ao swatch original, dist. ~5) |
 | `cosmic` | `#746` | Sem uso hoje |
 | `danub` | `#68c` | Sem uso hoje (era usada no rascunho antigo do Nemesis, substituído) |
-| `dodger-pale` | `#59f` | Papel `secondary` do **Nemesis** |
-| `dodger-soft` | `#36f` | Papel `highlight` do **Nemesis** |
+| `dodger-pale` | `#59f` | Fonte de `--role-secondary` no **Nemesis** |
+| `dodger-soft` | `#36f` | Fonte de `--role-highlight` no **Nemesis** |
 | `eggplant` | `#646` | Sem uso hoje |
-| `golden-tanoi` | `#fc6` | Papel `secondary` do **TOS** (padrão); reaproveitada como `secondary` (sem troca) no **Século XXIII** e como `primary` (hex literal) no **Século XXIX**; fonte de `--status-damaged` |
+| `golden-tanoi` | `#fc6` | Fonte de `--role-secondary` no **TOS** (padrão); reaproveitada sem troca no **Século XXIII** (fica igual ao default) e como `--role-primary` no **Século XXIX**; fonte de `--status-damaged` |
 | `hopbush` | `#c69` | Sem uso hoje |
-| `husk` | `#ba5` | Papel `secondary` do **First Contact**, `tertiary` do **Nemesis**, `highlight` do **Século XXIX** |
+| `husk` | `#ba5` | Fonte de `--role-secondary` no **First Contact**, `--role-tertiary` no **Nemesis**, `--role-highlight` no **Século XXIX** |
 | `indigo` | `#45b` | Sem uso hoje (era usada no rascunho antigo do Nemesis) |
 | `lavender-purple` | `#97a` | Sem uso hoje |
-| `lilac` | `#c9c` | Papel `tertiary` do **TOS** (padrão) e do **First Contact** (sem troca); reaproveitada (hex literal) como `secondary` no **Século XXIX** |
+| `lilac` | `#c9c` | Fonte de `--role-tertiary` no **TOS** (padrão) e no **First Contact** (sem troca); reaproveitada como `--role-secondary` no **Século XXIX** |
 | `mariner` | `#36c` | Sem uso hoje (era usada no rascunho antigo do Nemesis) |
-| `medium-carmine` | `#a53` | Nome do slot do 5º papel `highlight-dark` (mesma convenção dos outros 4); cor de **TOS** (padrão) nesse papel |
+| `medium-carmine` | `#a53` | Fonte de `--role-highlight-dark` no **TOS** (padrão) — nome não tem relação com o papel, é só a cor que o TOS escolheu pra ele |
 | `melrose` | `#99f` | Sem uso hoje |
 | `navy-blue` | `#008` | Sem uso hoje |
 | `near-blue` | `#01e` | Sem uso hoje |
 | `neon-carrot` | `#f93` | Sem uso hoje |
 | `orange-peel` | `#f96` | Sem uso hoje |
-| `pale-canary` | `#ff9` | Papel `primary` do **TOS** (padrão); `pale-canary-fg`/`-bg` direto em `HelmConsole`/`NavSensingConsole`/`StarChartConsole` |
-| `periwinkle` | `#cdf` | Papel `tertiary` do **Enterprise (NX-01)** |
-| `alert` | `#e10` | Papel de alerta `primary` (`--alert`) do **TOS**; `alert-bg`/`-fg` direto em vários consoles (status crítico/offline) |
-| `red-damask` | `#d64` | Papel de alerta `highlight` (`--red-damask`) do **TOS**; cor de `--status-damaged-alert` do **TOS** sob Red Alert |
-| `rust` | `#b41` | Papel `highlight` do **TOS** (padrão); reaproveitada (hex literal) como `highlight-dark` do **Nemesis** |
+| `pale-canary` | `#ff9` | Fonte de `--role-primary` no **TOS** (padrão); `pale-canary-bg` direto (fixo, não muda de tema) no scanner "animated" de `HelmConsole`/`NavSensingConsole`/`StarChartConsole`/`ShieldConsole` |
+| `periwinkle` | `#cdf` | Fonte de `--role-tertiary` no **Enterprise (NX-01)** |
+| `alert` | `#e10` | Fonte de `--role-primary-alert` no **TOS**; `alert-fg` direto (fixo) na legenda KBS do scanner (`NavSensingConsole`/`StarChartConsole`, achado fora de escopo — ver seção 13.7) |
+| `red-damask` | `#d64` | Fonte de `--role-highlight-alert` no **TOS**; cor de `--status-damaged-alert` do **TOS** sob Red Alert |
+| `rust` | `#b41` | Fonte de `--role-highlight` no **TOS** (padrão); reaproveitada como `--role-highlight-dark` no **Nemesis** |
 | `sandy-brown` | `#e95` | Sem uso hoje |
-| `tamarillo` | `#821` | Papel de alerta `tertiary` (`--tamarillo`) do **TOS**; reaproveitada de propósito também pro `.red-alert` de `highlight-dark` em **todo tema** (ver 13.2) |
-| `warning` | `#b11` | Papel de alerta `secondary` (`--warning`) do **TOS**; cor de `--status-critical` do **TOS** (normal e sob Red Alert, sem variação) |
-| `tanoi` | `#fc9` | `tanoi-fg`/`-bg` direto em `NavSensingConsole`/`StarChartConsole` |
+| `tamarillo` | `#821` | Fonte de `--role-tertiary-alert` no **TOS**; `--role-tertiary-alert` é reaproveitada de propósito também pro `.red-alert` de `highlight-dark` em **todo tema** (ver 13.2/13.7) |
+| `warning` | `#b11` | Fonte de `--role-secondary-alert` no **TOS**; cor de `--status-critical` do **TOS** (normal e sob Red Alert, sem variação) |
+| `tanoi` | `#fc9` | Sem uso hoje (a doc anterior citava uso em `NavSensingConsole`/`StarChartConsole` — não confirmado no código atual) |
 | `black` | `#000` | Cor base (`text-black`, fundos) |
-| `white` | `#fff` | Papel `primary` do **Enterprise (NX-01)** |
+| `white` | `#fff` | Fonte de `--role-primary` no **Enterprise (NX-01)** |
 
 ## Cores exclusivas de tema (sem correspondente próximo, criadas pra imagem de referência)
 
 | Nome | Hex | Usada em |
 |---|---|---|
-| `fawn` | `#b28452` | Papel `highlight` do **First Contact** |
-| `scuba` | `#31c9f4` | Papel `tertiary` do **Século XXIX** |
-| `pear` | `#99ff66` | Papel `primary` do **Século XXIII** |
-| `cerulean` | `#66ccff` | Papel `highlight` do **Século XXIII** |
-| `vermillion` | `#ff8c78` | `--status-nominal-alert` do **TOS** sob Red Alert (mais claro dos 3, ver seção de cores semânticas) |
-| `teal-nx` | `#009ece` | Papel `highlight-dark` do **Enterprise (NX-01)** |
-| `cobalt` | `#6666ff` | Papel `highlight-dark` do **Século XXIII** |
+| `fawn` | `#b28452` | Fonte de `--role-highlight` no **First Contact** |
+| `scuba` | `#31c9f4` | Fonte de `--role-tertiary` no **Século XXIX** |
+| `pear` | `#99ff66` | Fonte de `--role-primary` no **Século XXIII** |
+| `cerulean` | `#66ccff` | Fonte de `--role-highlight` no **Século XXIII** |
+| `vermillion` | `#ff8c78` | Fonte de `--status-nominal-alert` no **TOS** sob Red Alert (mais claro dos 3, ver seção de cores semânticas) |
+| `teal-nx` | `#009ece` | Fonte de `--role-highlight-dark` no **Enterprise (NX-01)** |
+| `cobalt` | `#6666ff` | Fonte de `--role-highlight-dark` no **Século XXIII** |
 
 ## Pool de alerta oficial (grupo "RED ALERT COLORS" do Okudagrams v4.1)
 
-Usado só pelos 5 temas novos — **TOS mantém seu próprio `--alert`/`--warning`/
-`--tamarillo`/`--red-damask` original**, nunca usa este pool.
+Usado só pelos 5 temas novos como fonte dos `--role-*-alert` — **TOS mantém `--alert`/
+`--warning`/`--tamarillo`/`--red-damask` (suas próprias cores) como fonte**, nunca usa
+este pool.
 
 | Nome | Hex | Usada em |
 |---|---|---|
-| `ra-vivid-red` | `#f5173c` | Papel de alerta mais claro de cada tema (varia por tema, ver tabela de papéis abaixo) |
+| `ra-vivid-red` | `#f5173c` | Fonte do papel de alerta mais claro de cada tema (varia por tema, ver tabela de papéis abaixo) |
 | `ra-crimson` | `#bf2042` | idem |
 | `ra-dark-red` | `#a30e24` | idem |
-| `ra-maroon` | `#330512` | Papel de alerta mais escuro de quase todo tema |
+| `ra-maroon` | `#330512` | Fonte do papel de alerta mais escuro de quase todo tema |
 
 ## Cores semânticas de status (nominal/danificado/crítico/desabilitado)
 
@@ -108,9 +205,9 @@ acima são **slots dedicados** que cada tema sobrescreve direto no próprio bloc
 Uma 1ª tentativa (nesta mesma sessão) tentou resolver isso fazendo a regra CSS ler
 `var(--alert)` direto em vez de um alias — funcionou pro caso de 1 var lida por 1 regra,
 mas quebrou de novo aqui porque `nominal`/`damaged`/`critical` precisam de 3 valores
-**independentes** dos 4 papéis interativos (que já usam esses mesmos 4 vermelhos pra
-outra coisa) — só dava pra ter essa independência com slots próprios, sobrescritos
-explicitamente por tema.
+**independentes** dos papéis interativos (`--role-*-alert`, que já usam esses mesmos
+vermelhos pra outra coisa) — só dava pra ter essa independência com slots próprios,
+sobrescritos explicitamente por tema.
 
 ## Grupos legados `bg-{cor}-{1-5}` (paleta original da LCARS SDK)
 
@@ -134,12 +231,14 @@ grupos legados, só 2 são reaproveitados diretamente por um tema: `bg-purple-2`
 
 ## Papéis de tema (referência rápida)
 
-`theme.css` define 5 papéis fixos — `primary`/`secondary`/`tertiary` (frames + botões),
-`highlight` (destaque) e `highlight-dark` (2º acento, adicionado 2026-07-25 — não precisa
-ser variação de brilho da mesma cor de `highlight`, pode ser cor totalmente diferente) —
-cada tema só diz qual cor cada papel usa:
+`theme.css` define 5 papéis fixos — `--role-primary`/`--role-secondary`/`--role-tertiary`
+(frames + botões, classes `primary-interactive` etc.), `--role-highlight` (destaque) e
+`--role-highlight-dark` (2º acento, adicionado 2026-07-25 — não precisa ser variação de
+brilho da mesma cor de `highlight`, pode ser cor totalmente diferente). Cada tema só diz
+**pra qual cor cada papel aponta** — a coluna abaixo é a cor, não o papel; o papel é
+sempre o mesmo nome em todo tema (`--role-primary` etc), só o valor muda:
 
-| Tema | primary | secondary | tertiary | highlight | highlight-dark |
+| Tema | `--role-primary` aponta pra | `--role-secondary` | `--role-tertiary` | `--role-highlight` | `--role-highlight-dark` |
 |---|---|---|---|---|---|
 | TOS (padrão) | pale-canary | golden-tanoi | lilac | rust | medium-carmine |
 | First Contact | bg-purple-2 | husk | lilac | fawn | bourbon |
@@ -148,12 +247,13 @@ cada tema só diz qual cor cada papel usa:
 | Século XXIX | golden-tanoi | lilac | scuba | husk | caribbean-green |
 | Século XXIII | pear | golden-tanoi | anakiwa | cerulean | cobalt |
 
-E o `.red-alert` de cada um (qual vermelho do pool cada papel usa sob alerta — TOS usa
-vermelhos próprios, não o pool). `highlight-dark` sempre reusa o mesmo vermelho de
-`tertiary` (`--tamarillo`) de propósito — ver nota em `tamarillo` na tabela de cores
-nomeadas, evita precisar de um 5º vermelho só pra esse papel:
+E o `.red-alert` de cada um (pra qual vermelho do pool cada `--role-*-alert` aponta sob
+alerta — TOS aponta pras próprias cores, não usa o pool). `--role-highlight-dark`'s
+`.red-alert` sempre reusa o mesmo vermelho de `--role-tertiary-alert` de propósito — ver
+nota em `tamarillo` na tabela de cores nomeadas, evita precisar de um 5º vermelho só pra
+esse papel:
 
-| Tema | primary (`--alert`) | secondary (`--warning`) | tertiary (`--tamarillo`) | highlight (`--red-damask`) | highlight-dark |
+| Tema | `--role-primary-alert` | `--role-secondary-alert` | `--role-tertiary-alert` | `--role-highlight-alert` | `--role-highlight-dark`.red-alert |
 |---|---|---|---|---|---|
 | TOS (padrão) | alert | warning | tamarillo | red-damask | tamarillo (= tertiary) |
 | First Contact | ra-vivid-red | ra-dark-red | ra-crimson | ra-maroon | ra-crimson (= tertiary) |

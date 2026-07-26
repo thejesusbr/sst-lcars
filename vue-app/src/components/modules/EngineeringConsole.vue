@@ -280,7 +280,7 @@ const simulateDamage = () => {
         <LcarsBlock label="Subsystem Load" :style="{ width: '8.5rem' }" />
         <LcarsText
           :text="String(subsystemDraw)"
-          :color="subsystemDraw > WARP_CORE_OUTPUT ? 'alert-bg' : 'text-white'"
+          :color="subsystemDraw > WARP_CORE_OUTPUT ? statusColor('critical') : 'text-white'"
           :style="{ flex: '1', textAlign: 'center' }"
         />
         <LcarsCap version="round-right" />

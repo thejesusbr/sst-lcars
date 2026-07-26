@@ -145,17 +145,13 @@ watch(
       id="stn-pnl-mnu"
       :style="{ width: '7.5rem', alignSelf: 'stretch' }"
     >
-      <LcarsBlock :label="sectorCoords" :color="lcarsColors.primary[4]" />
-      <LcarsBlock
-        flexc="v"
-        :color="lcarsColors.primary[5]"
-        :style="{ flex: '1' }"
-      />
+      <LcarsBlock :label="sectorCoords" color="primary-static" />
+      <LcarsBlock flexc="v" color="secondary-static" :style="{ flex: '1' }" />
       <LcarsElbow
         version="horizontal"
         direction="bottom-left"
         size="medium"
-        :color="lcarsColors.primary[2]"
+        color="tertiary-static"
       />
     </LcarsColumn>
 
@@ -164,7 +160,7 @@ watch(
       id="stn-pnl-scr"
       flex="v"
       flexc="h"
-      :style="{ justifyContent: 'space-between' }"
+      :style="{ justifyContent: 'space-evenly' }"
     >
       <!-- Conteúdo: dados à esquerda + Red Alert à direita -->
       <LcarsRow
@@ -179,44 +175,47 @@ watch(
         <!-- Coluna de dados: 2 linhas × 2 itens -->
         <LcarsColumn id="tct-sit-dsp" :style="{ flex: '1' }">
           <!-- Linha 1: Energy Level + Stardate -->
-          <LcarsRow>
-            <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
+          <LcarsRow :style="{ gap: '1rem' }">
+            <!-- Energy level indicator -->
+            <LcarsComplexButton color="primary-interactive">
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Energy Level"
                 :style="{ flex: 'none', width: '6.5rem' }"
               />
               <LcarsText
-                color="text-white"
+                color="text-light"
                 :text="String(energyLevel)"
                 :style="{ flex: '1', textAlign: 'center' }"
               />
               <LcarsBlock
+                color="tertiary-static"
                 :label="energyStatus"
                 :style="{ flex: 'none', width: '5.5rem' }"
               />
+              <LcarsCap version="round-right" color="tertiary-static" />
             </LcarsComplexButton>
-
-            <LcarsComplexButton color="secondary-interactive" :style="{ flex: '1' }">
-              <LcarsCap :style="{ background: 'transparent' }" />
+            <!-- Stardate indicator-->
+            <LcarsComplexButton color="secondary-interactive">
+              <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Stardate"
                 :style="{ flex: 'none', width: '5.5rem' }"
               />
-              <LcarsBlock version="decorator" />
               <LcarsText
                 id="sdtIndTxt"
-                color="text-white"
+                color="text-light"
                 :text="String(stardate)"
                 :style="{ flex: '1', textAlign: 'center' }"
               />
+              <LcarsBlock version="decorator" />
               <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
             </LcarsComplexButton>
           </LcarsRow>
 
           <!-- Linha 2: Enemies Left + Starbases Left -->
           <LcarsRow>
-            <LcarsComplexButton color="tertiary-interactive" :style="{ flex: '1' }">
+            <LcarsComplexButton color="tertiary-interactive">
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Enemies Left"
@@ -233,7 +232,7 @@ watch(
               />
             </LcarsComplexButton>
 
-            <LcarsComplexButton color="highlight-interactive" :style="{ flex: '1' }">
+            <LcarsComplexButton color="highlight-interactive">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
                 label="Starbases Left"
@@ -255,7 +254,7 @@ watch(
 
           <!-- Linha 3: Torpedo Stock + Shield Status -->
           <LcarsRow>
-            <LcarsComplexButton color="highlight-dark-interactive" :style="{ flex: '1' }">
+            <LcarsComplexButton color="highlight-dark-interactive">
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Torpedoes"
@@ -272,7 +271,7 @@ watch(
               />
             </LcarsComplexButton>
 
-            <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
+            <LcarsComplexButton color="primary-interactive">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
                 label="Shields"
@@ -290,7 +289,7 @@ watch(
 
           <!-- Linha 4: Warp Core Status + Overload -->
           <LcarsRow>
-            <LcarsComplexButton :color="warpCoreColor" :style="{ flex: '1' }">
+            <LcarsComplexButton :color="warpCoreColor">
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Warp Core"
@@ -307,7 +306,7 @@ watch(
               />
             </LcarsComplexButton>
 
-            <LcarsComplexButton color="secondary-interactive" :style="{ flex: '1' }">
+            <LcarsComplexButton color="secondary-interactive">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
                 label="Overload"
@@ -326,7 +325,7 @@ watch(
           <!-- Alerta de Core Breach: linha condicional, largura total -->
           <LcarsRow v-if="warpCoreStatus === 'BREACH'">
             <LcarsComplexButton
-              color="alert-bg"
+              :color="statusColor('critical')"
               class="blink"
               :style="{ flex: '1' }"
             >
@@ -352,18 +351,18 @@ watch(
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="ALERT CONDITION"
-                :color="lcarsColors.pool.orange[2]"
+                color="highlight-interactive"
                 :style="{ flex: '1' }"
               />
               <LcarsText
-                color="text-white"
+                color="text-light"
                 :style="{ 'min-width': '7.5rem' }"
                 :text="redAlert ? 'RED' : 'GREEN'"
               />
               <LcarsBlock version="decorator" :style="{ flex: '1' }" />
             </LcarsComplexButton>
             <LcarsToggleSwitch
-              color="atomic-tangerine-bg"
+              color="highlight-dark-interactive"
               :style="{ flex: '1' }"
               v-model="redAlert"
             />
@@ -432,7 +431,10 @@ watch(
           :style="{ width: '7.5rem' }"
           :color="lcarsColors.primary[2]"
         />
-        <LcarsBar :style="{ width: '7.5rem' }" color="highlight-dark-interactive" />
+        <LcarsBar
+          :style="{ width: '7.5rem' }"
+          color="highlight-dark-interactive"
+        />
         <LcarsBar flexc="h" color="primary-interactive" />
         <LcarsText
           color="text-white"
@@ -446,7 +448,11 @@ watch(
             lineHeight: '1.5rem',
           }"
         />
-        <LcarsCap version="round-right" size="small" color="secondary-interactive" />
+        <LcarsCap
+          version="round-right"
+          size="small"
+          color="secondary-interactive"
+        />
       </LcarsRow>
     </LcarsWrapper>
   </LcarsRow>
