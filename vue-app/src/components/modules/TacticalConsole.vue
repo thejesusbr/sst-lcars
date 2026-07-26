@@ -16,8 +16,9 @@ import WeaponsConsole from "./WeaponsConsole.vue";
 import NavSensingConsole from "./NavSensingConsole.vue";
 import EngineeringConsole from "./EngineeringConsole.vue";
 import StarChartConsole from "./StarChartConsole.vue";
+import CptLoungeConsole from "./CptLoungeConsole.vue";
 
-const { randColor, lcarsColors } = useLcarsColors();
+const { lcarsColors } = useLcarsColors();
 
 type ConsoleType =
   | "helm"
@@ -47,7 +48,7 @@ const toggleConsole = (console: ConsoleType) => {
       <LcarsButton
         id="hlm-cns-btn"
         label="Helm"
-        :color="randColor()"
+        color="primary-interactive"
         :style="{ filter: activeConsole === 'helm' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('helm')"
       />
@@ -55,7 +56,7 @@ const toggleConsole = (console: ConsoleType) => {
       <LcarsButton
         id="shd-cns-btn"
         label="Shields"
-        :color="randColor()"
+        color="secondary-interactive"
         :style="{ filter: activeConsole === 'shield' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('shield')"
       />
@@ -63,7 +64,7 @@ const toggleConsole = (console: ConsoleType) => {
       <LcarsButton
         id="wpn-cns-btn"
         label="Weapons"
-        :color="randColor()"
+        color="tertiary-interactive"
         :style="{
           filter: activeConsole === 'weapons' ? '' : 'brightness(0.6)',
         }"
@@ -73,7 +74,7 @@ const toggleConsole = (console: ConsoleType) => {
       <LcarsButton
         id="nav-cns-btn"
         label="Nav & Sensing"
-        :color="randColor()"
+        color="highlight-interactive"
         :style="{ filter: activeConsole === 'nav' ? '' : 'brightness(0.6)' }"
         @click="toggleConsole('nav')"
       />
@@ -81,7 +82,7 @@ const toggleConsole = (console: ConsoleType) => {
       <LcarsButton
         id="eng-cns-btn"
         label="Engineering"
-        :color="randColor()"
+        color="highlight-dark-interactive"
         :style="{
           filter: activeConsole === 'engineering' ? '' : 'brightness(0.6)',
         }"
@@ -91,24 +92,25 @@ const toggleConsole = (console: ConsoleType) => {
       <LcarsButton
         id="str-cns-btn"
         label="Star Chart"
-        :color="randColor()"
+        color="primary-interactive"
         :style="{
           filter: activeConsole === 'starchart' ? '' : 'brightness(0.6)',
         }"
         @click="toggleConsole('starchart')"
       />
 
-      <LcarsBlock label="1234 56" version="dark-light" :color="randColor()" />
-      <LcarsBlock flexc="v" :color="randColor()" />
+      <LcarsBlock label="1234-56" version="dark-light" color="secondary-interactive" />
+      <LcarsBlock flexc="v" color="tertiary-interactive" />
       <LcarsButton
         id="cpt-lng-btn"
         label="Cap. Lounge"
-        :color="randColor()"
+        color="highlight-interactive"
         :style="{
           filter: activeConsole === 'cptlounge' ? '' : 'brightness(0.6)',
         }"
         @click="toggleConsole('cptlounge')"
       />
+      <LcarsBlock label="A05K-19" version="dark-light" color="highlight-dark-interactive" />
     </LcarsColumn>
 
     <LcarsWrapper version="column" flex="v" flexc="h" id="tct-cns-scr">
@@ -121,9 +123,9 @@ const toggleConsole = (console: ConsoleType) => {
           :style="{ width: '7.5rem' }"
           :color="lcarsColors.primary[7]"
         />
-        <LcarsBar :style="{ width: '7.5rem' }" :color="randColor()" />
-        <LcarsBar flexc="h" :color="randColor()" />
-        <LcarsCap version="round-right" size="small" :color="randColor()" />
+        <LcarsBar :style="{ width: '7.5rem' }" color="primary-interactive" />
+        <LcarsBar flexc="h" color="secondary-interactive" />
+        <LcarsCap version="round-right" size="small" color="tertiary-interactive" />
       </LcarsRow>
 
       <LcarsWrapper
@@ -145,6 +147,7 @@ const toggleConsole = (console: ConsoleType) => {
         <NavSensingConsole v-show="activeConsole === 'nav'" />
         <EngineeringConsole v-show="activeConsole === 'engineering'" />
         <StarChartConsole v-show="activeConsole === 'starchart'" />
+        <CptLoungeConsole v-show="activeConsole === 'cptlounge'" />
       </LcarsWrapper>
 
       <LcarsRow :style="{ 'flex-direction': 'row-reverse' }">

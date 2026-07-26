@@ -40,7 +40,7 @@ const mockIntegrity = ref<Partial<Record<ShieldZoneKey, number>>>({
   life: 100,
 });
 
-const { randColor } = useLcarsColors();
+const { statusColor: semanticStatusColor } = useLcarsColors();
 
 // Integridade do escudo (0-100%) -- mock local, so pro contorno do escudo.
 // NAO e o mesmo que shieldEnergy (abaixo): energia afeta capacidade de
@@ -117,9 +117,9 @@ const statusColor = computed(() =>
 );
 
 const mainEnergyColor = computed(() => {
-  if (mainEnergy.value > 2000) return "bg-green-3";
-  if (mainEnergy.value > 800) return "golden-tanoi-bg";
-  return "alert-bg";
+  if (mainEnergy.value > 2000) return semanticStatusColor("nominal");
+  if (mainEnergy.value > 800) return semanticStatusColor("damaged");
+  return semanticStatusColor("critical");
 });
 
 const bracketColoring = {
@@ -182,10 +182,10 @@ const raiseShields = () => {
         width: '34rem',
       }"
     >
-      <LcarsComplexButton :color="randColor()" :style="{ width: '100%' }">
+      <LcarsComplexButton color="primary-interactive" :style="{ width: '100%' }">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Shields Status" :style="{ width: '8.5rem' }" />
-        <LcarsBlock :color="randColor()" :style="{ width: '2rem' }" />
+        <LcarsBlock color="secondary-interactive" :style="{ width: '2rem' }" />
         <LcarsText
           id="shdStsIndTxt"
           :text="shieldStatus"
@@ -231,7 +231,7 @@ const raiseShields = () => {
         :style="{ marginBottom: '1rem' }"
       />
 
-      <LcarsComplexButton :color="randColor()" :style="{ width: '100%' }">
+      <LcarsComplexButton color="tertiary-interactive" :style="{ width: '100%' }">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Shield Energy" :style="{ width: '9rem' }" />
         <SolidLevelBar
@@ -258,7 +258,7 @@ const raiseShields = () => {
         <LcarsComplexButton
           v-for="preset in [250, 500, 1000]"
           :key="preset"
-          :color="randColor()"
+          color="highlight-interactive"
           :style="{ width: '100%' }"
         >
           <LcarsButton
@@ -307,7 +307,7 @@ const raiseShields = () => {
       </LcarsRow>
 
       <LcarsComplexButton
-        :color="randColor()"
+        color="highlight-dark-interactive"
         :style="{ width: '100%', marginTop: '1rem' }"
       >
         <LcarsCap version="round-left" />

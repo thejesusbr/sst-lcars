@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useLcarsColors } from '@/composables/useLcarsColors'
 import LcarsRow from '@/components/elements/LcarsRow.vue'
 import LcarsColumn from '@/components/elements/LcarsColumn.vue'
 import LcarsTitle from '@/components/elements/LcarsTitle.vue'
@@ -18,7 +17,6 @@ const props = withDefaults(defineProps<{
   galaxyGrid: undefined,
 })
 
-const { randColor } = useLcarsColors()
 
 // Grid demo: codigos KBS (Klingons/Bases/Estrelas) para quadrantes explorados,
 // '???' para inexplorado. Ver SST_LCARS_SPECS.md secao 2.1.
@@ -107,7 +105,7 @@ const sendSystemToHelm = () => {
 
       <!-- Selected System -->
       <LcarsRow :style="{ 'justify-content': 'center', gap: '0.5rem', width: '42rem' }">
-        <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+        <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
           <LcarsCap version="round-left" />
           <LcarsBlock label="Selected System" :style="{ width: '10rem' }" />
           <LcarsText :text="selectedSystem" :style="{ flex: '1', 'text-align': 'center' }" />
@@ -115,7 +113,7 @@ const sendSystemToHelm = () => {
         </LcarsComplexButton>
         <LcarsButton
           version="round"
-          :color="randColor()"
+          color="secondary-interactive"
           label="Snd to Helm"
           :style="{ width: '10rem' }"
           @click="sendSystemToHelm"

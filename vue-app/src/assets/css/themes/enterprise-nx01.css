@@ -1,0 +1,20 @@
+@import "../colors.css";
+
+/* Enterprise (NX-01) -- Okudagrams Color Complete Set v4.1, lcarsmania.com.
+   Metodologia completa em SST_LCARS_SPECS.md secao 13.3. */
+[data-theme="enterprise-nx01"] {
+  --pale-canary: var(--white);
+  --golden-tanoi: var(--bg-orange-1);
+  --lilac: var(--periwinkle);
+  --rust: var(--chestnut-rose);
+  --medium-carmine: var(--teal-nx); /* highlight-dark, 5o papel (secao 13) */
+}
+[data-theme="enterprise-nx01"].red-alert {
+  --alert: var(--ra-vivid-red);
+  --warning: var(--ra-dark-red);
+  --tamarillo: var(--ra-crimson);
+  --red-damask: var(--ra-maroon);
+  --status-nominal-alert: var(--ra-vivid-red);
+  --status-damaged-alert: var(--ra-dark-red);
+  --status-critical: var(--ra-maroon);
+}

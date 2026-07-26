@@ -42,7 +42,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{ (e: "toggle-red-alert"): void }>();
 
-const { randColor, lcarsColors } = useLcarsColors();
+const { lcarsColors, statusColor } = useLcarsColors();
 
 const energyStatus = computed(() =>
   props.energyLevel > 1500
@@ -56,15 +56,17 @@ const starbasesStatus = computed(() =>
 );
 
 const warpCoreColor = computed(() => {
-  if (props.warpCoreStatus === "BREACH") return "alert-bg blink";
-  if (props.warpCoreStatus === "DAMAGED") return "golden-tanoi-bg";
-  return "caribbean-green-bg";
+  if (props.warpCoreStatus === "BREACH")
+    return `${statusColor("critical")} blink`;
+  if (props.warpCoreStatus === "DAMAGED") return statusColor("damaged");
+  return statusColor("nominal");
 });
 
 // Mesmo mecanismo do app legado (src/modules/situation-panel.js:182-187):
-// so alterna a classe "red-alert" no body. O resto (botoes com randColor()
-// mudando pra tons de vermelho) ja vem do CSS portado em theme.css
-// (.red-alert .primary-interactive etc), sem precisar de logica extra aqui.
+// so alterna a classe "red-alert" no body. O resto (botoes com cor fixa de
+// papel de tema mudando pra tons de vermelho) ja vem do CSS portado em
+// theme.css (.red-alert .primary-interactive etc), sem precisar de logica
+// extra aqui.
 const redAlert = ref(false);
 
 watch(redAlert, (value) => {
@@ -178,7 +180,7 @@ watch(
         <LcarsColumn id="tct-sit-dsp" :style="{ flex: '1' }">
           <!-- Linha 1: Energy Level + Stardate -->
           <LcarsRow>
-            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+            <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Energy Level"
@@ -195,7 +197,7 @@ watch(
               />
             </LcarsComplexButton>
 
-            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+            <LcarsComplexButton color="secondary-interactive" :style="{ flex: '1' }">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
                 label="Stardate"
@@ -214,7 +216,7 @@ watch(
 
           <!-- Linha 2: Enemies Left + Starbases Left -->
           <LcarsRow>
-            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+            <LcarsComplexButton color="tertiary-interactive" :style="{ flex: '1' }">
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Enemies Left"
@@ -231,7 +233,7 @@ watch(
               />
             </LcarsComplexButton>
 
-            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+            <LcarsComplexButton color="highlight-interactive" :style="{ flex: '1' }">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
                 label="Starbases Left"
@@ -253,7 +255,7 @@ watch(
 
           <!-- Linha 3: Torpedo Stock + Shield Status -->
           <LcarsRow>
-            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+            <LcarsComplexButton color="highlight-dark-interactive" :style="{ flex: '1' }">
               <LcarsCap version="round-left" />
               <LcarsBlock
                 label="Torpedoes"
@@ -270,7 +272,7 @@ watch(
               />
             </LcarsComplexButton>
 
-            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+            <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
                 label="Shields"
@@ -305,7 +307,7 @@ watch(
               />
             </LcarsComplexButton>
 
-            <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+            <LcarsComplexButton color="secondary-interactive" :style="{ flex: '1' }">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
                 label="Overload"
@@ -344,12 +346,12 @@ watch(
             :style="{ width: '100%', gap: '0.5rem', 'align-items': 'stretch' }"
           >
             <LcarsComplexButton
-              :color="randColor()"
+              color="tertiary-interactive"
               :style="{ background: 'transparent' }"
             >
               <LcarsCap version="round-left" />
               <LcarsBlock
-                label="ALERT"
+                label="ALERT CONDITION"
                 :color="lcarsColors.pool.orange[2]"
                 :style="{ flex: '1' }"
               />
@@ -368,7 +370,7 @@ watch(
           </LcarsRow>
         </LcarsColumn>
         <LcarsColumn flex="v" :style="{ width: 'fit-content' }">
-          <LcarsComplexButton :color="randColor()">
+          <LcarsComplexButton color="highlight-interactive">
             <LcarsCap version="round-left" />
             <LcarsButton
               id="cap-log-tab"
@@ -428,10 +430,10 @@ watch(
       >
         <LcarsBar
           :style="{ width: '7.5rem' }"
-          :color="lcarsColors.primary[5]"
+          :color="lcarsColors.primary[2]"
         />
-        <LcarsBar :style="{ width: '7.5rem' }" :color="randColor()" />
-        <LcarsBar flexc="h" :color="randColor()" />
+        <LcarsBar :style="{ width: '7.5rem' }" color="highlight-dark-interactive" />
+        <LcarsBar flexc="h" color="primary-interactive" />
         <LcarsText
           color="text-white"
           text="SITUATION PANEL"
@@ -444,7 +446,7 @@ watch(
             lineHeight: '1.5rem',
           }"
         />
-        <LcarsCap version="round-right" size="small" :color="randColor()" />
+        <LcarsCap version="round-right" size="small" color="secondary-interactive" />
       </LcarsRow>
     </LcarsWrapper>
   </LcarsRow>

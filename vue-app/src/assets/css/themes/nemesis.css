@@ -1,0 +1,24 @@
+@import "../colors.css";
+
+/* Nemesis (ST:X) -- Okudagrams Color Complete Set v4.1, lcarsmania.com.
+   Metodologia completa em SST_LCARS_SPECS.md secao 13.3. */
+[data-theme="nemesis"] {
+  --pale-canary: var(--anakiwa);
+  --golden-tanoi: var(--dodger-pale);
+  --lilac: var(--husk);
+  --rust: var(--dodger-soft);
+  /* highlight-dark (5o papel, secao 13) -- hex literal, nao var(--rust):
+     este bloco tambem redeclara --rust acima, var(--rust) resolveria
+     contra o dodger-soft de cima, nao contra o rust original (mesmo
+     gotcha do Seculo XXIX, ver secao 13.3). */
+  --medium-carmine: #b41;
+}
+[data-theme="nemesis"].red-alert {
+  --alert: var(--ra-vivid-red);
+  --warning: var(--ra-dark-red);
+  --tamarillo: var(--ra-crimson);
+  --red-damask: var(--ra-maroon);
+  --status-nominal-alert: var(--ra-vivid-red);
+  --status-damaged-alert: var(--ra-dark-red);
+  --status-critical: var(--ra-maroon);
+}

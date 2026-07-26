@@ -66,6 +66,18 @@
   border-color: var(--rust);
 }
 
+/* 5o papel de tema (2026-07-25) -- acento extra, nao precisa ser variacao
+   de brilho da mesma cor de --highlight-interactive, pode ser cor
+   diferente por tema. Slot nomeado --medium-carmine (cor padrao do TOS
+   pra esse papel), mesmo padrao dos outros 4 papeis. Ver
+   SST_LCARS_SPECS.md secao 13. */
+.highlight-dark-interactive,
+.highlight-dark-interactive > *:not([class*="-bg"]) {
+  fill: var(--medium-carmine);
+  background-color: var(--medium-carmine);
+  border-color: var(--medium-carmine);
+}
+
 .text-light {
   color: var(--pale-canary);
 }
@@ -129,6 +141,17 @@
   fill: var(--red-damask);
   background-color: var(--red-damask);
   border-color: var(--red-damask);
+}
+
+/* Reusa --tamarillo (mesma cor do red-alert de tertiary) de proposito --
+   TOS ja tinha essa cor livre pra isso; cada tema so precisa sobrescrever
+   --tamarillo 1x (ja faz isso pro tertiary) e o highlight-dark acompanha
+   de graca. */
+.red-alert .highlight-dark-interactive,
+.red-alert .highlight-dark-interactive > *:not([class*="-bg"]) {
+  fill: var(--tamarillo);
+  background-color: var(--tamarillo);
+  border-color: var(--tamarillo);
 }
 
 .red-alert .text-light {

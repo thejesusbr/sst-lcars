@@ -88,18 +88,6 @@ export interface LcarsColors {
   custom: string[]
 }
 
-export interface ThemeColors {
-  pool: string[]
-  interactive: string[]
-  static: string[]
-  text: {
-    dark: string
-    light: string
-    white: string
-    black: string
-  }
-}
-
 export type LcarsElementType =
   | 'aside'
   | 'bar'

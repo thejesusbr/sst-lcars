@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useLcarsColors } from '@/composables/useLcarsColors'
 import { useScannerIcons, ScannerEntity } from '@/composables/useScannerIcons'
 import LcarsRow from '@/components/elements/LcarsRow.vue'
 import LcarsColumn from '@/components/elements/LcarsColumn.vue'
@@ -19,7 +18,6 @@ const props = withDefaults(defineProps<{
   shortRangeGrid: undefined,
 })
 
-const { randColor } = useLcarsColors()
 const { getIcon, getRandomPlanet } = useScannerIcons()
 
 const selectedSector = ref('3,4')
@@ -64,6 +62,18 @@ const lrsCodeColor = (code: string) => {
 const playerQuadrant = ref({ row: 4, col: 4 })
 const longRangeScanned = ref(false)
 
+// Confianca do LRS decai com o tempo (ping de submarino -- informacao vai
+// ficando defasada desde o ultimo Scan). 5%/turno, piso em 30% (nunca some
+// de vez -- estrelas nao se movem, so inimigos/bases realmente ficam
+// desatualizados). "Turno" ainda nao existe como conceito global (Fase 4);
+// Advance Turn abaixo e so pra testar o decaimento ate la.
+const scanAge = ref(0)
+const SCAN_CONFIDENCE_FLOOR = 0.3
+const SCAN_DECAY_PER_TURN = 0.05
+const scanConfidence = computed(() =>
+  Math.max(SCAN_CONFIDENCE_FLOOR, 1 - SCAN_DECAY_PER_TURN * scanAge.value)
+)
+
 // Moldura na celula da posicao atual da nave -- so a nave sempre sabe onde
 // ela esta, isso nao depende do Scan revelar o conteudo dos vizinhos.
 const PLAYER_MARKER_STYLE = { boxShadow: 'inset 0 0 0 3px #ffffff' }
@@ -90,12 +100,22 @@ const longRangeGrid = computed(() => {
         if (absRow < 1 || absRow > 8 || absCol < 1 || absCol > 8) continue
         const code = LRS_DEMO_CODES[`${absRow},${absCol}`]
         if (!code) continue
-        grid[`${absRow},${absCol}`] = { text: code, color: lrsCodeColor(code) }
+        grid[`${absRow},${absCol}`] = {
+          text: code,
+          color: lrsCodeColor(code),
+          style: { opacity: String(scanConfidence.value) },
+        }
       }
     }
   }
+  // Posicao atual da nave: o SRS ja escaneou o sistema, entao essa info
+  // sempre aparece e nunca esmaece -- independe do LRS ter sido acionado.
   const playerKey = `${playerQuadrant.value.row},${playerQuadrant.value.col}`
-  grid[playerKey] = { ...grid[playerKey], style: PLAYER_MARKER_STYLE }
+  const playerCode = LRS_DEMO_CODES[playerKey]
+  grid[playerKey] = {
+    ...(playerCode ? { text: playerCode, color: lrsCodeColor(playerCode) } : {}),
+    style: PLAYER_MARKER_STYLE,
+  }
   return grid
 })
 
@@ -143,6 +163,13 @@ const sendParty = () => {
 
 const scanLongRange = () => {
   longRangeScanned.value = true
+  scanAge.value = 0
+}
+
+// Mock de teste pro decaimento de confianca do LRS -- Fase 4 tem turno de
+// verdade (useGameState); ate la, so avanca a idade do ultimo scan.
+const advanceTurn = () => {
+  if (longRangeScanned.value) scanAge.value += 1
 }
 
 const sendSystemToHelm = () => {
@@ -190,7 +217,7 @@ const sendProbe = () => {
       </LcarsRow>
 
       <!-- Selected Sector Complex Button -->
-      <LcarsComplexButton id="snd-hlm-sec" :color="randColor()" :style="{ width: '24rem', flex: 'none' }">
+      <LcarsComplexButton id="snd-hlm-sec" color="primary-interactive" :style="{ width: '24rem', flex: 'none' }">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Selected sector" :style="{ width: '10rem' }" />
         <LcarsText id="snd-hlm-sec-txt" :text="selectedSector" :style="{ width: '4rem', 'text-align': 'center' }" />
@@ -198,7 +225,7 @@ const sendProbe = () => {
         <LcarsButton
           id="tpd-tgt-cyc-tb1"
           version="round"
-          :color="randColor()"
+          color="secondary-interactive"
           label="Snd Helm"
           :style="{ width: '8rem' }"
           @click="sendToHelm"
@@ -210,7 +237,7 @@ const sendProbe = () => {
         <LcarsButton
           id="hal-btn"
           version="round"
-          :color="randColor()"
+          color="tertiary-interactive"
           label="Hail"
           :style="{ width: '7rem' }"
           @click="hail"
@@ -218,7 +245,7 @@ const sendProbe = () => {
         <LcarsButton
           id="dck-btn"
           version="round"
-          :color="randColor()"
+          color="highlight-interactive"
           label="Dock"
           :style="{ width: '7rem' }"
           @click="dock"
@@ -226,7 +253,7 @@ const sendProbe = () => {
         <LcarsButton
           id="snd-prt-btn"
           version="round"
-          :color="randColor()"
+          color="highlight-dark-interactive"
           label="Snd Party"
           :style="{ width: '8rem' }"
           @click="sendParty"
@@ -272,6 +299,21 @@ const sendProbe = () => {
           opacity: '0.75',
         }"
       />
+      <LcarsRow v-if="longRangeScanned" :style="{ 'justify-content': 'center', 'align-items': 'center', gap: '1rem' }">
+        <LcarsText
+          :text="`Signal confidence: ${Math.round(scanConfidence * 100)}%`"
+          color="text-white"
+          :style="{ textAlign: 'center', fontSize: '1rem', opacity: '0.6' }"
+        />
+        <LcarsButton
+          id="advTurnBtn"
+          version="round"
+          label="Advance Turn"
+          color="primary-interactive"
+          :style="{ width: '9rem' }"
+          @click="advanceTurn"
+        />
+      </LcarsRow>
 
       <!-- Controls row: Scan, Selected System, Snd to Helm -->
       <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '42rem' }">
@@ -279,11 +321,11 @@ const sendProbe = () => {
           id="lngScnBtn"
           version="round"
           label="Scan"
-          :color="randColor()"
+          color="secondary-interactive"
           :style="{ width: '8rem' }"
           @click="scanLongRange"
         />
-        <LcarsComplexButton :color="randColor()" :style="{ width: '22rem' }">
+        <LcarsComplexButton color="tertiary-interactive" :style="{ width: '22rem' }">
           <LcarsCap version="round-left" />
           <LcarsBlock label="Selected System" :style="{ width: '12rem' }" />
           <LcarsText id="sndHlmSysTxt" :text="selectedSystem" :style="{ width: '4rem', 'text-align': 'center' }" />
@@ -292,7 +334,7 @@ const sendProbe = () => {
         <LcarsButton
           id="sndSysHlm"
           version="round"
-          :color="randColor()"
+          color="highlight-interactive"
           label="Snd to Helm"
           :style="{ width: '10rem' }"
           @click="sendSystemToHelm"
@@ -302,7 +344,7 @@ const sendProbe = () => {
       <!-- Probe Control section -->
       <LcarsTitle version="centered" size="small" text="Probe control" color="text-white" />
       <LcarsRow :style="{ 'justify-content': 'center', width: '42rem' }">
-        <LcarsComplexButton :color="randColor()" :style="{ width: '42rem' }">
+        <LcarsComplexButton color="highlight-dark-interactive" :style="{ width: '42rem' }">
           <LcarsCap version="round-left" />
           <LcarsBlock label="Remaining Probes" :style="{ width: '12rem' }" />
           <LcarsText id="rmnPrbTxt" :text="String(remainingProbes)" :style="{ width: '3rem', 'text-align': 'center' }" />
@@ -318,7 +360,7 @@ const sendProbe = () => {
             version="round-right"
             size="large"
             label="Send to selected system"
-            :color="randColor()"
+            color="primary-interactive"
             :style="{ width: '16rem' }"
             :disabled="remainingProbes === 0 || probeStatus !== 'Offline'"
             @click="sendProbe"

@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import type { LcarsColors, ThemeColors } from '@/types/lcars'
+import type { LcarsColors } from '@/types/lcars'
 
 const lcarsColors: LcarsColors = reactive({
   pool: {
@@ -16,73 +16,24 @@ const lcarsColors: LcarsColors = reactive({
   custom: ['bg-orange-5', 'bg-blue-3', 'bg-blue-4', 'bg-blue-5', 'bg-green-3', 'bg-green-1', 'bg-purple-1', 'bg-purple-5']
 })
 
-const themeColors: ThemeColors = reactive({
-  pool: [
-    'anakiwa-bg',
-    'atomic-tangerine-bg',
-    'bahama-blue-bg',
-    'bourbon-bg',
-    'blue-bell-bg',
-    'caribbean-green-bg',
-    'chestnut-rose-bg',
-    'cosmic-bg',
-    'danub-bg',
-    'dodger-pale-bg',
-    'dodger-soft-bg',
-    'eggplant-bg',
-    'golden-tanoi-bg',
-    'hopbush-bg',
-    'husk-bg',
-    'indigo-bg',
-    'lavender-purple-bg',
-    'lilac-bg',
-    'mariner-bg',
-    'medium-carmine-bg',
-    'melrose-bg',
-    'navy-blue-bg',
-    'near-blue-bg',
-    'neon-carrot-bg',
-    'orange-peel-bg',
-    'pale-canary-bg',
-    'periwinkle-bg',
-    'alert-bg',
-    'red-damask-bg',
-    'rust-bg',
-    'sandy-brown-bg',
-    'tamarillo-bg',
-    'tanoi-bg'
-  ],
-  interactive: [
-    'primary-interactive',
-    'secondary-interactive',
-    'tertiary-interactive'
-  ],
-  static: ['primary-static', 'secondary-static', 'tertiary-static'],
-  text: {
-    dark: 'text-dark',
-    light: 'text-light',
-    white: 'text-white',
-    black: 'text-black'
-  }
-})
+export type SystemStatus = 'nominal' | 'damaged' | 'critical' | 'disabled'
+
+const STATUS_CLASS: Record<SystemStatus, string> = {
+  nominal: 'status-nominal-bg',
+  damaged: 'status-damaged-bg',
+  critical: 'status-critical-bg',
+  disabled: 'status-disabled-bg'
+}
 
 export function useLcarsColors() {
-  const randColor = (array: string[] = themeColors.interactive): string => {
-    return array[Math.floor(array.length * Math.random())]
-  }
-
-  const randColorGroup = (array: string[], length: number): string[] => {
-    const result: string[] = []
-    for (let i = 0; i < length; i++) {
-      result.push(array[Math.floor(array.length * Math.random())])
-    }
-    return result
-  }
+  // Classe de cor semantica (nominal/damaged/critical), theme-aware e com
+  // variante .red-alert -- ver colors.css. Cada console mantem seus
+  // proprios limiares/direcao de calculo, so troca o literal de classe por
+  // isso.
+  const statusColor = (status: SystemStatus): string => STATUS_CLASS[status]
 
   return {
     lcarsColors,
-    themeColors,
-    randColor,
-    randColorGroup
+    statusColor
   }
 }

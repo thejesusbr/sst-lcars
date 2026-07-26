@@ -37,7 +37,7 @@ const props = withDefaults(
   }
 );
 
-const { randColor } = useLcarsColors();
+const { statusColor } = useLcarsColors();
 
 // Nova mecanica de energia (substitui o antigo Main Energy dreno/carga):
 // o WC entrega um output nominal fixo, e os subsistemas da nave consomem
@@ -46,16 +46,11 @@ const { randColor } = useLcarsColors();
 // automaticamente.
 const WARP_CORE_OUTPUT = 4500;
 
-// Mock local do consumo total roteado aos subsistemas -- ainda nao existe
-// alocacao de energia por subsistema de verdade (Weapons/Helm/Shield tem
-// cada um seu proprio estado local, sem comunicacao entre consoles ainda;
-// isso e trabalho de Fase 4 com useGameState). Ate la, um unico numero
-// ajustavel serve pra testar a sobrecarga automatica. Ver SST_LCARS_SPECS.md.
+// Mock local do consumo total roteado aos subsistemas -- indicador passivo,
+// soma da energia alocada em cada console de subsistema (Weapons/Helm/Shield).
+// Alocacao real por subsistema ainda nao existe (Fase 4, useGameState); ate
+// la fica fixo. Ver SST_LCARS_SPECS.md.
 const subsystemDraw = ref(3000);
-const SUBSYSTEM_DRAW_PRESETS = [25, 50, 75, 100].map((percent) => ({
-  label: `${percent}%`,
-  value: Math.round((percent / 100) * WARP_CORE_OUTPUT),
-}));
 
 // Interface for subsystems in Damage Control
 interface Subsystem {
@@ -156,9 +151,9 @@ const OVERLOAD_PRESETS = [0, 25, 50, 75, 100].map((percent) => ({
 const overload = computed(() => manualOverload.value + autoOverload.value);
 
 const overloadColor = computed(() => {
-  if (overload.value < 8) return "bg-green-3";
-  if (overload.value <= 15) return "golden-tanoi-bg";
-  return "alert-bg";
+  if (overload.value < 8) return statusColor("nominal");
+  if (overload.value <= 15) return statusColor("damaged");
+  return statusColor("critical");
 });
 
 // Equipes de Controle de Danos (CdD) — mock local, sem lógica de fadiga real (Fase 3.5)
@@ -184,9 +179,9 @@ const teams = ref<DamageControlTeam[]>([
 ]);
 
 const teamEfficiencyColor = (efficiency: number) => {
-  if (efficiency > 60) return "caribbean-green-bg";
-  if (efficiency > 20) return "golden-tanoi-bg";
-  return "alert-bg";
+  if (efficiency > 60) return statusColor("nominal");
+  if (efficiency > 20) return statusColor("damaged");
+  return statusColor("critical");
 };
 
 const dispatchTargets = subsystems.value.map((sys) => sys.name);
@@ -212,19 +207,19 @@ const getSystemStatus = (integrity: number) => {
   if (integrity === 100) {
     return {
       text: "OPERATIONAL",
-      color: "caribbean-green-bg", // classe temática (sem !important) -- bg-green-3 forçava a mesma cor em todos os filhos do complex-button
+      color: statusColor("nominal"),
       isBlinking: false,
     };
   } else if (integrity > 0) {
     return {
       text: "DAMAGED",
-      color: "golden-tanoi-bg", // Yellow/Orange LCARS shade
+      color: statusColor("damaged"),
       isBlinking: false,
     };
   } else {
     return {
       text: "OFFLINE",
-      color: "alert-bg", // Red alert shade
+      color: statusColor("critical"),
       isBlinking: true, // Red blinking offline status
     };
   }
@@ -261,12 +256,17 @@ const simulateDamage = () => {
         minWidth: '30rem',
       }"
     >
-      <LcarsTitle version="centered" size="small" text="Energy Matrix" />
+      <LcarsTitle
+        version="centered"
+        size="small"
+        text="Energy Matrix"
+        :style="{ 'margin-top': '1rem' }"
+      />
 
       <!-- Main Energy: sempre mostra o output nominal do WC, nao e mais um
            recurso que drena -- consumo/sobrecarga sao controlados abaixo -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="primary-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
@@ -277,67 +277,24 @@ const simulateDamage = () => {
           color="text-white"
           :style="{ flex: '1', textAlign: 'center' }"
         />
+        <LcarsBlock label="Subsystem Load" :style="{ width: '8.5rem' }" />
+        <LcarsText
+          :text="String(subsystemDraw)"
+          :color="subsystemDraw > WARP_CORE_OUTPUT ? 'alert-bg' : 'text-white'"
+          :style="{ flex: '1', textAlign: 'center' }"
+        />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
-
-      <!-- Subsystem Load: mock de teste (soma de energia roteada aos
-           subsistemas), ver comentario em subsystemDraw no script -->
-      <LcarsComplexButton
-        :color="randColor()"
-        size="large"
-        :style="{ width: '100%', 'margin-top': '1.5rem' }"
-      >
-        <LcarsCap version="round-left" />
-        <LcarsBlock label="Subsystem Load" :style="{ width: '8.5rem' }" />
-        <LcarsButton
-          version="round"
-          :color="randColor()"
-          label="-"
-          :style="{ width: '3rem', flex: 'none' }"
-          @click="subsystemDraw = Math.max(0, subsystemDraw - 250)"
-        />
-        <SolidLevelBar
-          version="horizontal"
-          :max="WARP_CORE_OUTPUT * 1.5"
-          :min="0"
-          :color="subsystemDraw > WARP_CORE_OUTPUT ? 'alert-bg' : 'bg-blue-3'"
-          :level="subsystemDraw"
-        />
-        <LcarsButton
-          version="round-right"
-          :color="randColor()"
-          label="+"
-          :style="{ width: '3rem', flex: 'none' }"
-          @click="subsystemDraw = Math.min(WARP_CORE_OUTPUT * 1.5, subsystemDraw + 250)"
-        />
-      </LcarsComplexButton>
-
-      <LcarsComplexButton
-        :style="{ width: '100%', 'margin-top': '0.5rem', justifyContent: 'center' }"
-      >
-        <LcarsCap version="round-left" :color="randColor()" />
-        <LcarsButton
-          v-for="preset in SUBSYSTEM_DRAW_PRESETS"
-          :key="preset.value"
-          :label="preset.label"
-          :color="randColor()"
-          :style="{ flex: '1' }"
-          @click="subsystemDraw = preset.value"
-        />
-        <LcarsCap version="round-right" :color="randColor()" />
-      </LcarsComplexButton>
-
       <LcarsTitle
         version="centered"
         size="small"
         text="Warp Core Overload"
-        :style="{ 'margin-top': '1.5rem' }"
+        :style="{ 'margin-top': '1rem' }"
       />
-
       <!-- Overload indicator: total real (manual + automatico por excesso
            de Subsystem Load) -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="secondary-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
@@ -354,15 +311,15 @@ const simulateDamage = () => {
       <!-- Set Overload: dial manual, mesma linguagem visual do Set
            Power/Set Impulse -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="tertiary-interactive"
         size="large"
         :style="{ width: '100%', 'margin-top': '0.5rem' }"
       >
         <LcarsCap version="round-left" />
         <LcarsBlock label="Set Overload" :style="{ width: '8.5rem' }" />
         <LcarsButton
-          version="round"
-          :color="randColor()"
+          version="round-left"
+          color="highlight-interactive"
           label="-"
           :style="{ width: '3rem', flex: 'none' }"
           @click="manualOverload = Math.max(0, manualOverload - 1)"
@@ -376,7 +333,7 @@ const simulateDamage = () => {
         />
         <LcarsButton
           version="round-right"
-          :color="randColor()"
+          color="highlight-dark-interactive"
           label="+"
           :style="{ width: '3rem', flex: 'none' }"
           @click="manualOverload = Math.min(OVERLOAD_MAX, manualOverload + 1)"
@@ -384,18 +341,22 @@ const simulateDamage = () => {
       </LcarsComplexButton>
 
       <LcarsComplexButton
-        :style="{ width: '100%', 'margin-top': '0.5rem', justifyContent: 'center' }"
+        :style="{
+          width: '100%',
+          'margin-top': '0.5rem',
+          justifyContent: 'center',
+        }"
       >
-        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsCap version="round-left" color="primary-interactive" />
         <LcarsButton
           v-for="preset in OVERLOAD_PRESETS"
           :key="preset.value"
           :label="preset.label"
-          :color="randColor()"
+          color="secondary-interactive"
           :style="{ flex: '1' }"
           @click="manualOverload = preset.value"
         />
-        <LcarsCap version="round-right" :color="randColor()" />
+        <LcarsCap version="round-right" color="tertiary-interactive" />
       </LcarsComplexButton>
     </LcarsColumn>
 
@@ -408,6 +369,7 @@ const simulateDamage = () => {
           version="centered"
           size="small"
           text="Damage Control Teams"
+          :style="{ 'margin-top': '1rem' }"
         />
       </LcarsRow>
 
@@ -427,7 +389,7 @@ const simulateDamage = () => {
               :text="team.efficiency + '%'"
               color="text-white"
               :style="{
-                width: '4rem',
+                minWidth: '7.5rem',
                 'text-align': 'center',
                 'font-weight': 'bold',
               }"
@@ -439,7 +401,7 @@ const simulateDamage = () => {
             <LcarsBlock version="decorator" :style="{ flex: '1' }" />
             <LcarsButton
               version="round-right"
-              :color="randColor()"
+              color="highlight-interactive"
               :label="team.assignedSystem ?? 'Dispatch'"
               :style="{ width: '11rem' }"
               @click="cycleAssignment(team)"
@@ -458,6 +420,7 @@ const simulateDamage = () => {
           version="centered"
           size="small"
           text="Subsystem Integrity"
+          :style="{ 'margin-top': '1rem' }"
         />
       </LcarsRow>
 
@@ -486,7 +449,7 @@ const simulateDamage = () => {
               :text="sys.integrity + '%'"
               color="text-white"
               :style="{
-                width: '4.5rem',
+                minWidth: '7.5rem',
                 'text-align': 'right',
                 'font-weight': 'bold',
               }"
@@ -506,7 +469,7 @@ const simulateDamage = () => {
       >
         <LcarsButton
           label="SIMULATE DAMAGE"
-          color="atomic-tangerine-bg"
+          color="bg-orange-3"
           :style="{ width: '15rem' }"
           @click="simulateDamage"
         />

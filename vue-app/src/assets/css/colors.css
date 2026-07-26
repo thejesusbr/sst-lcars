@@ -36,6 +36,111 @@
   --tanoi: #fc9;
   --black: #000;
   --white: #fff;
+
+  /* Legacy "Group" palette (ported from the LCARS SDK's own default theme,
+     see comment at the Green Group below) -- var-indirected so a future
+     [data-theme] block can override a frame color without touching the
+     class rules. Themes are NOT required to redeclare these. */
+  --bg-green-1: #33ffff;
+  --bg-green-2: #33ffcc;
+  --bg-green-3: #00cc99;
+  --bg-green-4: #009999;
+  --bg-green-5: #006666;
+  --bg-green-1-alert: #ffff66;
+  --bg-green-2-alert: #ffff66;
+  --bg-green-3-alert: #cccccc;
+  --bg-green-4-alert: #ff0000;
+  --bg-green-5-alert: #cc0000;
+
+  --bg-blue-1: #99ccff;
+  --bg-blue-2: #88aacc;
+  --bg-blue-3: #3399cc;
+  --bg-blue-4: #006699;
+  --bg-blue-5: #003366;
+  --bg-blue-1-alert: #999999;
+  --bg-blue-2-alert: #990000;
+  --bg-blue-3-alert: #990000;
+  --bg-blue-4-alert: #660000;
+  --bg-blue-5-alert: #330000;
+
+  --bg-purple-1: #cc99cc;
+  --bg-purple-2: #ccbbff;
+  --bg-purple-3: #aa99ee;
+  --bg-purple-4: #6677bb;
+  --bg-purple-5: #666699;
+  --bg-purple-1-alert: #ff0000;
+  --bg-purple-2-alert: #ffff66;
+  --bg-purple-3-alert: #ff0000;
+  --bg-purple-4-alert: #cc0000;
+  --bg-purple-5-alert: #cc0000;
+
+  --bg-orange-1: #ccddbb;
+  --bg-orange-2: #bbbb77;
+  --bg-orange-3: #ddbb77;
+  --bg-orange-4: #dd8844;
+  --bg-orange-5: #cc6600;
+  --bg-orange-1-alert: #cccccc;
+  --bg-orange-2-alert: #ffff66;
+  --bg-orange-3-alert: #ff0000;
+  --bg-orange-4-alert: #cc0000;
+  --bg-orange-5-alert: #999999;
+
+  --bg-red-1: #ff0000;
+  --bg-red-2: #cc0000;
+  --bg-red-3: #990000;
+  --bg-red-4: #660000;
+  --bg-red-5: #330000;
+
+  --bg-grey-1: #cccccc;
+  --bg-grey-2: #999999;
+  --bg-grey-3: #777777;
+  --bg-grey-4: #555555;
+  --bg-grey-5: #333333;
+
+  /* Semantic status colors (nominal/damaged/critical/disabled) --
+     deliberately separate from decorative theme colors so a theme can
+     restyle frames/buttons without accidentally recoloring "damaged". See
+     statusColor() in useLcarsColors.ts.
+
+     --status-nominal-alert/--status-damaged-alert/--status-critical sao
+     SLOTS dedicados (nao um alias tipo `var(--alert)`) porque cada tema
+     precisa poder sobrescreve-los DIRETO no seu proprio bloco .red-alert
+     pra manter nominal>damaged>critical em ordem de brilho -- um alias
+     declarado uma unica vez aqui resolveria e seria herdado ja resolvido
+     a partir daqui, sem enxergar overrides de --alert feitos num elemento
+     descendente (mesmo gotcha ja documentado mais abaixo, achado de novo
+     ao tentar essa mesma ordenacao por tema). TOS define os defaults
+     abaixo; os 5 temas da secao 13.3 sobrescrevem os 3 no proprio
+     `.red-alert` block (ver themes/*.css). */
+  --status-nominal: var(--caribbean-green);
+  --status-damaged: var(--golden-tanoi);
+  --status-disabled: var(--bg-grey-3);
+  --status-nominal-alert: var(--vermillion);
+  --status-damaged-alert: var(--red-damask);
+  --status-critical: var(--warning);
+
+  /* Cores novas sem correspondente proximo no set acima -- só as que os
+     temas da imagem de referencia (Okudagrams Color Complete Set v4.1,
+     lcarsmania.com) realmente precisaram. Ver SST_LCARS_SPECS.md secao 13.3. */
+  --fawn: #b28452;
+  --scuba: #31c9f4;
+  --pear: #99ff66;
+  --cerulean: #66ccff;
+
+  /* Cores novas pro 5o papel de tema (highlight-dark, secao 13) e pra
+     corrigir a colisao nominal/critical do TOS (secao 13.4) -- mesma
+     regra de so criar cor nova quando nao ha parecida no set acima. */
+  --vermillion: #ff8c78; /* TOS: nominal sob red-alert, o mais claro dos 3 */
+  --teal-nx: #009ece;    /* Enterprise NX-01: highlight-dark */
+  --cobalt: #6666ff;     /* Seculo XXIII: highlight-dark */
+
+  /* Pool de vermelho oficial (grupo "RED ALERT COLORS" da mesma imagem),
+     usado só pelos temas novos abaixo -- TOS mantem --alert/--warning/
+     --tamarillo/--red-damask originais, intocados. */
+  --ra-vivid-red: #f5173c;
+  --ra-crimson: #bf2042;
+  --ra-dark-red: #a30e24;
+  --ra-maroon: #330512;
 }
 
 /* Color classes */
@@ -56,7 +161,7 @@
 .bahama-blue-bg > *:not([class*="-bg"]) {
   fill: var(--bahama-blue);
   background-color: var(--bahama-blue);
-  border-color: var(--aabahama-bluea);
+  border-color: var(--bahama-blue);
 }
 .bourbon-bg,
 .bourbon-bg > *:not([class*="-bg"]) {
@@ -176,7 +281,7 @@
 .near-blue-bg > *:not([class*="-bg"]) {
   fill: var(--near-blue);
   background-color: var(--near-blue);
-  border-color: var(--aanear-bluea);
+  border-color: var(--near-blue);
 }
 .neon-carrot-bg,
 .neon-carrot-bg > *:not([class*="-bg"]) {
@@ -270,7 +375,7 @@
   border-color: var(--atomic-tangerine);
 }
 .bahama-blue-fg {
-  color: var(--aabahama-bluea);
+  color: var(--bahama-blue);
 }
 .bourbon-fg {
   color: var(--bourbon);
@@ -331,7 +436,7 @@
 .near-blue-fg {
   fill: var(--near-blue);
   background-color: var(--near-blue);
-  border-color: var(--aanear-bluea);
+  border-color: var(--near-blue);
 }
 .neon-carrot-fg {
   color: var(--neon-carrot);
@@ -376,28 +481,28 @@
 /* Green Group from legacy theme */
 .bg-green-1,
 .bg-green-1 > *:not([class*="bg-"]) {
-  background-color: #33ffff !important;
-  border-color: #33ffff !important;
+  background-color: var(--bg-green-1) !important;
+  border-color: var(--bg-green-1) !important;
 }
 .bg-green-2,
 .bg-green-2 > *:not([class*="bg-"]) {
-  background-color: #33ffcc !important;
-  border-color: #33ffcc !important;
+  background-color: var(--bg-green-2) !important;
+  border-color: var(--bg-green-2) !important;
 }
 .bg-green-3,
 .bg-green-3 > *:not([class*="bg-"]) {
-  background-color: #00cc99 !important;
-  border-color: #00cc99 !important;
+  background-color: var(--bg-green-3) !important;
+  border-color: var(--bg-green-3) !important;
 }
 .bg-green-4,
 .bg-green-4 > *:not([class*="bg-"]) {
-  background-color: #009999 !important;
-  border-color: #009999 !important;
+  background-color: var(--bg-green-4) !important;
+  border-color: var(--bg-green-4) !important;
 }
 .bg-green-5,
 .bg-green-5 > *:not([class*="bg-"]) {
-  background-color: #006666 !important;
-  border-color: #006666 !important;
+  background-color: var(--bg-green-5) !important;
+  border-color: var(--bg-green-5) !important;
 }
 
 /* Variacoes red-alert do Green Group -- valores de referencia da propria
@@ -406,28 +511,91 @@
    red-alert dela pro Green Group sao os mesmos daqui, reaproveitados). */
 .red-alert .bg-green-1,
 .red-alert .bg-green-1 > *:not([class*="bg-"]) {
-  background-color: #ffff66 !important;
-  border-color: #ffff66 !important;
+  background-color: var(--bg-green-1-alert) !important;
+  border-color: var(--bg-green-1-alert) !important;
 }
 .red-alert .bg-green-2,
 .red-alert .bg-green-2 > *:not([class*="bg-"]) {
-  background-color: #ffff66 !important;
-  border-color: #ffff66 !important;
+  background-color: var(--bg-green-2-alert) !important;
+  border-color: var(--bg-green-2-alert) !important;
 }
 .red-alert .bg-green-3,
 .red-alert .bg-green-3 > *:not([class*="bg-"]) {
-  background-color: #cccccc !important;
-  border-color: #cccccc !important;
+  background-color: var(--bg-green-3-alert) !important;
+  border-color: var(--bg-green-3-alert) !important;
 }
 .red-alert .bg-green-4,
 .red-alert .bg-green-4 > *:not([class*="bg-"]) {
-  background-color: #ff0000 !important;
-  border-color: #ff0000 !important;
+  background-color: var(--bg-green-4-alert) !important;
+  border-color: var(--bg-green-4-alert) !important;
 }
 .red-alert .bg-green-5,
 .red-alert .bg-green-5 > *:not([class*="bg-"]) {
-  background-color: #cc0000 !important;
-  border-color: #cc0000 !important;
+  background-color: var(--bg-green-5-alert) !important;
+  border-color: var(--bg-green-5-alert) !important;
+}
+
+/* Semantic status colors (nominal/damaged/critical/disabled) -- see
+   statusColor() in useLcarsColors.ts. Same -bg pattern (cascades to
+   un-classed children of a LcarsComplexButton), no !important (not part
+   of the legacy "Group" family). Disabled has no red-alert variant --
+   e' cinza neutro, nao muda de sentido sob alerta (mesmo precedente de
+   bg-grey-* mais acima).
+
+   Critical NAO tem uma regra `.red-alert .status-critical-bg` separada de
+   proposito: `--status-critical` em si e' o slot que cada tema sobrescreve
+   dentro do proprio `.red-alert` block (ver themes/*.css) -- a regra
+   .status-critical-bg (sem escopo, sempre ativa) ja resolve certo nos dois
+   estados so' de ler essa var.
+
+   nominal/damaged usam SLOTS DEDICADOS (--status-nominal-alert/
+   --status-damaged-alert), nao mais um alias tipo `var(--alert)`: um
+   alias declarado uma unica vez em :root resolve e e' herdado JA
+   resolvido a partir dali -- um tema sobrescrevendo --alert num elemento
+   descendente (body) nao retroalimenta um alias ja resolvido em :root
+   (gotcha documentado a primeira vez ao consertar Nemesis+Red Alert, ver
+   SST_LCARS_SPECS.md secao 13.2). Dessa vez, em vez de ler --alert direto
+   (o que amarraria a cor de status a QUALQUER papel que hoje usa --alert,
+   sem controle independente pra manter nominal>damaged>critical em ordem
+   de brilho por tema), cada tema sobrescreve os 3 slots dedicados
+   diretamente no proprio `.red-alert` block -- funciona pelo mesmo motivo
+   (override na MESMA especificidade que o consumo), so' que sem acoplar
+   a mais nenhum outro papel. */
+.status-nominal-bg,
+.status-nominal-bg > *:not([class*="-bg"]) {
+  fill: var(--status-nominal);
+  background-color: var(--status-nominal);
+  border-color: var(--status-nominal);
+}
+.status-damaged-bg,
+.status-damaged-bg > *:not([class*="-bg"]) {
+  fill: var(--status-damaged);
+  background-color: var(--status-damaged);
+  border-color: var(--status-damaged);
+}
+.status-critical-bg,
+.status-critical-bg > *:not([class*="-bg"]) {
+  fill: var(--status-critical);
+  background-color: var(--status-critical);
+  border-color: var(--status-critical);
+}
+.status-disabled-bg,
+.status-disabled-bg > *:not([class*="-bg"]) {
+  fill: var(--status-disabled);
+  background-color: var(--status-disabled);
+  border-color: var(--status-disabled);
+}
+.red-alert .status-nominal-bg,
+.red-alert .status-nominal-bg > *:not([class*="-bg"]) {
+  fill: var(--status-nominal-alert);
+  background-color: var(--status-nominal-alert);
+  border-color: var(--status-nominal-alert);
+}
+.red-alert .status-damaged-bg,
+.red-alert .status-damaged-bg > *:not([class*="-bg"]) {
+  fill: var(--status-damaged-alert);
+  background-color: var(--status-damaged-alert);
+  border-color: var(--status-damaged-alert);
 }
 
 /* Blue/Purple/Orange/Red/Grey Groups -- usados por lcarsColors.pool
@@ -444,209 +612,215 @@
 /* Blue Group */
 .bg-blue-1,
 .bg-blue-1 > *:not([class*="bg-"]) {
-  background-color: #99ccff !important;
-  border-color: #99ccff !important;
+  background-color: var(--bg-blue-1) !important;
+  border-color: var(--bg-blue-1) !important;
 }
 .bg-blue-2,
 .bg-blue-2 > *:not([class*="bg-"]) {
-  background-color: #88aacc !important;
-  border-color: #88aacc !important;
+  background-color: var(--bg-blue-2) !important;
+  border-color: var(--bg-blue-2) !important;
 }
 .bg-blue-3,
 .bg-blue-3 > *:not([class*="bg-"]) {
-  background-color: #3399cc !important;
-  border-color: #3399cc !important;
+  background-color: var(--bg-blue-3) !important;
+  border-color: var(--bg-blue-3) !important;
 }
 .bg-blue-4,
 .bg-blue-4 > *:not([class*="bg-"]) {
-  background-color: #006699 !important;
-  border-color: #006699 !important;
+  background-color: var(--bg-blue-4) !important;
+  border-color: var(--bg-blue-4) !important;
 }
 .bg-blue-5,
 .bg-blue-5 > *:not([class*="bg-"]) {
-  background-color: #003366 !important;
-  border-color: #003366 !important;
+  background-color: var(--bg-blue-5) !important;
+  border-color: var(--bg-blue-5) !important;
 }
 .red-alert .bg-blue-1,
 .red-alert .bg-blue-1 > *:not([class*="bg-"]) {
-  background-color: #999999 !important;
-  border-color: #999999 !important;
+  background-color: var(--bg-blue-1-alert) !important;
+  border-color: var(--bg-blue-1-alert) !important;
 }
 .red-alert .bg-blue-2,
 .red-alert .bg-blue-2 > *:not([class*="bg-"]) {
-  background-color: #990000 !important;
-  border-color: #990000 !important;
+  background-color: var(--bg-blue-2-alert) !important;
+  border-color: var(--bg-blue-2-alert) !important;
 }
 .red-alert .bg-blue-3,
 .red-alert .bg-blue-3 > *:not([class*="bg-"]) {
-  background-color: #990000 !important;
-  border-color: #990000 !important;
+  background-color: var(--bg-blue-3-alert) !important;
+  border-color: var(--bg-blue-3-alert) !important;
 }
 .red-alert .bg-blue-4,
 .red-alert .bg-blue-4 > *:not([class*="bg-"]) {
-  background-color: #660000 !important;
-  border-color: #660000 !important;
+  background-color: var(--bg-blue-4-alert) !important;
+  border-color: var(--bg-blue-4-alert) !important;
 }
 .red-alert .bg-blue-5,
 .red-alert .bg-blue-5 > *:not([class*="bg-"]) {
-  background-color: #330000 !important;
-  border-color: #330000 !important;
+  background-color: var(--bg-blue-5-alert) !important;
+  border-color: var(--bg-blue-5-alert) !important;
 }
 
 /* Purple Group */
 .bg-purple-1,
 .bg-purple-1 > *:not([class*="bg-"]) {
-  background-color: #cc99cc !important;
-  border-color: #cc99cc !important;
+  background-color: var(--bg-purple-1) !important;
+  border-color: var(--bg-purple-1) !important;
 }
 .bg-purple-2,
 .bg-purple-2 > *:not([class*="bg-"]) {
-  background-color: #ccbbff !important;
-  border-color: #ccbbff !important;
+  background-color: var(--bg-purple-2) !important;
+  border-color: var(--bg-purple-2) !important;
 }
 .bg-purple-3,
 .bg-purple-3 > *:not([class*="bg-"]) {
-  background-color: #aa99ee !important;
-  border-color: #aa99ee !important;
+  background-color: var(--bg-purple-3) !important;
+  border-color: var(--bg-purple-3) !important;
 }
 .bg-purple-4,
 .bg-purple-4 > *:not([class*="bg-"]) {
-  background-color: #6677bb !important;
-  border-color: #6677bb !important;
+  background-color: var(--bg-purple-4) !important;
+  border-color: var(--bg-purple-4) !important;
 }
 .bg-purple-5,
 .bg-purple-5 > *:not([class*="bg-"]) {
-  background-color: #666699 !important;
-  border-color: #666699 !important;
+  background-color: var(--bg-purple-5) !important;
+  border-color: var(--bg-purple-5) !important;
 }
 .red-alert .bg-purple-1,
 .red-alert .bg-purple-1 > *:not([class*="bg-"]) {
-  background-color: #ff0000 !important;
-  border-color: #ff0000 !important;
+  background-color: var(--bg-purple-1-alert) !important;
+  border-color: var(--bg-purple-1-alert) !important;
 }
 .red-alert .bg-purple-2,
 .red-alert .bg-purple-2 > *:not([class*="bg-"]) {
-  background-color: #ffff66 !important;
-  border-color: #ffff66 !important;
+  background-color: var(--bg-purple-2-alert) !important;
+  border-color: var(--bg-purple-2-alert) !important;
 }
 .red-alert .bg-purple-3,
 .red-alert .bg-purple-3 > *:not([class*="bg-"]) {
-  background-color: #ff0000 !important;
-  border-color: #ff0000 !important;
+  background-color: var(--bg-purple-3-alert) !important;
+  border-color: var(--bg-purple-3-alert) !important;
 }
 .red-alert .bg-purple-4,
 .red-alert .bg-purple-4 > *:not([class*="bg-"]) {
-  background-color: #cc0000 !important;
-  border-color: #cc0000 !important;
+  background-color: var(--bg-purple-4-alert) !important;
+  border-color: var(--bg-purple-4-alert) !important;
 }
 .red-alert .bg-purple-5,
 .red-alert .bg-purple-5 > *:not([class*="bg-"]) {
-  background-color: #cc0000 !important;
-  border-color: #cc0000 !important;
+  background-color: var(--bg-purple-5-alert) !important;
+  border-color: var(--bg-purple-5-alert) !important;
 }
 
 /* Orange Group */
 .bg-orange-1,
 .bg-orange-1 > *:not([class*="bg-"]) {
-  background-color: #ccddbb !important;
-  border-color: #ccddbb !important;
+  background-color: var(--bg-orange-1) !important;
+  border-color: var(--bg-orange-1) !important;
 }
 .bg-orange-2,
 .bg-orange-2 > *:not([class*="bg-"]) {
-  background-color: #bbbb77 !important;
-  border-color: #bbbb77 !important;
+  background-color: var(--bg-orange-2) !important;
+  border-color: var(--bg-orange-2) !important;
 }
 .bg-orange-3,
 .bg-orange-3 > *:not([class*="bg-"]) {
-  background-color: #ddbb77 !important;
-  border-color: #ddbb77 !important;
+  background-color: var(--bg-orange-3) !important;
+  border-color: var(--bg-orange-3) !important;
 }
 .bg-orange-4,
 .bg-orange-4 > *:not([class*="bg-"]) {
-  background-color: #dd8844 !important;
-  border-color: #dd8844 !important;
+  background-color: var(--bg-orange-4) !important;
+  border-color: var(--bg-orange-4) !important;
 }
 .bg-orange-5,
 .bg-orange-5 > *:not([class*="bg-"]) {
-  background-color: #cc6600 !important;
-  border-color: #cc6600 !important;
+  background-color: var(--bg-orange-5) !important;
+  border-color: var(--bg-orange-5) !important;
 }
 .red-alert .bg-orange-1,
 .red-alert .bg-orange-1 > *:not([class*="bg-"]) {
-  background-color: #cccccc !important;
-  border-color: #cccccc !important;
+  background-color: var(--bg-orange-1-alert) !important;
+  border-color: var(--bg-orange-1-alert) !important;
 }
 .red-alert .bg-orange-2,
 .red-alert .bg-orange-2 > *:not([class*="bg-"]) {
-  background-color: #ffff66 !important;
-  border-color: #ffff66 !important;
+  background-color: var(--bg-orange-2-alert) !important;
+  border-color: var(--bg-orange-2-alert) !important;
 }
 .red-alert .bg-orange-3,
 .red-alert .bg-orange-3 > *:not([class*="bg-"]) {
-  background-color: #ff0000 !important;
-  border-color: #ff0000 !important;
+  background-color: var(--bg-orange-3-alert) !important;
+  border-color: var(--bg-orange-3-alert) !important;
 }
 .red-alert .bg-orange-4,
 .red-alert .bg-orange-4 > *:not([class*="bg-"]) {
-  background-color: #cc0000 !important;
-  border-color: #cc0000 !important;
+  background-color: var(--bg-orange-4-alert) !important;
+  border-color: var(--bg-orange-4-alert) !important;
 }
 .red-alert .bg-orange-5,
 .red-alert .bg-orange-5 > *:not([class*="bg-"]) {
-  background-color: #999999 !important;
-  border-color: #999999 !important;
+  background-color: var(--bg-orange-5-alert) !important;
+  border-color: var(--bg-orange-5-alert) !important;
 }
 
 /* Red Group -- sem variacao red-alert (ja e vermelho) */
 .bg-red-1,
 .bg-red-1 > *:not([class*="bg-"]) {
-  background-color: #ff0000 !important;
-  border-color: #ff0000 !important;
+  background-color: var(--bg-red-1) !important;
+  border-color: var(--bg-red-1) !important;
 }
 .bg-red-2,
 .bg-red-2 > *:not([class*="bg-"]) {
-  background-color: #cc0000 !important;
-  border-color: #cc0000 !important;
+  background-color: var(--bg-red-2) !important;
+  border-color: var(--bg-red-2) !important;
 }
 .bg-red-3,
 .bg-red-3 > *:not([class*="bg-"]) {
-  background-color: #990000 !important;
-  border-color: #990000 !important;
+  background-color: var(--bg-red-3) !important;
+  border-color: var(--bg-red-3) !important;
 }
 .bg-red-4,
 .bg-red-4 > *:not([class*="bg-"]) {
-  background-color: #660000 !important;
-  border-color: #660000 !important;
+  background-color: var(--bg-red-4) !important;
+  border-color: var(--bg-red-4) !important;
 }
 .bg-red-5,
 .bg-red-5 > *:not([class*="bg-"]) {
-  background-color: #330000 !important;
-  border-color: #330000 !important;
+  background-color: var(--bg-red-5) !important;
+  border-color: var(--bg-red-5) !important;
 }
 
 /* Grey Group -- sem variacao red-alert (neutro de chrome) */
 .bg-grey-1,
 .bg-grey-1 > *:not([class*="bg-"]) {
-  background-color: #cccccc !important;
-  border-color: #cccccc !important;
+  background-color: var(--bg-grey-1) !important;
+  border-color: var(--bg-grey-1) !important;
 }
 .bg-grey-2,
 .bg-grey-2 > *:not([class*="bg-"]) {
-  background-color: #999999 !important;
-  border-color: #999999 !important;
+  background-color: var(--bg-grey-2) !important;
+  border-color: var(--bg-grey-2) !important;
 }
 .bg-grey-3,
 .bg-grey-3 > *:not([class*="bg-"]) {
-  background-color: #777777 !important;
-  border-color: #777777 !important;
+  background-color: var(--bg-grey-3) !important;
+  border-color: var(--bg-grey-3) !important;
 }
 .bg-grey-4,
 .bg-grey-4 > *:not([class*="bg-"]) {
-  background-color: #555555 !important;
-  border-color: #555555 !important;
+  background-color: var(--bg-grey-4) !important;
+  border-color: var(--bg-grey-4) !important;
 }
 .bg-grey-5,
 .bg-grey-5 > *:not([class*="bg-"]) {
-  background-color: #333333 !important;
-  border-color: #333333 !important;
+  background-color: var(--bg-grey-5) !important;
+  border-color: var(--bg-grey-5) !important;
 }
+
+/* =============================================================================
+   Themes -- ver vue-app/src/assets/css/themes/*.css (e SST_LCARS_SPECS.md
+   secao 13). colors.css so define as cores; cada tema mora no proprio
+   arquivo, que faz @import deste aqui pra usar var(--nome-existente).
+   ========================================================================== */

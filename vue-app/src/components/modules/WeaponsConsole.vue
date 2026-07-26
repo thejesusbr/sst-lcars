@@ -28,7 +28,7 @@ const props = withDefaults(
   }
 );
 
-const { randColor } = useLcarsColors();
+const { statusColor } = useLcarsColors();
 const { getIcon } = useScannerIcons();
 
 interface Tube {
@@ -89,15 +89,15 @@ const phaserEffectiveness = computed(() =>
 );
 
 const phaserTempColor = computed(() => {
-  if (phaserTemp.value < 100) return "bg-blue-3";
-  if (phaserTemp.value < 200) return "golden-tanoi-bg";
-  return "alert-bg";
+  if (phaserTemp.value < 100) return statusColor("nominal");
+  if (phaserTemp.value < 200) return statusColor("damaged");
+  return statusColor("critical");
 });
 
 const torpedoStockColor = computed(() => {
-  if (torpedoStock.value > 4) return "bg-green-3";
-  if (torpedoStock.value > 0) return "golden-tanoi-bg";
-  return "alert-bg";
+  if (torpedoStock.value > 4) return statusColor("nominal");
+  if (torpedoStock.value > 0) return statusColor("damaged");
+  return statusColor("critical");
 });
 
 const scannerGrid = computed(() => {
@@ -211,7 +211,7 @@ const fireTorpedoes = () => {
 
       <!-- Temperature -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="primary-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
@@ -230,7 +230,7 @@ const fireTorpedoes = () => {
 
       <!-- Effectiveness -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="secondary-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
@@ -249,7 +249,7 @@ const fireTorpedoes = () => {
 
       <!-- Power Output indicator -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="tertiary-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
@@ -265,7 +265,7 @@ const fireTorpedoes = () => {
 
       <!-- Set Power Output -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="highlight-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
@@ -273,7 +273,7 @@ const fireTorpedoes = () => {
         <LcarsBlock label="Set Power" :style="{ width: '6rem' }" />
         <LcarsButton
           version="round-left"
-          :color="randColor()"
+          color="highlight-dark-interactive"
           label="-"
           :style="{ width: '3rem', flex: 'none' }"
           @click="phaserPower = Math.max(0, phaserPower - 100)"
@@ -287,7 +287,7 @@ const fireTorpedoes = () => {
         />
         <LcarsButton
           version="round-right"
-          :color="randColor()"
+          color="primary-interactive"
           label="+"
           :style="{ width: '3rem', flex: 'none' }"
           @click="phaserPower = Math.min(PHASER_POWER_MAX, phaserPower + 100)"
@@ -296,16 +296,16 @@ const fireTorpedoes = () => {
 
       <!-- Power presets -->
       <LcarsComplexButton :style="{ width: '100%', justifyContent: 'center' }">
-        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsCap version="round-left" color="secondary-interactive" />
         <LcarsButton
           v-for="preset in phaserPowerPresets"
           :key="preset.value"
           :label="preset.label"
-          :color="randColor()"
+          color="tertiary-interactive"
           :style="{ flex: '1' }"
           @click="phaserPower = preset.value"
         />
-        <LcarsCap version="round-right" :color="randColor()" />
+        <LcarsCap version="round-right" color="highlight-interactive" />
       </LcarsComplexButton>
 
       <!-- Lock + Targets locked -->
@@ -314,12 +314,12 @@ const fireTorpedoes = () => {
       >
         <LcarsButton
           version="round"
-          :color="randColor()"
+          color="highlight-dark-interactive"
           label="Lock"
           :style="{ width: '6rem', flex: 'none' }"
           @click="lockTargets"
         />
-        <LcarsComplexButton :color="randColor()" :style="{ flex: '1' }">
+        <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
           <LcarsBlock label="Targets locked" :style="{ flex: '1' }" />
           <LcarsText
             :text="String(lockedTargets)"
@@ -375,7 +375,7 @@ const fireTorpedoes = () => {
       <LcarsComplexButton
         v-for="(tube, i) in tubes"
         :key="i"
-        :color="randColor()"
+        color="secondary-interactive"
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
@@ -395,7 +395,7 @@ const fireTorpedoes = () => {
         <LcarsBlock version="decorator" :style="{ flex: '1' }" />
         <LcarsButton
           version="round-right"
-          :color="randColor()"
+          color="tertiary-interactive"
           label="Cycle"
           :style="{ width: '7rem' }"
           @click="cycleTubeTarget(i)"
@@ -422,7 +422,7 @@ const fireTorpedoes = () => {
 
       <!-- Stock level -->
       <LcarsComplexButton
-        :color="randColor()"
+        color="highlight-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
@@ -443,17 +443,17 @@ const fireTorpedoes = () => {
       <LcarsRow :style="{ width: '100%', gap: '0.5rem' }">
         <LcarsBlock
           label="Tubes"
-          :color="randColor()"
+          color="highlight-dark-interactive"
           :style="{ width: '7rem', flex: 'none' }"
         />
         <LcarsBlock
           label="Auto-load"
-          :color="randColor()"
+          color="primary-interactive"
           :style="{ flex: '1', 'text-align': 'center' }"
         />
         <LcarsBlock
           label="Status"
-          :color="randColor()"
+          color="secondary-interactive"
           :style="{ width: '7rem', flex: 'none' }"
         />
       </LcarsRow>
@@ -466,7 +466,7 @@ const fireTorpedoes = () => {
       >
         <LcarsButton
           version="round"
-          :color="randColor()"
+          color="tertiary-interactive"
           :label="
             tube.status === 'Loaded' ? `Unload ${i + 1}` : `Load ${i + 1}`
           "
@@ -476,7 +476,7 @@ const fireTorpedoes = () => {
         />
         <LcarsToggleSwitch
           :model-value="tube.autoLoad"
-          :color="randColor()"
+          color="highlight-interactive"
           :style="{ flex: '1' }"
           @update:model-value="toggleAutoLoad(i)"
         />

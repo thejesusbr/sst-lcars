@@ -1,0 +1,26 @@
+@import "../colors.css";
+
+/* Seculo XXIX -- Okudagrams Color Complete Set v4.1, lcarsmania.com.
+   Metodologia completa em SST_LCARS_SPECS.md secao 13.3.
+
+   pale-canary/golden-tanoi usam hex literal (nao var()) de proposito: essas
+   2 vars tambem sao redeclaradas NESTE MESMO bloco, entao var(--golden-tanoi)/
+   var(--lilac) resolveriam contra o valor JA sobrescrito aqui, nao contra o
+   original de colors.css (custom properties nao tem ordem sequencial dentro
+   de uma regra, resolvem contra a cascata final). */
+[data-theme="29th-century"] {
+  --pale-canary: #fc6;  /* = --golden-tanoi original */
+  --golden-tanoi: #c9c; /* = --lilac original */
+  --lilac: var(--scuba);
+  --rust: var(--husk);
+  --medium-carmine: var(--caribbean-green); /* highlight-dark, 5o papel (secao 13) */
+}
+[data-theme="29th-century"].red-alert {
+  --alert: var(--ra-vivid-red);
+  --warning: var(--ra-crimson);
+  --tamarillo: var(--ra-maroon);
+  --red-damask: var(--ra-dark-red);
+  --status-nominal-alert: var(--ra-vivid-red);
+  --status-damaged-alert: var(--ra-dark-red);
+  --status-critical: var(--ra-maroon);
+}

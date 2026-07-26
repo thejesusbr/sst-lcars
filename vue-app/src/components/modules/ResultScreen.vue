@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useLcarsColors } from '@/composables/useLcarsColors'
 import LcarsWrapper from '@/components/elements/LcarsWrapper.vue'
 import LcarsColumn from '@/components/elements/LcarsColumn.vue'
 import LcarsTitle from '@/components/elements/LcarsTitle.vue'
@@ -18,7 +17,6 @@ withDefaults(defineProps<{
 
 const emit = defineEmits<{ (e: 'new-game'): void }>()
 
-const { randColor } = useLcarsColors()
 </script>
 
 <template>
@@ -29,7 +27,7 @@ const { randColor } = useLcarsColors()
       <LcarsText :text="`Rating: ${rating}`" color="text-white" />
       <LcarsButton
         label="New Game"
-        :color="randColor()"
+        color="primary-interactive"
         :style="{ width: '12rem' }"
         @click="emit('new-game')"
       />

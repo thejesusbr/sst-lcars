@@ -305,6 +305,17 @@ Stardate (taxa proporcional à integridade danificada)
 ser adicionado aqui
 * **Starbase repair** — ao atracar em Starbase, todos os subsistemas voltam a 100% e energia
 é reabastecida; isso precisa ser acionado a partir de Engineering ou de um evento global
+* **Dreno passivo por sistema** (10.1, pré-requisito técnico) — não existe nem como mock;
+sem ele não há energia real pra "liberar" ao desligar sistema não-essencial, mecânica de
+priorização de energia fica sem base
+* **Core Breach como alvo de dispatch de CdD, tier 5x** (10.4) — `dispatchTargets` só lista
+os 9 subsistemas; falta opção "Radiation Breach" no cycle e o estado
+`radiationBreach{active,containment,turnsRemaining}` em si (não existe em nenhum console)
+* **Empilhamento de equipe com retorno decrescente a partir da 3ª** (10.3) —
+`cycleAssignment` deixa empilhar quantas equipes quiser no mesmo sistema, sem o
+multiplicador `[1,1,0.5,0.25,0.125,0.0625]` nem indicação visual de perda de eficiência
+* **Tier 3x vs 5x por docking** (10.3/10.4) — não há estado de "docado em Starbase" em
+lugar nenhum, reparo sempre roda como se fosse tier base, sem bônus
 
 **Proposta de integração (sem implementar):**
 
@@ -570,6 +581,19 @@ na seção 8.1.
 * `'briefing'` — tela inicial com nome do comandante, dificuldade, início de missão
 * `'playing'` — exibe `GameHud.vue` (estado atual)
 * `'result'` — resultado (vitória/derrota), rating, botão "New Game"
+
+\---
+
+### 7.4. Cap. Lounge
+
+**Justificativa:** o usuário adicionou uma 7ª aba no `TacticalConsole` (botão `cpt-lng-btn`,
+tipo `cptlounge` — plumbing já existia, só faltava conteúdo) pra abrigar, no futuro, um
+painel geral de configurações do jogo (áudio, dificuldade, etc). Escolha de tema de cor
+(seção 13\.) é o primeiro item desse painel a ser implementado.
+
+**Estado atual (2026-07-25):** `CptLoungeConsole.vue` — stub mínimo, só o seletor de tema
+funcionando (`useTheme.ts`). **Não é** o painel de configurações completo — isso continua
+trabalho futuro, sem data definida.
 
 \---
 
@@ -1236,6 +1260,238 @@ Energy Matrix (esquerda) / Damage Control Teams (centro) / **Subsystem Integrity
   50%, 75%, 100% do `OVERLOAD_MAX` (20).
 * **`initialEnergy` prop removida** (não fazia mais sentido, Main Energy não é mais
 configurável de fora) — `EngineeringConsole.stories.ts` atualizado.
+
+\---
+
+## 13\. Sistema de Temas de Cor
+
+> Implementado 2026-07-25. Motivação: o app usava uma paleta única (calorosa, fiel à TOS)
+> espalhada em 3 camadas de CSS sem conceito de "tema" — cor decorativa vinha de
+> `randColor()` sorteando entre 3 classes a cada re-render (visual instável, sem
+> intenção), e cor de status era reimplementada ad hoc em 7 lugares, sem variante
+> `.red-alert`. Ver seção 7\.4 pro Cap. Lounge, onde mora o seletor.
+
+### 13.1. Categorias
+
+Pedido original separava cor em 4 categorias (frames, botões, indicadores, semânticas).
+Investigação não achou nenhum "indicador" no código atual que não fosse também um status
+semântico (nominal/danificado/crítico) — as duas categorias foram **colapsadas em uma**
+(decisão do usuário, não especulação). Resultado, 3 categorias reais:
+
+1. **Frames + Botões** — já unificado por `theme.css` (`primary/secondary/tertiary/
+highlight` × `static/interactive`, + `highlight-dark` desde 2026-07-25, seção 13.5, só
+`-interactive`), já indireto via `var()`, tema não precisa tocar nada aqui além de
+redefinir os 5 nomes de cor que essas classes leem (`--pale-canary`, `--golden-tanoi`,
+`--lilac`, `--rust`, `--medium-carmine`).
+2. **Frames legados** (`bg-{green,blue,purple,orange,red,grey}-{1-5}`, `lcarsColors.pool`/
+`primary`/`secondary`/`tertiary`/`custom` em `useLcarsColors.ts`) — convertidos pra `var()`
+nesta sessão (antes eram hex cru com `!important`). Tema não precisa redeclarar, só quem
+quiser mudar cor de moldura específica.
+3. **Semânticas** (`--status-nominal`/`--status-damaged`/`--status-critical`/
+`--status-disabled` desde 2026-07-25, classes `.status-{nominal,damaged,critical,disabled}-bg`,
+helper `statusColor()` em `useLcarsColors.ts`) — consolida os 7 lugares que reimplementavam
+essa lógica ad hoc (`EngineeringConsole.getSystemStatus/overloadColor/teamEfficiencyColor`,
+`ShieldConsole.mainEnergyColor`, `WeaponsConsole.phaserTempColor/torpedoStockColor`,
+`SituationPanel.warpCoreColor`). Cada console mantém seu próprio limiar/direção de
+cálculo — só o nome da classe de saída virou compartilhado.
+
+### 13.2. Mecanismo `[data-theme]` + `.red-alert`
+
+Um tema é um bloco `[data-theme="<id>"]` que só redeclara as vars que muda — o resto herda
+do `:root` de `colors.css` (que É o tema TOS/padrão, sem atributo nenhum, zero mudança
+visual pro tema atual). `useTheme.ts` escreve `document.body.dataset.theme` (mesmo
+elemento que já hospeda a classe `.red-alert`, ver `SituationPanel.vue`), então a
+combinação tema+alerta vira um bloco composto `[data-theme="<id>"].red-alert` que
+sobrescreve as MESMAS vars (`--alert`/`--warning`/`--tamarillo`/`--red-damask`) que as
+regras `.red-alert` sem escopo de `theme.css`/`colors.css` já leem — **nenhuma edição em
+`theme.css` necessária**, e o custo por tema novo é sempre só esses 2 blocos (nunca
+combinatorial pelas classes de categoria).
+
+**Gotcha achado 2026-07-25 (testando o modal de catálogo de cores, seção 7.4):** as
+regras `.red-alert .status-nominal-bg`/`.status-damaged-bg` liam uma var intermediária
+(`--status-nominal-alert: var(--alert)`, declarada uma vez em `:root`) em vez de
+`var(--alert)` direto. Isso quebrava silenciosamente pra qualquer tema não-TOS: uma custom
+property alias declarada em `:root` resolve e é herdada **já resolvida** a partir dali —
+um override de `--alert` feito num elemento descendente (`body`, via
+`[data-theme=x].red-alert`) não retroalimenta o alias já resolvido em `:root`. Testado com
+Nemesis + Red Alert de verdade: indicador de status "nominal" saía com o vermelho do TOS
+(`#e10`), não o `ra-vivid-red` do tema. Fix: as regras passaram a referenciar
+`var(--alert)`/`var(--red-damask)` diretamente (sem a var intermediária, removida) — cada
+consumidor reresolve via herança normal na hora de pintar, pegando o override certo.
+
+**Arquivo por tema (refatorado 2026-07-25):** `colors.css` só define cor (`:root` +
+grupos legados + classes semânticas) — nenhum bloco `[data-theme]` mora lá. Cada tema tem
+seu próprio arquivo em `vue-app/src/assets/css/themes/<id>.css`, começando com
+`@import "../colors.css";` (pra poder usar `var(--nome-existente)`) seguido dos 2 blocos
+do tema. `main.ts` importa cada arquivo de tema individualmente. Separa "o que são as
+cores" de "como cada tema as combina" — cria tema novo sem tocar em `colors.css`.
+
+**Regra de luminosidade pro `.red-alert` de um tema:** escolher, dentre os vermelhos já
+existentes na paleta, o que tem luminosidade percebida mais parecida com a cor normal que
+está sendo substituída (papel mais claro → vermelho mais claro disponível, e assim por
+diante) — mesmo critério informal que o próprio TOS já usa (`primary`/pale-canary, o mais
+claro, vai pro `--alert`; `highlight`/rust, o mais escuro, vai pro `--red-damask`). Não é
+fórmula exata, é aproximação visual — conferir no navegador.
+
+**Receita pra adicionar um tema novo:**
+1. Criar `vue-app/src/assets/css/themes/<id>.css` com `@import "../colors.css";` no topo.
+2. Nele, `[data-theme="<id>"] { --pale-canary: ...; --golden-tanoi: ...; --lilac: ...; --rust: ...; --medium-carmine: ...; }` com as 5 cores do papel (só as que mudam) — se
+alguma dessas 5 vars for usada como fonte de outra NO MESMO bloco, usar hex literal em vez
+de `var()` pra evitar autossombreamento (custom properties não resolvem em ordem
+sequencial, ver 13.3).
+3. `[data-theme="<id>"].red-alert { --alert: ...; --warning: ...; --tamarillo: ...; --red-damask: ...; }` com os vermelhos luminosidade-parecidos (`highlight-dark` não
+precisa de entrada própria aqui — reusa `--tamarillo` de graça, ver 13.5).
+4. No mesmo bloco `.red-alert`, também `--status-nominal-alert: ...; --status-damaged-alert: ...; --status-critical: ...;` — **slots dedicados, obrigatórios pra manter a
+progressão nominal>damaged>critical** (não basta só os 4 de cima, ver 13.5 pro porquê).
+5. Importar o arquivo novo em `main.ts`.
+6. Adicionar `{ id: '<id>', label: '...', description: '...' }` em `THEMES` (`useTheme.ts`).
+7. Opcional: redeclarar `--status-nominal`/`--status-damaged`/`--status-disabled` e/ou os
+`--bg-{group}-N` se o tema quiser status normal (não-alerta) ou molduras legadas com cor
+diferente da padrão (precisaria ir em `colors.css`, já que são a base compartilhada — só
+faz sentido se for uma mudança que vale a pena virar padrão pra todo mundo, não só 1 tema).
+
+### 13.3. Os 5 temas reais (2026-07-25, fonte: imagem de referência)
+
+Substituiu o rascunho provisório de "Nemesis" assim que o usuário enviou a imagem real
+("Okudagrams Color Complete Set v4.1", lcarsmania.com) com 7 grupos de cor nomeados por
+era/produção.
+
+**Interpretação dos 7 grupos:**
+- **STANDARD LCARS COLORS** — não virou tema, é a paleta de referência oficial. Usada só
+  pra **validar** o TOS atual: `--pale-canary` bate quase exato com um swatch do grupo
+  (diff ~5 em 1 canal), `--lilac` bate **exatamente** com outro — confirma que a paleta
+  TOS já em uso é fiel ao Okudagram oficial, sem necessidade de ajuste.
+- **RED ALERT COLORS** — não virou tema, é o pool de vermelhos oficiais (`--ra-vivid-red`,
+  `--ra-crimson`, `--ra-dark-red`, `--ra-maroon`) reusado no `.red-alert` dos 5 temas
+  abaixo. O grupo também tinha 4 swatches bege/cinza (não usados) — provavelmente cor de
+  painel "apagado" durante alerta real dos Okudagrams; **ideia futura, não implementada**
+  (nosso mecanismo hoje só recolore os papéis interactive/status, não esmaece o resto).
+- **5 grupos restantes = 5 temas**: First Contact (ST:VIII), Nemesis (ST:X, substitui o
+  rascunho), Enterprise (NX-01), Século XXIX, Século XXIII.
+- **TOS fica 100% intocado** — inclusive seu `.red-alert` original (`--alert`/`--warning`/
+  `--tamarillo`/`--red-damask`), que não usa o pool de vermelho novo.
+
+**Metodologia** (mecânica, igual pros 5 temas, sem curadoria manual por matiz): por grupo,
+calculada luminância perceptual (`0.299R+0.587G+0.114B`) de cada swatch (lido como RGB
+decimal — a imagem tinha hex e RGB inconsistentes em ~15% dos swatches, provável
+compressão/OCR do gráfico original; RGB decimal usado como fonte da verdade). Os 4
+swatches mais claros de cada grupo viram `primary>secondary>tertiary>highlight` (mesma
+convenção do TOS). Cada um busca a cor mais próxima já existente em `colors.css`
+(distância euclidiana RGB); ≤~45 reusa, senão cria 1 var nova. Resultado: só **4 cores
+novas** (`--fawn`, `--scuba`, `--pear`, `--cerulean`) pros 20 papéis (5 temas × 4) — resto
+reaproveitou cor existente. `.red-alert` de cada tema pareia por ranking de luminância
+pós-match contra o pool de 4 vermelhos (papel mais claro do tema pega o vermelho mais
+claro do pool) — por isso 3 dos 5 temas (mesma ordem relativa de luminância entre papéis)
+acabam com a mesma atribuição de vermelho; não é cópia, é a mesma fórmula convergindo.
+
+| Tema (id) | primary | secondary | tertiary | highlight |
+|---|---|---|---|---|
+| `first-contact` | `bg-purple-2` | `husk` | `lilac` (=TOS, sem troca) | `fawn` **novo** |
+| `nemesis` | `anakiwa` | `dodger-pale` | `husk` | `dodger-soft` |
+| `enterprise-nx01` | `white` | `bg-orange-1` | `periwinkle` | `chestnut-rose` |
+| `29th-century` | `golden-tanoi` | `lilac` | `scuba` **novo** | `husk` |
+| `23rd-century` | `pear` **novo** | `golden-tanoi` (=TOS, sem troca) | `anakiwa` | `cerulean` **novo** |
+
+**Gotcha de CSS achado ao implementar `29th-century`:** custom properties não têm ordem
+sequencial dentro de uma regra — `var(--golden-tanoi)` usado como valor de `--pale-canary`
+resolve contra a cascata **final** daquele elemento, não contra o valor "antes desta
+regra". Como `29th-century` redeclara `--golden-tanoi` e `--lilac` no mesmo bloco onde
+também os usa como fonte pra `--pale-canary`/`--golden-tanoi`, isso criava
+autossombreamento (tudo colapsava pro valor mais "de baixo" da cadeia). Fix: hex literal
+(`#fc6`, `#c9c`) nesses 2 casos específicos em vez de `var()` — só onde a fonte é uma das
+4 vars que o próprio bloco também redeclara.
+
+**Pontos de atenção pra revisão visual:** `enterprise-nx01` ficou com 3 dos 4 papéis
+bem claros/parecidos entre si (branco, periwinkle, laranja pastel) — pode ser fiel ao
+visual "lavado" real da série Enterprise, ou pode ficar sem graça; fácil trocar 1 papel
+depois de ver renderizado. Ordem de papel é mecânica (só luminância, sem curadoria de
+matiz) — qualquer combinação estranha é mais barato ajustar depois de ver do que prever.
+
+### 13.4. Fixes de brinde
+
+Dois nomes de var tipografados errado em `colors.css` (`--aabahama-bluea`,
+`--aanear-bluea`, referenciados por `.bahama-blue-bg/fg` e `.near-blue-bg/fg`) — hoje
+renderizavam sem cor de borda/texto por causa do typo. Corrigidos ao mexer no arquivo pra
+esta feature; não tinham relação com tema, achado incidental.
+
+### 13.5. 5º papel `highlight-dark` + significado `disabled` + fix da progressão de vermelhos (2026-07-25)
+
+Pedido do usuário: adicionar um 5º papel de tema (`highlight-dark`, não precisa ser
+variação de brilho de `highlight`, pode ser cor diferente), adicionar significado
+semântico `disabled` (cinza), corrigir colisão `nominal`/`critical` no TOS e garantir
+progressão de brilho `nominal > damaged > critical` sob Red Alert em **todos** os temas.
+
+**`highlight-dark`** — `theme.css` ganhou `.highlight-dark-interactive` (mesmo padrão dos
+outros 4, só `-interactive`, sem `-static`, mesma assimetria que `highlight` já tinha).
+Slot `--medium-carmine` (nome = cor padrão do TOS nesse papel, mesma convenção dos outros
+4 slots). Cada tema sobrescreve só essa 1 var no próprio bloco normal — ver tabela de
+mapeamento em `documentation/design/COLOR_REFERENCE.md`. Só 2 temas precisaram de cor
+nova (`teal-nx` no Enterprise NX-01, `cobalt` no Século XXIII); os outros 3 reaproveitaram
+cor já existente (`bourbon`, `rust`, `caribbean-green`). `.red-alert .highlight-dark-interactive`
+reusa **de propósito** `var(--tamarillo)` (mesma cor do `.red-alert` de `tertiary`) — como
+todo tema já sobrescreve `--tamarillo` pro tertiary, `highlight-dark` fica correto sob
+alerta de graça, sem precisar de um 5º vermelho no pool nem tocar no bloco `.red-alert` de
+nenhum tema.
+
+**`disabled`** — `--status-disabled: var(--bg-grey-3)`, igual em todo tema, sem variante
+`.red-alert` (mesmo precedente do `bg-grey-*`: cinza neutro não muda de sentido sob
+alerta). `SystemStatus` (`useLcarsColors.ts`) ganhou o 4º valor; nenhum console foi
+migrado pra usar ainda — só a infraestrutura (cor + classe + `statusColor()` + catálogo do
+Cap. Lounge), uso é opcional/futuro.
+
+**Fix da progressão de vermelhos semânticos** — o bug relatado (`nominal` e `critical`
+usando a mesma cor no TOS) tinha uma causa mais profunda que só "TOS errado": o fix
+anterior (seção 13.2, Nemesis+Red Alert) tinha resolvido um problema parecido fazendo a
+regra `.red-alert .status-nominal-bg` ler `var(--alert)` **direto** em vez de um alias —
+isso bastava quando só 1 var precisava variar por tema. Aqui não bastava: `nominal`,
+`damaged` e `critical` precisam de **3 valores independentes entre si**, mas `--alert`/
+`--warning`/`--tamarillo`/`--red-damask` já são os 4 vermelhos dos 4 papéis interativos —
+ler `--alert` direto pra `nominal` amarra a cor de status a QUALQUER cor que o papel
+`primary` daquele tema escolher pro alerta dele, sem jeito de manter uma ordem
+nominal>damaged>critical independente disso.
+
+**Fix de verdade:** `--status-nominal-alert`/`--status-damaged-alert`/`--status-critical`
+viraram **slots dedicados** de novo (como antes do fix da seção 13.2), mas dessa vez
+**cada um dos 5 temas novos os sobrescreve explicitamente** dentro do próprio bloco
+`.red-alert` (3 linhas novas por tema) — não dependem de nenhum alias resolvido em
+`:root`. Os 5 temas usam sempre `ra-vivid-red > ra-dark-red > ra-maroon` (reordenação
+pura do pool oficial, independente de como os 4 papéis interativos já usam esse mesmo
+pool — às vezes coincide, às vezes não, sem problema, são categorias diferentes). **Só o
+TOS precisou de 1 cor nova** (`--vermillion: #ff8c78`, novo `nominal-alert`, o mais claro
+dos 3) — `damaged-alert` virou `red-damask` (já existia) e `critical` virou `warning` (já
+existia, saiu de `alert` especificamente pra parar de colidir com `nominal`). Validado nos
+6 temas via Electron: luminância `nominal > damaged > critical` e as 3 cores distintas em
+todos.
+
+**Lição consolidada (2ª vez que esse padrão de bug aparece):** um alias de custom property
+em `:root` (`--x: var(--y)`) só segue um override de `--y` feito em outro elemento (body,
+via `[data-theme]`/`.red-alert`) se **ninguém mais** também precisa de um valor
+independente pra `--x` que não seja simplesmente "o que `--y` for". Quando 2+ coisas
+precisam variar de forma desacoplada uma da outra, cada uma precisa do próprio slot,
+sobrescrito explicitamente onde faz sentido (tema, elemento) — não dá pra economizar
+encadeando alias.
+
+### 13.6. Remoção do `randColor()` (2026-07-25)
+
+Com os temas prontos (13.3–13.5), o problema original que motivou toda a seção 13 —
+`randColor()` sorteando cor decorativa a cada re-render, sem identidade estável — foi
+resolvido na raiz: as 92 chamadas `:color="randColor()"` (10 arquivos) viraram cor
+**fixa por posição**, ciclando os 5 papéis interativos em ordem de aparência no
+template (`primary-interactive` → `secondary-interactive` → `tertiary-interactive` →
+`highlight-interactive` → `highlight-dark-interactive` → repete). Puramente mecânico,
+sem curadoria por elemento — mesmo espírito do "reordenamento sem cor nova" da seção
+13.5, aqui aplicado a decoração em vez de status.
+
+Efeito: visual "pisca" (cor mudando sozinha a cada state update) sumiu — cada
+cap/botão/decorator agora tem uma cor ESTÁVEL, que só muda se o usuário trocar de tema
+(porque a classe é fixa, mas o que ela renderiza vem da cascata `[data-theme]`, igual
+sempre foi). `randColor()`, `randColorGroup()` e `themeColors` (`useLcarsColors.ts`,
+`types/lcars.ts`) removidos — zero chamador restante, incluindo `themeColors.pool`/
+`.static`, que já eram código morto antes disso (nunca referenciados em nenhum `.vue`,
+achado na sessão de criação dos temas).
+
+`lcarsColors.primary/secondary/tertiary/custom` (índices fixos, ex.: `lcarsColors.primary[7]`)
+**não foi tocado** — já era determinístico, nunca usava `randColor()`.
 
 \---
 

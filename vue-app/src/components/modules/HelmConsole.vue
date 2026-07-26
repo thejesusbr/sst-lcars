@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useLcarsColors } from "@/composables/useLcarsColors";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
 import LcarsComplexButton from "@/components/elements/LcarsComplexButton.vue";
@@ -15,7 +14,6 @@ import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
 import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
 import LcarsHtmlTag from "@/components/elements/LcarsHtmlTag.vue";
 
-const { randColor } = useLcarsColors();
 
 const activeDstToggle = ref<"sec" | "sys">("sec");
 
@@ -206,7 +204,7 @@ watch(warpFactor, (value) => {
     :style="{ 'justify-content': 'space-evenly' }"
   >
     <LcarsColumn id="dst-pnl" :style="{ 'justify-content': 'center' }" flex="v">
-      <LcarsComplexButton id="cur-pos-ind" :color="randColor()">
+      <LcarsComplexButton id="cur-pos-ind" color="primary-interactive">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Current Location" :style="{ width: '7.5rem' }" />
         <LcarsBlock label="Sector" :style="{ width: '3.75rem' }" />
@@ -232,7 +230,7 @@ watch(warpFactor, (value) => {
 
       <LcarsComplexButton
         id="set-dst-inp"
-        :color="randColor()"
+        color="secondary-interactive"
         :style="{ 'justify-content': 'center' }"
       >
         <LcarsCap version="round-left" />
@@ -268,7 +266,7 @@ watch(warpFactor, (value) => {
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
-      <LcarsComplexButton id="impPwrInd" :color="randColor()">
+      <LcarsComplexButton id="impPwrInd" color="tertiary-interactive">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Impulse Power" :style="{ width: '7.5rem' }" />
         <LcarsText id="impPwr" :text="`${boostedImpulsePower}%`" />
@@ -276,15 +274,15 @@ watch(warpFactor, (value) => {
       </LcarsComplexButton>
 
       <LcarsComplexButton id="impPwrSel">
-        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsCap version="round-left" color="highlight-interactive" />
         <LcarsBlock
           label="Set Impulse"
           :style="{ width: '7.5rem' }"
-          :color="randColor()"
+          color="highlight-dark-interactive"
         />
         <LcarsButton
           version="round-left"
-          :color="randColor()"
+          color="primary-interactive"
           label="-"
           :style="{ width: '1.5rem', flex: 'none' }"
           @click="impulsePower = Math.max(0, impulsePower - 5)"
@@ -299,7 +297,7 @@ watch(warpFactor, (value) => {
         />
         <LcarsButton
           version="round-right"
-          :color="randColor()"
+          color="secondary-interactive"
           label="+"
           :style="{ width: '1.5rem', flex: 'none' }"
           @click="impulsePower = Math.min(100, impulsePower + 5)"
@@ -307,24 +305,24 @@ watch(warpFactor, (value) => {
       </LcarsComplexButton>
 
       <LcarsComplexButton id="impPwrPresets" :style="{ justifyContent: 'center' }">
-        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsCap version="round-left" color="tertiary-interactive" />
         <LcarsButton
           v-for="preset in impulsePresets"
           :key="preset.value"
           :label="preset.label"
-          :color="randColor()"
+          color="highlight-interactive"
           :style="{ flex: '1' }"
           @click="impulsePower = preset.value"
         />
-        <LcarsCap version="round-right" :color="randColor()" />
+        <LcarsCap version="round-right" color="highlight-dark-interactive" />
       </LcarsComplexButton>
 
       <LcarsComplexButton id="impBoostCtn">
-        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsCap version="round-left" color="primary-interactive" />
         <LcarsButton
           id="impBoost"
           label="Boost"
-          :color="randColor()"
+          color="secondary-interactive"
           :class="{
             'white-flash': impulseBoost,
             blink: boostCooldownRemaining > 0,
@@ -340,7 +338,7 @@ watch(warpFactor, (value) => {
           color="primary-static"
           :level="boostCooldownRemaining"
         />
-        <LcarsCap version="round-right" :color="randColor()" />
+        <LcarsCap version="round-right" color="tertiary-interactive" />
       </LcarsComplexButton>
     </LcarsColumn>
 
@@ -349,22 +347,22 @@ watch(warpFactor, (value) => {
       :style="{ 'justify-content': 'center', 'align-items': 'center' }"
       flex="v"
     >
-      <LcarsComplexButton id="wrpFctInd" :color="randColor()">
+      <LcarsComplexButton id="wrpFctInd" color="highlight-interactive">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Warp Factor" :style="{ width: '15rem' }" />
         <LcarsText id="wrpFct" :text="warpFactor.toFixed(1)" />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
       <LcarsComplexButton id="wrpFctSel">
-        <LcarsCap version="round-left" :color="randColor()" />
+        <LcarsCap version="round-left" color="highlight-dark-interactive" />
         <LcarsBlock
           label="Set Warp"
           :style="{ width: '7.5rem' }"
-          :color="randColor()"
+          color="primary-interactive"
         />
         <LcarsButton
           version="round-left"
-          :color="randColor()"
+          color="secondary-interactive"
           label="-"
           :style="{ width: '1.5rem', flex: 'none' }"
           @click="warpFactor = Math.max(1, warpFactor - 1)"
@@ -379,7 +377,7 @@ watch(warpFactor, (value) => {
         />
         <LcarsButton
           version="round-right"
-          :color="randColor()"
+          color="tertiary-interactive"
           label="+"
           :style="{ width: '1.5rem', flex: 'none' }"
           @click="warpFactor = Math.min(8, warpFactor + 1)"
@@ -390,7 +388,7 @@ watch(warpFactor, (value) => {
         id="wrpEng"
         version="round"
         label="Engage"
-        :color="randColor()"
+        color="highlight-interactive"
         :class="{ 'white-flash': warpEngaged }"
         :style="{
           width: '15rem',
