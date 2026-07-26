@@ -815,7 +815,7 @@ pre {
 .complex-button .button {
   width: auto;
   position: relative;
-  height: 100%;
+  height: auto;
   min-width: 7.5rem;
 }
 
