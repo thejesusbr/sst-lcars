@@ -53,6 +53,12 @@ qual cor esse papel aponta hoje. Como não há mais `randColor()` (seção 13.6 
 prefira `color="..."` **estático** (sem `:`) quando o valor não muda — só usa
 `:color="expressão"` quando a cor realmente depende de estado reativo (ver item 2).
 
+Pra texto solto (sem fundo/borda), `theme.css` tem o par `-fg`-por-papel:
+`text-primary`/`text-secondary`/`text-tertiary`/`text-highlight`/`text-highlight-dark`
+(2026-07-26) — mesmos 5 papéis, só `color`, sem `fill`/`background-color`/`border-color`.
+`text-light` (= `text-primary`) e `text-dark` (= `text-highlight`) continuam existindo
+por compatibilidade (usados em código já escrito), não foram removidos.
+
 **2. Status semântico** — quando a cor tem SIGNIFICADO (nominal/danificado/crítico/
 desabilitado), nunca escreva a classe na mão (`"caribbean-green-bg"`, `"alert-bg"` etc.).
 Sempre passe pelo helper, que já é theme-aware e tem `.red-alert` embutido:

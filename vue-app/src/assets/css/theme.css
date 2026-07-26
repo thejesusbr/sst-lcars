@@ -84,7 +84,7 @@
 }
 
 .text-dark {
-  color: var(--role-highlight-alert);
+  color: var(--role-highlight);
 }
 
 .text-white {
@@ -109,6 +109,55 @@
 
 .red-alert .text-black {
   color: black;
+}
+
+/* Texto por papel (2026-07-26) -- so' cor de texto, sem bg/fill/border,
+   pra rotulo de indicador que aparece em qualquer cor do tema (visto nos
+   videos da serie: texto de status/leitura sobre fundo transparente pode
+   usar qualquer um dos 5 papeis, nao so' primary/highlight que ja tinham
+   alias em text-light/text-dark). Mesma convencao -fg das cores nomeadas,
+   so' que por papel em vez de nome de cor -- text-light/text-dark
+   continuam existindo (usados hoje), estes sao adicao, nao substituicao. */
+.text-primary {
+  color: var(--role-primary);
+}
+
+.text-secondary {
+  color: var(--role-secondary);
+}
+
+.text-tertiary {
+  color: var(--role-tertiary);
+}
+
+.text-highlight {
+  color: var(--role-highlight);
+}
+
+.text-highlight-dark {
+  color: var(--role-highlight-dark);
+}
+
+.red-alert .text-primary {
+  color: var(--role-primary-alert);
+}
+
+.red-alert .text-secondary {
+  color: var(--role-secondary-alert);
+}
+
+.red-alert .text-tertiary {
+  color: var(--role-tertiary-alert);
+}
+
+.red-alert .text-highlight {
+  color: var(--role-highlight-alert);
+}
+
+/* Reusa --role-tertiary-alert, mesmo motivo do .highlight-dark-interactive
+   acima (nenhum tema tem um 5o vermelho dedicado pra este papel). */
+.red-alert .text-highlight-dark {
+  color: var(--role-tertiary-alert);
 }
 
 .red-alert .primary-static,

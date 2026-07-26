@@ -43,6 +43,12 @@
 }
 
 .sdk.default-bracket > .elbow .bar+.bar{width:10px; min-width:0px;}
+/* width:auto -- o bar do canto sempre esticou pra fundir com o frame (sem
+   gap antes do elbow); LcarsBar's version default agora e' "medium"
+   (width:7.5rem fixo), que quebrava essa fusao. Bar de bracket (aqui) e'
+   mais especifico que bar de frame generico: aqui SEMPRE estica, flexc
+   explicito ou nao. */
+.sdk.default-bracket > .elbow > .bar{width:auto;}
 .sdk.default-bracket > .elbow{position:absolute;}
 .sdk.default-bracket > .top-left{top:0px; left:0px; }
 .sdk.default-bracket > .top-left .bar+.bar{position: absolute; top:35px; width: 10px; height: 15px; left:auto; right: 0px;}
@@ -53,7 +59,17 @@
 .sdk.default-bracket > .bottom-right{bottom:0px; right:0px;}
 .sdk.default-bracket > .bottom-right .bar+.bar{position: absolute; bottom:35px; width: 10px; height: 15px; right: 0px; left:auto;}
 
-.sdk.default-bracket > .column >.bar{flex:1;}
+/* width:auto pelo mesmo motivo do elbow acima -- essas colunas sao estreitas
+   de proposito (10px, ver nth-child abaixo), o bar sempre esticou por flex,
+   nunca teve width proprio. min/max-height:none reseta o .bar.medium do
+   lcars-sdk.css (min-height:60px;max-height:60px -- sistema legado de
+   ALTURA de bar horizontal, nome de classe colide com o .bar.medium de
+   LARGURA do module.css); sem isso o max-height:60px trava os 3 bars da
+   coluna em 60px cada, current bug reportado no ShieldConsole -- coluna
+   nao preenchia a altura toda, sobrava vao preto embaixo. flex:1/.5/3
+   (ver nth-child abaixo) continua distribuindo a altura disponivel entre
+   os 3, so' que agora sem teto. */
+.sdk.default-bracket > .column >.bar{flex:1; width:auto; min-height:0; max-height:none;}
 .sdk.default-bracket > .column > *:not(:first-child){margin-top:5px;}
 .sdk.default-bracket > .column:nth-child(odd) >.bar:nth-child(2) { flex: .5;}
 .sdk.default-bracket > .column:nth-child(even) >.bar:nth-child(2) { flex: 3;}

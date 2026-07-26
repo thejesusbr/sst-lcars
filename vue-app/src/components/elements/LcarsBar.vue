@@ -5,6 +5,8 @@ import { useLcarsRegistry } from '@/composables/useLcarsRegistry'
 const props = withDefaults(defineProps<{
   id?: string
   color?: string
+  version?: string
+  thin?: boolean
   label?: string
   altLabel?: string | number
   flex?: string
@@ -18,6 +20,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   id: undefined,
   color: undefined,
+  version: 'medium',
+  thin: false,
   label: undefined,
   altLabel: undefined,
   flex: undefined,
@@ -43,6 +47,8 @@ const classes = computed(() => {
     bar: true
   }
   if (props.color) cls[props.color] = true
+  if (props.version) cls[props.version] = true
+  if (props.thin) cls.thin = true
   if (props.flex) cls[`flex-${props.flex}`] = true
   if (props.flexc) cls[`flex-c-${props.flexc}`] = true
   if (props.hidden) cls.hidden = true

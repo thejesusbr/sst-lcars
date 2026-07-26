@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useLcarsColors } from "@/composables/useLcarsColors";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
 import LcarsWrapper from "@/components/elements/LcarsWrapper.vue";
@@ -10,6 +9,7 @@ import LcarsCap from "@/components/elements/LcarsCap.vue";
 import LcarsElbow from "@/components/elements/LcarsElbow.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
 import LcarsTitle from "@/components/elements/LcarsTitle.vue";
+import LcarsText from "../elements/LcarsText.vue";
 import HelmConsole from "./HelmConsole.vue";
 import ShieldConsole from "./ShieldConsole.vue";
 import WeaponsConsole from "./WeaponsConsole.vue";
@@ -17,8 +17,6 @@ import NavSensingConsole from "./NavSensingConsole.vue";
 import EngineeringConsole from "./EngineeringConsole.vue";
 import StarChartConsole from "./StarChartConsole.vue";
 import CptLoungeConsole from "./CptLoungeConsole.vue";
-
-const { lcarsColors } = useLcarsColors();
 
 type ConsoleType =
   | "helm"
@@ -42,7 +40,7 @@ const toggleConsole = (console: ConsoleType) => {
       <LcarsElbow
         size="medium"
         direction="top-left no-event"
-        :color="lcarsColors.primary[7]"
+        color="highlight-interactive"
       />
 
       <LcarsButton
@@ -99,7 +97,11 @@ const toggleConsole = (console: ConsoleType) => {
         @click="toggleConsole('starchart')"
       />
 
-      <LcarsBlock label="1234-56" version="dark-light" color="secondary-interactive" />
+      <LcarsBlock
+        label="1234-56"
+        version="dark-light"
+        color="secondary-interactive"
+      />
       <LcarsBlock flexc="v" color="tertiary-interactive" />
       <LcarsButton
         id="cpt-lng-btn"
@@ -110,7 +112,11 @@ const toggleConsole = (console: ConsoleType) => {
         }"
         @click="toggleConsole('cptlounge')"
       />
-      <LcarsBlock label="A05K-19" version="dark-light" color="highlight-dark-interactive" />
+      <LcarsBlock
+        label="A05K-19"
+        version="dark-light"
+        color="highlight-dark-interactive"
+      />
     </LcarsColumn>
 
     <LcarsWrapper version="column" flex="v" flexc="h" id="tct-cns-scr">
@@ -119,13 +125,32 @@ const toggleConsole = (console: ConsoleType) => {
         version="frame"
         :style="{ padding: '0 .25rem' }"
       >
+        <LcarsBar version="large" color="highlight-interactive" />
+        <LcarsBar version="large" color="primary-interactive" />
         <LcarsBar
-          :style="{ width: '7.5rem' }"
-          :color="lcarsColors.primary[7]"
+          version="small"
+          color="tertiary-static"
+          :style="{ width: '2.2rem' }"
         />
-        <LcarsBar :style="{ width: '7.5rem' }" color="primary-interactive" />
+        <LcarsBar version="xxlarge" thin color="tertiary-static" />
         <LcarsBar flexc="h" color="secondary-interactive" />
-        <LcarsCap version="round-right" size="small" color="tertiary-interactive" />
+        <LcarsText
+          color="text-light"
+          text="TACTICAL CONSOLE"
+          :style="{
+            whiteSpace: 'nowrap',
+            padding: '0 0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '1.5rem',
+            lineHeight: '1.5rem',
+          }"
+        />
+        <LcarsCap
+          version="round-right"
+          size="small"
+          color="tertiary-interactive"
+        />
       </LcarsRow>
 
       <LcarsWrapper

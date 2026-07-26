@@ -10,9 +10,9 @@ const meta: Meta<typeof LcarsBar> = {
       control: 'select',
       options: ['pale-canary-bg', 'golden-tanoi-bg', 'lilac-bg', 'rust-bg', 'tanoi-bg', 'neon-carrot-bg', 'orange-peel-bg'],
     },
-    size: {
+    version: {
       control: 'select',
-      options: ['tiny', 'small', 'medium', 'large', 'xlarge'],
+      options: ['small', 'medium', 'large'],
     },
     flex: {
       control: 'select',
@@ -46,24 +46,21 @@ export const WithLabel: Story = {
 export const Small: Story = {
   args: {
     color: 'lilac-bg',
-    size: 'small',
-    style: { width: '200px' },
+    version: 'small',
   },
 }
 
 export const Medium: Story = {
   args: {
     color: 'rust-bg',
-    size: 'medium',
-    style: { width: '200px' },
+    version: 'medium',
   },
 }
 
 export const Large: Story = {
   args: {
     color: 'tanoi-bg',
-    size: 'large',
-    style: { width: '200px' },
+    version: 'large',
   },
 }
 

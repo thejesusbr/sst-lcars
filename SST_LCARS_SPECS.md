@@ -1594,6 +1594,34 @@ secondary-static` agora renderiza a cor própria (golden-tanoi) em vez de herdar
 (pale-canary); filho sem cor própria continua herdando normalmente; os 61
 `LcarsComplexButton` da app inteira seguem pintados sem exceção após a troca.
 
+### 13.9. Completar as cores de texto (2026-07-26)
+
+Usuário observou (revendo os vídeos da série) que texto de indicador pode aparecer em
+qualquer cor do tema, não só primary/highlight (`text-light`/`text-dark`, já existiam) —
+faltavam `text-primary`/`text-secondary`/`text-tertiary`/`text-highlight`/
+`text-highlight-dark` (por papel) e a família `-fg` de cor nomeada tinha lacunas.
+
+**Adicionado em `theme.css`:** as 5 classes por papel acima + variantes `.red-alert`, no
+mesmo padrão dos pares `-static`/`-interactive` já existentes, só que com `color` em vez
+de `fill`/`background-color`/`border-color`. `text-light` (= `text-primary`) e `text-dark`
+(= `text-highlight`) continuam existindo, não foram removidas nem redefinidas — a adição
+é puramente aditiva. `text-highlight-dark` sob `.red-alert` reusa `--role-tertiary-alert`,
+mesmo motivo de `.highlight-dark-interactive` (13.5).
+
+**Bugs achados de brinde em `colors.css` ao auditar a família `-fg` inteira:**
+`atomic-tangerine-fg`, `lilac-fg` e `near-blue-fg` tinham `fill`/`background-color`/
+`border-color` copiados da regra `-bg` correspondente, sem nunca ter `color` — ou seja,
+aplicar essas 3 classes num texto nunca mudou a cor dele. Corrigidas pra só `color`, igual
+todo outro `-fg` de cor nomeada (fill/bg/border não fazem sentido numa classe de texto).
+`caribbean-green-fg` não existia (só tinha `-bg`) — adicionada, mesma lacuna. Confirmado
+via diff `-bg` × `-fg`: agora as duas famílias são 1:1 pras 33 cores nomeadas + black/white
+(as cores exclusivas de tema da seção 13.3 — `fawn`, `scuba`, `pear`, `cerulean`,
+`vermillion`, `teal-nx`, `cobalt` — e o pool `ra-*` continuam sem `-bg`/`-fg` próprio de
+propósito: só existem como fonte de `--role-*`, nunca escolhidas direto num template).
+
+Verificado via Electron (mesma técnica das seções 13.7/13.8): as 5 classes por papel e as
+3 correções resolvem pro hex esperado do TOS.
+
 \---
 
 *Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20; item 9

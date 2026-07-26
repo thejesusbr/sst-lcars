@@ -386,9 +386,7 @@
   color: var(--anakiwa);
 }
 .atomic-tangerine-fg {
-  fill: var(--atomic-tangerine);
-  background-color: var(--atomic-tangerine);
-  border-color: var(--atomic-tangerine);
+  color: var(--atomic-tangerine);
 }
 .bahama-blue-fg {
   color: var(--bahama-blue);
@@ -398,6 +396,9 @@
 }
 .blue-bell-fg {
   color: var(--blue-bell);
+}
+.caribbean-green-fg {
+  color: var(--caribbean-green);
 }
 .chestnut-rose-fg {
   color: var(--chestnut-rose);
@@ -433,9 +434,7 @@
   color: var(--lavender-purple);
 }
 .lilac-fg {
-  fill: var(--lilac);
-  background-color: var(--lilac);
-  border-color: var(--lilac);
+  color: var(--lilac);
 }
 .mariner-fg {
   color: var(--mariner);
@@ -450,9 +449,7 @@
   color: var(--navy-blue);
 }
 .near-blue-fg {
-  fill: var(--near-blue);
-  background-color: var(--near-blue);
-  border-color: var(--near-blue);
+  color: var(--near-blue);
 }
 .neon-carrot-fg {
   color: var(--neon-carrot);

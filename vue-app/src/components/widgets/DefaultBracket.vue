@@ -64,15 +64,15 @@ onUnmounted(() => {
     <LcarsElbow direction="top-left" version="horizontal" size="small" :color="elbowColor" no-event>
       <LcarsBar />
     </LcarsElbow>
-    
+
     <LcarsElbow direction="top-right" version="horizontal" size="small" :color="elbowColor" no-event>
       <LcarsBar />
     </LcarsElbow>
-    
+
     <LcarsElbow direction="bottom-left" version="horizontal" size="small" :color="elbowColor" no-event>
       <LcarsBar />
     </LcarsElbow>
-    
+
     <LcarsElbow direction="bottom-right" version="horizontal" size="small" :color="elbowColor" no-event>
       <LcarsBar />
     </LcarsElbow>

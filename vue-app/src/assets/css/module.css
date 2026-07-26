@@ -17,14 +17,46 @@ body {
   min-height: 3rem;
   text-align: right;
 }
+
+.bar {
+  min-height: 1.5rem;
+}
+
+.bar.small {
+  min-height: 1.5rem;
+  width: 1.5rem;
+}
+
+.bar.medium {
+  min-height: 1.5rem;
+  width: 7.5rem;
+}
+
+.bar.large {
+  min-height: 1.5rem;
+  width: 15rem;
+}
+
+.bar.xlarge {
+  min-height: 1.5rem;
+  width: 30rem;
+}
+
+.bar.xxlarge {
+  min-height: 1.5rem;
+  width: 45rem;
+}
+
+.bar.thin {
+  min-height: 0.75rem !important;
+  max-height: 0.75rem !important;
+}
+
 .cap {
   min-width: 3rem;
   min-height: 3rem;
 }
 
-.bar {
-  min-height: 1.5rem;
-}
 .cap.small {
   min-width: 1.5rem;
   min-height: 1.5rem;

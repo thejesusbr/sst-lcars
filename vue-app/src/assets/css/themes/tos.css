@@ -18,8 +18,8 @@
   --role-primary: var(--pale-canary);
   --role-secondary: var(--golden-tanoi);
   --role-tertiary: var(--lilac);
-  --role-highlight: var(--rust);
-  --role-highlight-dark: var(--medium-carmine);
+  --role-highlight: var(--atomic-tangerine);
+  --role-highlight-dark: var(--rust);
 }
 [data-theme="tos"].red-alert {
   --role-primary-alert: var(--alert);
