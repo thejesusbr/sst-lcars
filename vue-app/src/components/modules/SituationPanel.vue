@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted, nextTick } from "vue";
+import { computed, ref, watch, onUnmounted } from "vue";
 import { useLcarsColors } from "@/composables/useLcarsColors";
 import LcarsButton from "../elements/LcarsButton.vue";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
@@ -12,6 +12,9 @@ import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsComplexButton from "@/components/elements/LcarsComplexButton.vue";
 import LcarsWrapper from "@/components/elements/LcarsWrapper.vue";
 import LcarsToggleSwitch from "../elements/LcarsToggleSwitch.vue";
+import CombatLog, {
+  type CombatLogEntry,
+} from "@/components/widgets/CombatLog.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -77,19 +80,12 @@ onUnmounted(() => {
   document.body.classList.remove("red-alert");
 });
 
-// Combat Log embutido na 4a coluna (antes era um CombatLog.vue a parte,
-// painel fixo inferior -- fundido aqui pra caber no grid de 4 colunas).
-type LogCategory = "captain" | "general" | "engineering";
+// Combat Log embutido na 4a coluna (painel fixo inferior antes -- fundido
+// aqui pra caber no grid de 4 colunas). Exibicao/scroll ficam no componente
+// CombatLog.vue; aqui so os dados e o filtro por aba.
+const activeLogTab = ref<CombatLogEntry["category"]>("general");
 
-interface CombatLogEntry {
-  stardate: number;
-  category: LogCategory;
-  text: string;
-}
-
-const activeLogTab = ref<LogCategory>("general");
-
-const toggleLogTab = (tab: LogCategory) => {
+const toggleLogTab = (tab: CombatLogEntry["category"]) => {
   activeLogTab.value = tab;
 };
 
@@ -119,20 +115,6 @@ const logEntries = ref<CombatLogEntry[]>([
 
 const filteredLogEntries = computed(() =>
   logEntries.value.filter((entry) => entry.category === activeLogTab.value)
-);
-
-const logContent = ref<HTMLElement | null>(null);
-
-watch(
-  logEntries,
-  () => {
-    nextTick(() => {
-      if (logContent.value) {
-        logContent.value.scrollTop = logContent.value.scrollHeight;
-      }
-    });
-  },
-  { deep: true }
 );
 </script>
 
@@ -172,11 +154,10 @@ watch(
           padding: '.35rem 0',
         }"
       >
-        <!-- Coluna de dados: 2 linhas × 2 itens -->
-        <LcarsColumn id="tct-sit-dsp" :style="{ flex: '1' }">
-          <!-- Linha 1: Energy Level + Stardate -->
-          <LcarsRow :style="{ gap: '1rem' }">
-            <!-- Energy level indicator -->
+        <!-- Coluna de dados A: Energy, Enemies, Torpedoes, Warp Core -->
+        <LcarsColumn id="stn-pnl-dsp-a" :style="{ flex: '1' }">
+          <!-- Energy level indicator -->
+          <LcarsRow>
             <LcarsComplexButton color="primary-interactive">
               <LcarsCap version="round-left" />
               <LcarsBlock
@@ -195,27 +176,10 @@ watch(
               />
               <LcarsCap version="round-right" color="tertiary-static" />
             </LcarsComplexButton>
-            <!-- Stardate indicator-->
-            <LcarsComplexButton color="secondary-interactive">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Stardate"
-                :style="{ flex: 'none', width: '5.5rem' }"
-              />
-              <LcarsText
-                id="sdtIndTxt"
-                color="text-light"
-                :text="String(stardate)"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock version="decorator" color="primary-interactive" />
-              <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
-              <LcarsCap version="round-right" />
-            </LcarsComplexButton>
           </LcarsRow>
 
-          <!-- Linha 2: Enemies Left + Starbases Left -->
-          <LcarsRow :style="{ gap: '1rem' }">
+          <!-- Enemies Left -->
+          <LcarsRow>
             <LcarsComplexButton color="tertiary-interactive">
               <LcarsCap version="round-left" />
               <LcarsBlock
@@ -234,7 +198,75 @@ watch(
               />
               <LcarsCap version="round-right" color="secondary-static" />
             </LcarsComplexButton>
+          </LcarsRow>
 
+          <!-- Torpedo Stock -->
+          <LcarsRow>
+            <LcarsComplexButton color="highlight-interactive">
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                label="Torpedoes"
+                :style="{ flex: 'none', width: '6.5rem' }"
+              />
+              <LcarsText
+                color="text-highlight"
+                :text="String(torpedoStock)"
+                :style="{ flex: '1' }"
+              />
+              <LcarsBlock
+                version="round-right"
+                :style="{ flex: 'none', width: '3rem' }"
+              />
+              <LcarsCap :style="{ background: 'transparent' }" />
+            </LcarsComplexButton>
+          </LcarsRow>
+
+          <!-- Warp Core Status -->
+          <LcarsRow>
+            <LcarsComplexButton color="tertiary-static">
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                label="Warp Core"
+                :style="{ flex: 'none', width: '6.5rem' }"
+              />
+              <LcarsText
+                color="text-white"
+                :text="warpCoreStatus"
+                :style="{ flex: '1' }"
+              />
+              <LcarsBlock
+                version="round-right"
+                :color="warpCoreColor"
+                :style="{ flex: 'none', width: '3rem' }"
+              />
+              <LcarsCap :style="{ background: 'transparent' }" />
+            </LcarsComplexButton>
+          </LcarsRow>
+        </LcarsColumn>
+        <!-- Coluna de dados B: Stardate, Starbases, Shields, Overload -->
+        <LcarsColumn id="stn-pnl-dsp-b" :style="{ flex: '1' }">
+          <!-- Stardate indicator-->
+          <LcarsRow>
+            <LcarsComplexButton color="secondary-interactive">
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                label="Stardate"
+                :style="{ flex: 'none', width: '5.5rem' }"
+              />
+              <LcarsText
+                id="sdtIndTxt"
+                color="text-light"
+                :text="String(stardate)"
+                :style="{ flex: '1' }"
+              />
+              <LcarsBlock version="decorator" color="primary-interactive" />
+              <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
+              <LcarsCap version="round-right" />
+            </LcarsComplexButton>
+          </LcarsRow>
+
+          <!-- Starbases Left -->
+          <LcarsRow>
             <LcarsComplexButton color="highlight-interactive">
               <LcarsCap version="round-left" />
               <LcarsBlock
@@ -255,26 +287,8 @@ watch(
             </LcarsComplexButton>
           </LcarsRow>
 
-          <!-- Linha 3: Torpedo Stock + Shield Status -->
-          <LcarsRow :style="{ gap: '1rem' }">
-            <LcarsComplexButton color="highlight-interactive">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Torpedoes"
-                :style="{ flex: 'none', width: '6.5rem' }"
-              />
-              <LcarsText
-                color="text-highlight"
-                :text="String(torpedoStock)"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                version="round-right"
-                :style="{ flex: 'none', width: '3rem' }"
-              />
-              <LcarsCap :style="{ background: 'transparent' }" />
-            </LcarsComplexButton>
-            <!-- Shield status -->
+          <!-- Shield status -->
+          <LcarsRow>
             <LcarsComplexButton color="primary-interactive">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
@@ -291,29 +305,8 @@ watch(
             </LcarsComplexButton>
           </LcarsRow>
 
-          <!-- Linha 4: Warp Core Status + Overload -->
-          <LcarsRow :style="{ gap: '1rem' }">
-            <!-- Warp Core Status -->
-            <LcarsComplexButton color="tertiary-static">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Warp Core"
-                :style="{ flex: 'none', width: '6.5rem' }"
-              />
-              <LcarsText
-                color="text-white"
-                :text="warpCoreStatus"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                version="round-right"
-                :color="warpCoreColor"
-                :style="{ flex: 'none', width: '3rem' }"
-              />
-              <LcarsCap :style="{ background: 'transparent' }" />
-            </LcarsComplexButton>
-
-            <!-- Overload -->
+          <!-- Overload -->
+          <LcarsRow>
             <LcarsComplexButton color="secondary-interactive">
               <LcarsCap :style="{ background: 'transparent' }" />
               <LcarsBlock
@@ -330,25 +323,9 @@ watch(
               <LcarsCap version="round-right" />
             </LcarsComplexButton>
           </LcarsRow>
-
-          <!-- Alerta de Core Breach: linha condicional, largura total -->
-          <LcarsRow v-if="warpCoreStatus === 'BRC'">
-            <LcarsComplexButton
-              :color="statusColor('critical')"
-              class="blink"
-              :style="{ flex: '1' }"
-            >
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                :label="`RADIATION BREACH — ${breachTurnsRemaining} TURNS REMAINING`"
-                :style="{ flex: '1', textAlign: 'center', fontWeight: 'bold' }"
-              />
-              <LcarsCap version="round-right" />
-            </LcarsComplexButton>
-          </LcarsRow>
         </LcarsColumn>
         <!-- Botão Toggle Red Alert -->
-        <LcarsColumn>
+        <LcarsColumn id="stn-pnl-dsp-c" :style="{ flex: '1' }">
           <LcarsRow
             :style="{ width: '100%', gap: '0.5rem', 'align-items': 'stretch' }"
           >
@@ -367,17 +344,21 @@ watch(
                 :style="{ 'min-width': '7.5rem' }"
                 :text="redAlert ? 'RED' : 'GREEN'"
               />
-              <LcarsBlock version="decorator" :style="{ flex: '1' }" />
             </LcarsComplexButton>
             <LcarsToggleSwitch
               color="highlight-dark-interactive"
               :style="{ flex: '1' }"
               v-model="redAlert"
             />
+            <LcarsCap version="round-right" color="tertiary-static" />
           </LcarsRow>
         </LcarsColumn>
         <!-- Logs -->
-        <LcarsColumn flex="v" :style="{ width: 'fit-content' }">
+        <LcarsColumn
+          id="stn-pnl-dsp-d"
+          flex="v"
+          :style="{ flex: '1', width: 'fit-content' }"
+        >
           <LcarsComplexButton color="highlight-interactive">
             <LcarsCap version="round-left" />
             <LcarsButton
@@ -409,25 +390,27 @@ watch(
             />
             <LcarsCap version="round-right" :color="lcarsColors.primary[4]" />
           </LcarsComplexButton>
-          <div ref="logContent" class="log-content">
-            <p
-              v-for="(entry, i) in filteredLogEntries"
-              :key="i"
-              class="log-entry"
-            >
-              <span class="log-stardate"
-                >[{{ entry.stardate.toFixed(1) }}]</span
-              >
-              {{ entry.text }}
-            </p>
-            <p
-              v-if="filteredLogEntries.length === 0"
-              class="log-entry log-empty"
-            >
-              No entries.
-            </p>
-          </div>
+          <CombatLog :entries="filteredLogEntries" />
         </LcarsColumn>
+      </LcarsRow>
+
+      <!-- Alerta de Core Breach: linha condicional, largura total -->
+      <LcarsRow
+        v-if="warpCoreStatus === 'BRC'"
+        :style="{ padding: '0 .35rem' }"
+      >
+        <LcarsComplexButton
+          :color="statusColor('critical')"
+          class="blink"
+          :style="{ flex: '1' }"
+        >
+          <LcarsCap version="round-left" />
+          <LcarsBlock
+            :label="`RADIATION BREACH — ${breachTurnsRemaining} TURNS REMAINING`"
+            :style="{ flex: '1', textAlign: 'center', fontWeight: 'bold' }"
+          />
+          <LcarsCap version="round-right" />
+        </LcarsComplexButton>
       </LcarsRow>
 
       <!-- Footer: barras na base -->
@@ -464,32 +447,3 @@ watch(
     </LcarsWrapper>
   </LcarsRow>
 </template>
-
-<style scoped>
-.log-content {
-  width: 0;
-  min-width: 100%;
-  max-height: 7.5rem;
-  box-sizing: border-box;
-  padding: 0.5rem 1rem;
-  overflow-y: auto;
-  overflow-x: hidden;
-  font-family: "LCARS-Mono", monospace;
-  color: #fff;
-}
-
-.log-entry {
-  overflow-wrap: break-word;
-  word-break: break-word;
-  margin: 0 0 0.35rem 0;
-}
-
-.log-stardate {
-  color: #ff9900;
-  margin-right: 0.5rem;
-}
-
-.log-empty {
-  opacity: 0.5;
-}
-</style>

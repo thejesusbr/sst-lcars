@@ -174,10 +174,6 @@ const toggleConsole = (console: ConsoleType) => {
         <StarChartConsole v-show="activeConsole === 'starchart'" />
         <CptLoungeConsole v-show="activeConsole === 'cptlounge'" />
       </LcarsWrapper>
-
-      <LcarsRow :style="{ 'flex-direction': 'row-reverse' }">
-        <LcarsTitle size="small" color="text-white" text="Tactical Console" />
-      </LcarsRow>
     </LcarsWrapper>
   </LcarsRow>
 </template>

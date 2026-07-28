@@ -14,7 +14,6 @@ import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
 import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
 import LcarsHtmlTag from "@/components/elements/LcarsHtmlTag.vue";
 
-
 const activeDstToggle = ref<"sec" | "sys">("sec");
 
 const toggleSysSec = (opt: "sec" | "sys") => {
@@ -201,25 +200,35 @@ watch(warpFactor, (value) => {
     id="hlm-cns-dsp"
     flex="h"
     flexc="h"
-    :style="{ 'justify-content': 'space-evenly' }"
+    :style="{ 'padding-top': '1.25rem', 'justify-content': 'space-evenly' }"
   >
-    <LcarsColumn id="dst-pnl" :style="{ 'justify-content': 'center' }" flex="v">
-      <LcarsComplexButton id="cur-pos-ind" color="primary-interactive">
-        <LcarsCap version="round-left" />
-        <LcarsBlock label="Current Location" :style="{ width: '7.5rem' }" />
-        <LcarsBlock label="Sector" :style="{ width: '3.75rem' }" />
-        <LcarsText id="cur-loc-sec" color="text-white" text="3, 4" />
-        <LcarsBlock label="System" :style="{ width: '3.75rem' }" />
-        <LcarsText id="cur-loc-sys" color="text-white" text="3, 4" />
-        <LcarsCap version="round-right" />
-      </LcarsComplexButton>
-
+    <LcarsColumn
+      id="dst-pnl"
+      :style="{ 'justify-content': 'flex-start' }"
+      flex="v"
+    >
+      <!-- Título -->
       <LcarsTitle
         version="small centered"
         text="Helm Controls"
-        color="text-white"
+        color="text-light"
       />
+      <!-- Indicador da posição atual -->
+      <LcarsComplexButton id="cur-pos-ind" color="secondary-interactive">
+        <LcarsCap version="round-left" />
+        <LcarsBlock label="Current Location" color="highlight-interactive" />
+        <LcarsBlock
+          label="Sector"
+          color="highlight-dark-interactive"
+          :style="{ width: '3.75rem' }"
+        />
+        <LcarsText id="cur-loc-sec" color="text-white" text="3, 4" />
+        <LcarsBlock label="System" :style="{ width: '3.75rem' }" />
+        <LcarsText id="cur-loc-sys" color="text-white" text="3, 4" />
+        <LcarsCap version="round-right" color="tertiary-static" />
+      </LcarsComplexButton>
 
+      <!-- Pad de direção -->
       <LcarsWrapper
         id="hlm-dir-pad-wrp"
         flex="h"
@@ -228,6 +237,7 @@ watch(warpFactor, (value) => {
         <LcarsSvg id="hlm-dir-pad" :xml="dirPadSvg" />
       </LcarsWrapper>
 
+      <!-- Entrada de destino -->
       <LcarsComplexButton
         id="set-dst-inp"
         color="secondary-interactive"
@@ -248,6 +258,9 @@ watch(warpFactor, (value) => {
           id="dst-sec-ind"
           color="text-white"
           :text="`${destination.sec.x}, ${destination.sec.y}`"
+          :style="{
+            filter: activeDstToggle === 'sec' ? '' : 'brightness(0.6)',
+          }"
         />
         <LcarsButton
           label="System"
@@ -262,10 +275,14 @@ watch(warpFactor, (value) => {
           id="dst-sys-ind"
           color="text-white"
           :text="`${destination.sys.x}, ${destination.sys.y}`"
+          :style="{
+            filter: activeDstToggle === 'sys' ? '' : 'brightness(0.6)',
+          }"
         />
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
+      <!-- Indicador de potência de impulso -->
       <LcarsComplexButton id="impPwrInd" color="tertiary-interactive">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Impulse Power" :style="{ width: '7.5rem' }" />
@@ -273,6 +290,7 @@ watch(warpFactor, (value) => {
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
+      <!-- Seleção da potência de impulso -->
       <LcarsComplexButton id="impPwrSel">
         <LcarsCap version="round-left" color="highlight-interactive" />
         <LcarsBlock
@@ -304,7 +322,11 @@ watch(warpFactor, (value) => {
         />
       </LcarsComplexButton>
 
-      <LcarsComplexButton id="impPwrPresets" :style="{ justifyContent: 'center' }">
+      <!-- Botões de preset de potência de impulso -->
+      <LcarsComplexButton
+        id="impPwrPresets"
+        :style="{ justifyContent: 'center' }"
+      >
         <LcarsCap version="round-left" color="tertiary-interactive" />
         <LcarsButton
           v-for="preset in impulsePresets"
@@ -317,6 +339,7 @@ watch(warpFactor, (value) => {
         <LcarsCap version="round-right" color="highlight-dark-interactive" />
       </LcarsComplexButton>
 
+      <!-- Indicador de boost -->
       <LcarsComplexButton id="impBoostCtn">
         <LcarsCap version="round-left" color="primary-interactive" />
         <LcarsButton
@@ -340,13 +363,31 @@ watch(warpFactor, (value) => {
         />
         <LcarsCap version="round-right" color="tertiary-interactive" />
       </LcarsComplexButton>
+      <LcarsButton
+        id="btn-eng-imp"
+        label="Engage Impulse"
+        class="dark-light"
+        color="highlight-interactive"
+        version="round"
+        :style="{ alignSelf: 'center', width: '50%' }"
+      />
     </LcarsColumn>
-
+    <!-- Controles de dobra -->
     <LcarsColumn
       id="wrpPnl"
-      :style="{ 'justify-content': 'center', 'align-items': 'center' }"
+      :style="{
+        'justify-content': 'flex-start',
+        'align-items': 'center',
+      }"
       flex="v"
     >
+      <!-- Título -->
+      <LcarsTitle
+        version="small centered"
+        text="Warp Controls"
+        color="text-light"
+      />
+      <!-- Indicador de fator de dobra -->
       <LcarsComplexButton id="wrpFctInd" color="highlight-interactive">
         <LcarsCap version="round-left" />
         <LcarsBlock label="Warp Factor" :style="{ width: '15rem' }" />
@@ -387,9 +428,9 @@ watch(warpFactor, (value) => {
       <LcarsButton
         id="wrpEng"
         version="round"
-        label="Engage"
+        label="Engage Warp"
         color="highlight-interactive"
-        :class="{ 'white-flash': warpEngaged }"
+        :class="{ 'white-flash': warpEngaged, 'dark-lite': !warpEngaged }"
         :style="{
           width: '15rem',
           flex: 'none',
