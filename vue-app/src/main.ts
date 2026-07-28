@@ -11,5 +11,6 @@ import './assets/css/themes/nemesis.css'
 import './assets/css/themes/enterprise-nx01.css'
 import './assets/css/themes/29th-century.css'
 import './assets/css/themes/23rd-century.css'
+import './assets/css/themes/picard.css'
 
 createApp(App).mount('#app')

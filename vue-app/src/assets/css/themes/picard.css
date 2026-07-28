@@ -1,0 +1,77 @@
+@import "../colors.css";
+
+/* Picard (Star Trek: Picard, Seculo XXV) -- fonte: "The final Season One
+   palette", ion.studio/25th-century-lcars (captura enviada pelo usuario,
+   2026-07-28). Paleta propria, fora do Okudagrams Color Complete Set v4.1
+   das secoes 13.3+ do specs -- 5 novas cores (secao "Seculo XXV" em
+   colors.css), nenhuma reaproveitada. Metodologia completa em
+   SST_LCARS_SPECS.md secao 13.10. Sobrescreve --role-* (o PAPEL), nunca a
+   cor nomeada em si -- ver secao 13.7. */
+[data-theme="picard"] {
+  --role-primary: var(--bali-hai);
+  --role-secondary: var(--shuttle-gray);
+  --role-tertiary: var(--ebony-clay);
+  --role-highlight: var(--trinidad); /* laranja da paleta, escolha manual do usuario */
+  --role-highlight-dark: var(--woodsmoke); /* a mais escura da paleta, escolha manual do usuario */
+}
+
+/* Ref. da imagem oficial: elemento com fundo highlight-dark usa texto na cor
+   de highlight, nao preto -- so' este tema faz essa troca. Alvo e' o
+   :before/:after (label via content:attr(data-label), ver lcars-sdk.css)
+   que um reset global (*:before,*:after{color:#000000}) deixa preto por
+   padrao em todo tema; a especificidade do seletor abaixo (atributo de tema
+   + classe + pseudo-elemento) ja' basta pra vencer o reset sem precisar de
+   !important. Replica o mesmo padrao ".highlight-dark-interactive > *:not(...)"
+   de theme.css pra tambem cobrir filhos sem classe de cor propria (ex.: cap
+   dentro de um LcarsComplexButton highlight-dark). So' em modo normal --
+   sob .red-alert o fundo de .highlight-dark-interactive vira
+   --role-tertiary-alert (ver theme.css), ajuste de texto nesse estado fica
+   pro usuario revisar depois (avisou que RAs da serie usam branco/cinza
+   tambem, nao so' vermelho). */
+[data-theme="picard"]:not(.red-alert) .highlight-dark-interactive:before,
+[data-theme="picard"]:not(.red-alert) .highlight-dark-interactive:after,
+[data-theme="picard"]:not(.red-alert)
+  .highlight-dark-interactive
+  > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]):before,
+[data-theme="picard"]:not(.red-alert)
+  .highlight-dark-interactive
+  > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]):after {
+  color: var(--role-highlight);
+}
+
+/* Mesma ideia acima, pro papel tertiary (fiel a paleta oficial: fundo
+   tertiary usa texto primary). Cobre -interactive e -static (tertiary tem
+   os dois, diferente de highlight-dark que so' tem -interactive). */
+[data-theme="picard"]:not(.red-alert) .tertiary-interactive:before,
+[data-theme="picard"]:not(.red-alert) .tertiary-interactive:after,
+[data-theme="picard"]:not(.red-alert) .tertiary-static:before,
+[data-theme="picard"]:not(.red-alert) .tertiary-static:after,
+[data-theme="picard"]:not(.red-alert)
+  .tertiary-interactive
+  > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]):before,
+[data-theme="picard"]:not(.red-alert)
+  .tertiary-interactive
+  > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]):after,
+[data-theme="picard"]:not(.red-alert)
+  .tertiary-static
+  > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]):before,
+[data-theme="picard"]:not(.red-alert)
+  .tertiary-static
+  > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]):after {
+  color: var(--role-primary);
+}
+
+/* Sem paleta de alerta oficial na fonte -- vermelhos criados por luminancia
+   perceptual (ver colors.css e secao 13.10), nao reusam o pool --ra-*
+   (calibrado pro Okudagrams, luminancia baixa demais pros papeis claros
+   desta paleta). Usuario avisou que vai revisar manualmente depois (RAs da
+   serie usam branco/cinza junto do vermelho, ainda nao modelado aqui). */
+[data-theme="picard"].red-alert {
+  --role-primary-alert: var(--salmon);
+  --role-secondary-alert: var(--indian-red);
+  --role-tertiary-alert: var(--falu-red);
+  --role-highlight-alert: var(--jasper);
+  --status-nominal-alert: var(--salmon);
+  --status-damaged-alert: var(--indian-red);
+  --status-critical: var(--falu-red);
+}

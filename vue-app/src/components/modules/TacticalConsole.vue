@@ -8,7 +8,6 @@ import LcarsBar from "@/components/elements/LcarsBar.vue";
 import LcarsCap from "@/components/elements/LcarsCap.vue";
 import LcarsElbow from "@/components/elements/LcarsElbow.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
-import LcarsTitle from "@/components/elements/LcarsTitle.vue";
 import LcarsText from "../elements/LcarsText.vue";
 import HelmConsole from "./HelmConsole.vue";
 import ShieldConsole from "./ShieldConsole.vue";
@@ -36,6 +35,7 @@ const toggleConsole = (console: ConsoleType) => {
 
 <template>
   <LcarsRow id="tct-cns" flexc="v">
+    <!-- Menu lateral: navegação entre os consoles -->
     <LcarsColumn flex="v" id="tct-cns-mnu" :style="{ width: '7.5rem' }">
       <LcarsElbow
         size="medium"
@@ -120,6 +120,7 @@ const toggleConsole = (console: ConsoleType) => {
     </LcarsColumn>
 
     <LcarsWrapper version="column" flex="v" flexc="h" id="tct-cns-scr">
+      <!-- Cabeçalho: barras de frame + título -->
       <LcarsRow
         id="tct-cns-hdr"
         version="frame"
@@ -153,6 +154,7 @@ const toggleConsole = (console: ConsoleType) => {
         />
       </LcarsRow>
 
+      <!-- Área de conteúdo: só o console ativo fica visível -->
       <LcarsWrapper
         version="row"
         flexc="v"

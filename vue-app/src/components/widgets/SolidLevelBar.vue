@@ -49,20 +49,32 @@ const classes = computed(() => {
   return cls
 })
 
-const wrapperTransform = computed(() => {
+// wrapper (bar + cap bg-white) tem a mesma largura/altura do container --
+// deslocar por 100% (o que "${100-percentage}%" fazia) arrasta o cap junto
+// pra fora da area visivel em 0%, deixando so vazio. O cap so deve
+// desaparecer proporcionalmente ao esvaziar o BAR (calc(100% - 5px) em
+// solid-level-bar.css, mesma constante aqui), nunca a largura toda do
+// wrapper -- assim em 0% o cap fica parado na borda, visivel.
+const wrapperShift = computed(() => {
   const value = Math.max(props.min, Math.min(props.max, currentLevel.value))
   const percentage = (value / props.max) * 100
+  const emptyFraction = (100 - percentage) / 100
+  return `(100% - 5px) * ${emptyFraction}`
+})
+
+const wrapperTransform = computed(() => {
+  const shift = wrapperShift.value
 
   if (props.version === 'vertical') {
     if (props.reverse) {
-      return `translateY(-${100 - percentage}%)`
+      return `translateY(calc(-1 * (${shift})))`
     }
-    return `translateY(${100 - percentage}%)`
+    return `translateY(calc(${shift}))`
   } else {
     if (props.reverse) {
-      return `translateX(${100 - percentage}%)`
+      return `translateX(calc(${shift}))`
     }
-    return `translateX(-${100 - percentage}%)`
+    return `translateX(calc(-1 * (${shift})))`
   }
 })
 

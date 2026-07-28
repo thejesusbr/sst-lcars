@@ -116,12 +116,6 @@ const statusColor = computed(() =>
   semanticStatusColor(shieldEnergy.value > 0 ? "nominal" : "critical", "fg")
 );
 
-const mainEnergyColor = computed(() => {
-  if (mainEnergy.value > 2000) return semanticStatusColor("nominal");
-  if (mainEnergy.value > 800) return semanticStatusColor("damaged");
-  return semanticStatusColor("critical");
-});
-
 const bracketColoring = {
   elbow: "tertiary-static",
   column1: ["primary-static", "tertiary-static", "primary-static"],
@@ -171,7 +165,11 @@ const raiseShields = () => {
   <LcarsRow
     id="shdCnsDsp"
     flexc="h"
-    :style="{ justifyContent: 'space-evenly', gap: '2rem', width: '100%' }"
+    :style="{
+      'padding-top': '1.25rem',
+      justifyContent: 'space-evenly',
+      width: '100%',
+    }"
   >
     <!-- Column 1: Shield Status Viewer -->
     <LcarsColumn
@@ -182,10 +180,20 @@ const raiseShields = () => {
         width: '34rem',
       }"
     >
-      <LcarsComplexButton color="primary-interactive" :style="{ width: '100%' }">
+      <!-- Título -->
+      <LcarsTitle version="centered" size="small" text="Shield Status" />
+      <!-- Indicador de status (UP/DOWN) do escudo -->
+      <LcarsComplexButton
+        color="primary-interactive"
+        :style="{ width: '100%' }"
+      >
         <LcarsCap version="round-left" />
-        <LcarsBlock label="Shields Status" :style="{ width: '8.5rem' }" />
-        <LcarsBlock color="secondary-interactive" :style="{ width: '2rem' }" />
+        <LcarsBlock
+          label="Shields Status"
+          :style="{ flex: '1' }"
+          :color="shieldStatus === 'DOWN' ? 'alert-bg' : 'primary-static'"
+          :class="{ blink: shieldStatus === 'DOWN' }"
+        />
         <LcarsText
           id="shdStsIndTxt"
           :text="shieldStatus"
@@ -202,6 +210,7 @@ const raiseShields = () => {
         <LcarsCap version="round-right" />
       </LcarsComplexButton>
 
+      <!-- Diagrama do escudo (zonas + integridade), dentro do bracket padrão -->
       <DefaultBracket
         :coloring="bracketColoring"
         :style="{ marginTop: '1rem', width: '100%', minHeight: '22rem' }"
@@ -214,6 +223,7 @@ const raiseShields = () => {
         />
       </DefaultBracket>
 
+      <!-- Botão de teste (mock, sem mecânica de combate real ainda) -->
       <LcarsButton
         label="Simulate Hit"
         :color="semanticStatusColor('critical')"
@@ -231,7 +241,11 @@ const raiseShields = () => {
         :style="{ marginBottom: '1rem' }"
       />
 
-      <LcarsComplexButton color="tertiary-interactive" :style="{ width: '100%' }">
+      <!-- Barra de nível: energia atual do escudo -->
+      <LcarsComplexButton
+        color="tertiary-interactive"
+        :style="{ width: '100%' }"
+      >
         <LcarsCap version="round-left" />
         <LcarsBlock label="Shield Energy" :style="{ width: '9rem' }" />
         <SolidLevelBar
@@ -254,6 +268,7 @@ const raiseShields = () => {
         :style="{ margin: '1.25rem 0 0.5rem' }"
       />
 
+      <!-- Presets de transferência: -/definir/+ por quantidade fixa -->
       <LcarsColumn flex="v" :style="{ gap: '0.5rem', width: '100%' }">
         <LcarsComplexButton
           v-for="preset in [250, 500, 1000]"
@@ -284,6 +299,7 @@ const raiseShields = () => {
         </LcarsComplexButton>
       </LcarsColumn>
 
+      <!-- Ações totais: baixar/levantar escudos por completo -->
       <LcarsRow
         :style="{
           marginTop: '1rem',
@@ -294,35 +310,19 @@ const raiseShields = () => {
       >
         <LcarsButton
           label="Lower Shields"
+          version="round"
           :color="semanticStatusColor('critical')"
           :style="{ flex: '1' }"
           @click="lowerShields"
         />
         <LcarsButton
           label="Raise Shields"
+          version="round"
           color="bg-green-3"
           :style="{ flex: '1' }"
           @click="raiseShields"
         />
       </LcarsRow>
-
-      <LcarsComplexButton
-        color="highlight-dark-interactive"
-        :style="{ width: '100%', marginTop: '1rem' }"
-      >
-        <LcarsCap version="round-left" />
-        <LcarsBlock label="Main Energy" :style="{ width: '9rem' }" />
-        <SolidLevelBar
-          version="horizontal"
-          :max="4500"
-          :min="0"
-          :color="mainEnergyColor"
-          :level="mainEnergy"
-          :label="mainEnergy.toString()"
-          :style="{ flex: '1' }"
-        />
-        <LcarsCap version="round-right" />
-      </LcarsComplexButton>
     </LcarsColumn>
   </LcarsRow>
 </template>

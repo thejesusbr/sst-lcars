@@ -15,7 +15,6 @@ const meta: Meta<typeof EngineeringConsole> = {
     phaserIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     photonIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     shieldIntegrity: { control: { type: 'number', min: 0, max: 100 } },
-    damageIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     lifeIntegrity: { control: { type: 'number', min: 0, max: 100 } },
     warpCoreIntegrity: { control: { type: 'number', min: 0, max: 100 } },
   }
@@ -32,7 +31,6 @@ export const Default: Story = {
     phaserIntegrity: 100,
     photonIntegrity: 100,
     shieldIntegrity: 100,
-    damageIntegrity: 100,
     lifeIntegrity: 100,
     warpCoreIntegrity: 100,
   },
@@ -51,7 +49,6 @@ export const DamagedSystems: Story = {
     phaserIntegrity: 80,
     photonIntegrity: 100,
     shieldIntegrity: 0,
-    damageIntegrity: 100,
     lifeIntegrity: 100,
     warpCoreIntegrity: 60,
   },

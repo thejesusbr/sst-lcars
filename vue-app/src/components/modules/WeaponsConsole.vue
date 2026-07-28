@@ -190,7 +190,12 @@ const fireTorpedoes = () => {
   <LcarsRow
     id="wpnCnsDsp"
     flexc="h"
-    :style="{ 'justify-content': 'space-evenly', gap: '2rem', width: '100%' }"
+    :style="{
+      'padding-top': '1.25rem',
+      'justify-content': 'space-evenly',
+      gap: '2rem',
+      width: '100%',
+    }"
   >
     <!-- Column 1: Phaser Bank Control -->
     <LcarsColumn
@@ -198,7 +203,6 @@ const fireTorpedoes = () => {
       :style="{
         'justify-content': 'flex-start',
         'align-items': 'center',
-        gap: '0.75rem',
         minWidth: '30rem',
       }"
     >

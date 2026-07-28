@@ -98,6 +98,7 @@ watch(activeTheme, () => {
 
 <template>
   <LcarsRow id="cpt-lng-dsp" flexc="h" :style="{ 'justify-content': 'center' }">
+    <!-- Painel principal: seletor de tema -->
     <LcarsColumn
       id="cpt-lng-pnl"
       flex="v"
@@ -109,6 +110,7 @@ watch(activeTheme, () => {
         color="text-white"
         :style="{ opacity: '0.75' }"
       />
+      <!-- Botões de tema, um por entrada de THEMES (useTheme.ts) -->
       <LcarsRow :style="{ gap: '.75rem' }">
         <LcarsButton
           v-for="t in themes"
@@ -133,6 +135,7 @@ watch(activeTheme, () => {
       />
     </LcarsColumn>
 
+    <!-- Modal do catálogo de cores: papéis de tema x variante de red-alert -->
     <div v-if="showCatalog" class="catalog-backdrop" @click.self="showCatalog = false">
       <LcarsColumn flex="v" class="catalog-panel" :style="{ gap: '1rem' }">
         <LcarsRow :style="{ 'align-items': 'center' }">
@@ -150,6 +153,7 @@ watch(activeTheme, () => {
           />
         </LcarsRow>
 
+        <!-- Uma coluna por categoria (Frames & Buttons, Status) -->
         <LcarsColumn
           v-for="category in categories"
           :key="category.title"
@@ -157,6 +161,7 @@ watch(activeTheme, () => {
           :style="{ gap: '.5rem' }"
         >
           <LcarsText :text="category.title" color="text-white" :style="{ opacity: '0.75' }" />
+          <!-- Linha por swatch: cor normal + par red-alert -->
           <LcarsRow
             v-for="item in category.items"
             :key="item.varName"

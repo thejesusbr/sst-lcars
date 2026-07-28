@@ -1622,6 +1622,70 @@ propósito: só existem como fonte de `--role-*`, nunca escolhidas direto num te
 Verificado via Electron (mesma técnica das seções 13.7/13.8): as 5 classes por papel e as
 3 correções resolvem pro hex esperado do TOS.
 
+### 13.10. 6º tema: Picard (Star Trek: Picard, Século XXV, 2026-07-28)
+
+Usuário enviou captura de tela de ion.studio/25th-century-lcars ("The final Season One
+palette") — fonte diferente do Okudagrams Color Complete Set v4.1 usado nas seções
+13.3+, então **nenhuma das 5 cores é reaproveitada** de `colors.css`; todas novas
+(`--trinidad` #e7442a, `--bali-hai` #9ea5ba, `--shuttle-gray` #6d748c, `--ebony-clay`
+#2f3749, `--woodsmoke` #111419).
+
+**Atribuição de papel:** `primary`/`secondary`/`tertiary` por luminância perceptual
+(mesma fórmula `0.299R+0.587G+0.114B` da seção 13.3) das 3 cores cinza-azuladas restantes
+— `bali-hai` (165.3) > `shuttle-gray` (116.6) > `ebony-clay` (54.7). `highlight` e
+`highlight-dark` foram escolha **manual** do usuário, não luminância: laranja da paleta
+(`trinidad`) pro destaque, a cor mais escura (`woodsmoke`) pro 5º papel.
+
+**Paleta de alerta:** a fonte não trouxe um grupo "RED ALERT COLORS" (só a paleta
+normal) — usuário pediu pra criar uma nova usando luminância como critério (mesma ideia
+da seção 13.3, mas aplicada por cor individual substituída, não por ranking contra um
+pool fixo): pra cada um dos 4 papéis com alerta, um vermelho com luminância perceptual
+próxima da cor normal que ele substitui. **Não reusa o pool `--ra-*`** — esse pool foi
+calibrado pros tons do Okudagrams (o mais claro, `ra-vivid-red`, tem luminância 93.6);
+`bali-hai` sozinho (165.3) já passa da luminância máxima de um vermelho puro `#f00`
+(76.2), então precisou de vermelhos nitidamente mais claros/rosados que qualquer um do
+pool existente:
+
+| Papel (normal, luminância) | Vermelho criado | Luminância do vermelho |
+|---|---|---|
+| `bali-hai` (primary, 165.3) | `--salmon` `#fa8072` | 162.9 |
+| `shuttle-gray` (secondary, 116.6) | `--indian-red` `#cd5c5c` | 125.8 |
+| `ebony-clay` (tertiary, 54.7) | `--falu-red` `#801818` | 55.1 |
+| `trinidad` (highlight, 113.8) | `--jasper` `#d05340` | 118.2 |
+
+`highlight-dark` não tem alerta próprio (mesma regra de todo tema, reusa
+`--role-tertiary-alert`, ver seção 13.5). `--status-nominal-alert`/`--status-damaged-alert`/
+`--status-critical` reaproveitam `salmon`/`indian-red`/`falu-red` na mesma ordem de
+brilho decrescente das outras 5 temas.
+
+Tema registrado como `picard` (nome de produção, mesmo padrão de `nemesis`/
+`first-contact`/`enterprise-nx01` — id `25th-century` descartado após o usuário pedir
+nome mais específico) em `useTheme.ts` e importado em `main.ts` (`themes/picard.css`).
+Sem classes `-bg`/`-fg` próprias pras 9 cores novas (mesmo precedente de `fawn`/`scuba`/
+`ra-*`: só existem como fonte de `--role-*`, nenhum template usa o nome direto).
+
+Verificado via Electron (mesma técnica das seções 13.7–13.9): tema normal e sob Red Alert
+renderizam com os hex esperados (confirmado no catálogo de cores do Cap. Lounge).
+**Usuário avisou que fará ajustes manuais depois** — notou que os Red Alerts da série
+usam branco e cinza além do vermelho, algo que este mecanismo (só recolore os 5 papéis
+pra tons de vermelho) ainda não modela.
+
+**Ajuste de brinde (mesmo dia):** usuário notou (comparando com a imagem de referência)
+que elemento com fundo `highlight-dark` usa texto na cor de `highlight` ali, não preto —
+diferente do padrão do resto da UI. Causa raiz: label de `.block`/`.button`/`.bar`/`.cap`
+é `content: attr(data-label)` num `:before`/`:after` (`lcars-sdk.css`), e um reset global
+(`*:before,*:after{color:#000000}`) força preto em todo tema, sem nenhuma classe de papel
+(`text-*`/`-interactive`/`-static`) hoje tocar a cor desses pseudo-elementos (só
+`LcarsText`, que renderiza texto real, não pseudo). Resolvido com 1 regra CSS **só no
+tema Picard**, em `themes/picard.css`: `[data-theme="picard"]:not(.red-alert)
+.highlight-dark-interactive:before/:after` (+ a mesma variante pro filho sem classe de
+cor própria, espelhando o `> *:not(...)` que `theme.css` já usa pra fill/bg/border) força
+`color: var(--role-highlight)`. Especificidade (atributo de tema + classe + pseudo-
+elemento) já basta pra vencer o reset sem `!important`. Escopado a `:not(.red-alert)` de
+propósito — sob alerta o fundo de `highlight-dark-interactive` vira `--role-tertiary-alert`
+(ver seção 13.5), e ajustar a cor do texto nesse estado também fica pro usuário revisar
+manualmente (mesmo motivo do parágrafo anterior).
+
 \---
 
 *Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20; item 9

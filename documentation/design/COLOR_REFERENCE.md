@@ -159,11 +159,29 @@ dê a ele sua PRÓPRIA classe — ela sempre vence a cascata do pai.
 | `teal-nx` | `#009ece` | Fonte de `--role-highlight-dark` no **Enterprise (NX-01)** |
 | `cobalt` | `#6666ff` | Fonte de `--role-highlight-dark` no **Século XXIII** |
 
+## Cores do Picard (Star Trek: Picard, Século XXV; fonte própria — ion.studio/25th-century-lcars)
+
+Paleta separada do Okudagrams v4.1 (seção acima) — nenhuma cor reaproveitada, ver
+SST_LCARS_SPECS.md seção 13.10 pra metodologia completa (luminância perceptual).
+
+| Nome | Hex | Usada em |
+|---|---|---|
+| `bali-hai` | `#9ea5ba` | Fonte de `--role-primary` no **Picard** |
+| `shuttle-gray` | `#6d748c` | Fonte de `--role-secondary` no **Picard** |
+| `ebony-clay` | `#2f3749` | Fonte de `--role-tertiary` no **Picard** |
+| `trinidad` | `#e7442a` | Fonte de `--role-highlight` no **Picard** (laranja, escolha manual) |
+| `woodsmoke` | `#111419` | Fonte de `--role-highlight-dark` no **Picard** (a mais escura da paleta, escolha manual) |
+| `salmon` | `#fa8072` | Alerta de `bali-hai` (luminância 162.9 ≈ 165.3) |
+| `indian-red` | `#cd5c5c` | Alerta de `shuttle-gray` (luminância 125.8 ≈ 116.6) |
+| `falu-red` | `#801818` | Alerta de `ebony-clay` (luminância 55.1 ≈ 54.7) |
+| `jasper` | `#d05340` | Alerta de `trinidad` (luminância 118.2 ≈ 113.8) |
+
 ## Pool de alerta oficial (grupo "RED ALERT COLORS" do Okudagrams v4.1)
 
-Usado só pelos 5 temas novos como fonte dos `--role-*-alert` — **TOS mantém `--alert`/
-`--warning`/`--tamarillo`/`--red-damask` (suas próprias cores) como fonte**, nunca usa
-este pool.
+Usado só pelos 5 temas da seção 13.3 como fonte dos `--role-*-alert` — **TOS mantém
+`--alert`/`--warning`/`--tamarillo`/`--red-damask` (suas próprias cores) como fonte**, e o
+**Picard tem seu próprio pool de vermelhos** (tabela acima, criados por luminância,
+não faz parte deste pool oficial do Okudagrams).
 
 | Nome | Hex | Usada em |
 |---|---|---|
@@ -178,7 +196,7 @@ Independentes da cor decorativa do tema — ver `statusColor()` em `useLcarsColo
 `disabled` (2026-07-25) é neutro/cinza, igual em todo tema, sem variante `.red-alert`
 (mesmo precedente do grupo `bg-grey-*`). `nominal`/`damaged`/`critical` sob Red Alert
 seguem uma progressão de brilho decrescente (mais claro → mais escuro) validada em todos
-os 6 temas — ver tabela abaixo.
+os 7 temas — ver tabela abaixo.
 
 | Var | Normal (sempre) | Sob `.red-alert` |
 |---|---|---|
@@ -197,10 +215,13 @@ Progressão de brilho sob Red Alert, por tema (nominal > damaged > critical):
 | Enterprise (NX-01) | `ra-vivid-red` | `ra-dark-red` | `ra-maroon` |
 | Século XXIX | `ra-vivid-red` | `ra-dark-red` | `ra-maroon` |
 | Século XXIII | `ra-vivid-red` | `ra-dark-red` | `ra-maroon` |
+| Picard | `salmon` | `indian-red` | `falu-red` |
 
-Os 5 temas novos usam sempre os mesmos 3 (do pool oficial de vermelhos), independente de
-como os 4 papéis interativos daquele tema já usam esse mesmo pool — reordenação/reuso
-puro, sem cor nova. **Só o TOS precisou de 1 cor nova** (`vermillion`): antes desse ajuste,
+Os 5 temas da seção 13.3 usam sempre os mesmos 3 (do pool oficial de vermelhos),
+independente de como os 4 papéis interativos daquele tema já usam esse mesmo pool —
+reordenação/reuso puro, sem cor nova. Picard tem seu próprio pool (3 cores novas,
+seção 13.10), por não ter paleta de alerta oficial na fonte. **Só o TOS precisou de 1 cor
+nova entre os 6 primeiros temas** (`vermillion`): antes desse ajuste,
 `nominal` sob alerta e `critical` usavam a mesma cor (`--alert`) — bug relatado pelo
 usuário, corrigido trocando `critical` pra `warning` e dando um vermelho próprio e mais
 claro pra `nominal`.
@@ -252,6 +273,7 @@ sempre o mesmo nome em todo tema (`--role-primary` etc), só o valor muda:
 | Enterprise (NX-01) | white | bg-orange-1 | periwinkle | chestnut-rose | teal-nx |
 | Século XXIX | golden-tanoi | lilac | scuba | husk | caribbean-green |
 | Século XXIII | pear | golden-tanoi | anakiwa | cerulean | cobalt |
+| Picard | bali-hai | shuttle-gray | ebony-clay | trinidad | woodsmoke |
 
 E o `.red-alert` de cada um (pra qual vermelho do pool cada `--role-*-alert` aponta sob
 alerta — TOS aponta pras próprias cores, não usa o pool). `--role-highlight-dark`'s
@@ -267,3 +289,4 @@ esse papel:
 | Enterprise (NX-01) | ra-vivid-red | ra-dark-red | ra-crimson | ra-maroon | ra-crimson (= tertiary) |
 | Século XXIX | ra-vivid-red | ra-crimson | ra-maroon | ra-dark-red | ra-maroon (= tertiary) |
 | Século XXIII | ra-crimson | ra-vivid-red | ra-dark-red | ra-maroon | ra-dark-red (= tertiary) |
+| Picard | salmon | indian-red | falu-red | jasper | falu-red (= tertiary) |

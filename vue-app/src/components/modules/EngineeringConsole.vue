@@ -20,7 +20,6 @@ const props = withDefaults(
     phaserIntegrity?: number;
     photonIntegrity?: number;
     shieldIntegrity?: number;
-    damageIntegrity?: number;
     lifeIntegrity?: number;
     warpCoreIntegrity?: number;
   }>(),
@@ -31,7 +30,6 @@ const props = withDefaults(
     phaserIntegrity: 100,
     photonIntegrity: 100,
     shieldIntegrity: 100,
-    damageIntegrity: 100,
     lifeIntegrity: 100,
     warpCoreIntegrity: 100,
   }
@@ -67,7 +65,6 @@ const subsystems = ref<Subsystem[]>([
   { name: "Phaser Banks", key: "phasers", integrity: props.phaserIntegrity },
   { name: "Photon Tubes", key: "photons", integrity: props.photonIntegrity },
   { name: "Shield Control", key: "shields", integrity: props.shieldIntegrity },
-  { name: "Damage Control", key: "damage", integrity: props.damageIntegrity },
   { name: "Life Support", key: "life", integrity: props.lifeIntegrity },
   { name: "Warp Core", key: "warpCore", integrity: props.warpCoreIntegrity },
 ]);
@@ -110,21 +107,15 @@ watch(
   }
 );
 watch(
-  () => props.damageIntegrity,
+  () => props.lifeIntegrity,
   (val) => {
     subsystems.value[6].integrity = val;
   }
 );
 watch(
-  () => props.lifeIntegrity,
-  (val) => {
-    subsystems.value[7].integrity = val;
-  }
-);
-watch(
   () => props.warpCoreIntegrity,
   (val) => {
-    subsystems.value[8].integrity = val;
+    subsystems.value[7].integrity = val;
   }
 );
 
@@ -143,9 +134,13 @@ const autoOverload = computed(() => {
 // outra por consequencia de rotear energia demais.
 const manualOverload = ref(0);
 const OVERLOAD_MAX = 20;
-const OVERLOAD_PRESETS = [0, 25, 50, 75, 100].map((percent) => ({
-  label: `${percent}%`,
-  value: Math.round((percent / 100) * OVERLOAD_MAX),
+// Label mostra o valor real de overload (0/5/10/15/20%), nao a fracao do
+// dial (0/25/50/75/100%) -- rotulo antigo dava a entender que "50%" era
+// metade da sobrecarga do reator, quando na verdade era so metade do dial
+// (10% de overload de verdade, ja que OVERLOAD_MAX e' 20%).
+const OVERLOAD_PRESETS = [0, 5, 10, 15, 20].map((value) => ({
+  label: value === 0 ? "OFF" : `${value}%`,
+  value,
 }));
 
 const overload = computed(() => manualOverload.value + autoOverload.value);
@@ -202,6 +197,15 @@ const cycleAssignment = (team: DamageControlTeam) => {
   }
 };
 
+// Recolhe a equipe (botao de status) -- so' faz sentido enquanto "working";
+// em "idle" nao ha o que recolher, em "cooldown" a equipe so' volta sozinha
+// com o tempo (mecanica de fadiga, secao 10.3), nao por acao manual daqui.
+const recallTeam = (team: DamageControlTeam) => {
+  if (team.status !== "working") return;
+  team.assignedSystem = null;
+  team.status = "idle";
+};
+
 // Helper to return style class and status text based on integrity level
 const getSystemStatus = (integrity: number) => {
   if (integrity === 100) {
@@ -244,8 +248,11 @@ const simulateDamage = () => {
 <template>
   <LcarsRow
     id="engCnsDsp"
-    flexc="h"
-    :style="{ 'justify-content': 'space-evenly', gap: '2rem', width: '100%' }"
+    :style="{
+      'padding-top': '1.25rem',
+      'justify-content': 'space-evenly',
+      width: '100%',
+    }"
   >
     <!-- Column 1: Energy Matrix -->
     <LcarsColumn
@@ -253,15 +260,9 @@ const simulateDamage = () => {
       :style="{
         'justify-content': 'flex-start',
         'align-items': 'center',
-        minWidth: '30rem',
       }"
     >
-      <LcarsTitle
-        version="centered"
-        size="small"
-        text="Energy Matrix"
-        :style="{ 'margin-top': '1rem' }"
-      />
+      <LcarsTitle version="centered" size="small" text="Energy Matrix" />
 
       <!-- Main Energy: sempre mostra o output nominal do WC, nao e mais um
            recurso que drena -- consumo/sobrecarga sao controlados abaixo -->
@@ -280,7 +281,11 @@ const simulateDamage = () => {
         <LcarsBlock label="Subsystem Load" :style="{ width: '8.5rem' }" />
         <LcarsText
           :text="String(subsystemDraw)"
-          :color="subsystemDraw > WARP_CORE_OUTPUT ? statusColor('critical') : 'text-white'"
+          :color="
+            subsystemDraw > WARP_CORE_OUTPUT
+              ? statusColor('critical')
+              : 'text-white'
+          "
           :style="{ flex: '1', textAlign: 'center' }"
         />
         <LcarsCap version="round-right" />
@@ -369,14 +374,13 @@ const simulateDamage = () => {
           version="centered"
           size="small"
           text="Damage Control Teams"
-          :style="{ 'margin-top': '1rem' }"
         />
       </LcarsRow>
 
       <div class="systems-grid">
         <div v-for="team in teams" :key="team.id" class="system-row">
           <LcarsComplexButton
-            :color="teamEfficiencyColor(team.efficiency)"
+            color="tertiary-interactive"
             size="medium"
             :style="{ width: '100%' }"
           >
@@ -394,11 +398,21 @@ const simulateDamage = () => {
                 'font-weight': 'bold',
               }"
             />
-            <LcarsBlock
+            <!-- Unico elemento com cor semantica (eficiencia) -- o resto
+                 da linha usa cor normal de tema, pra nao ficar invasivo. -->
+            <LcarsButton
+              :color="teamEfficiencyColor(team.efficiency)"
               :label="team.status.toUpperCase()"
               :style="{ width: '7rem' }"
+              @click="recallTeam(team)"
             />
-            <LcarsBlock version="decorator" :style="{ flex: '1' }" />
+            <LcarsBlock
+              version="decorator"
+              :class="{
+                'dark-light': team.status === 'working',
+                blink: team.status === 'cooldown',
+              }"
+            />
             <LcarsButton
               version="round-right"
               color="highlight-interactive"
@@ -420,7 +434,6 @@ const simulateDamage = () => {
           version="centered"
           size="small"
           text="Subsystem Integrity"
-          :style="{ 'margin-top': '1rem' }"
         />
       </LcarsRow>
 
@@ -428,8 +441,7 @@ const simulateDamage = () => {
       <div class="systems-grid">
         <div v-for="sys in subsystems" :key="sys.key" class="system-row">
           <LcarsComplexButton
-            :color="getSystemStatus(sys.integrity).color"
-            :class="{ blink: getSystemStatus(sys.integrity).isBlinking }"
+            color="tertiary-interactive"
             size="medium"
             :style="{ width: '100%' }"
           >
@@ -439,8 +451,11 @@ const simulateDamage = () => {
               :label="sys.name"
               :style="{ width: '13rem', 'text-align': 'left' }"
             />
-            <!-- Textual Status -->
+            <!-- Textual Status: unico elemento com cor semantica, resto da
+                 linha usa cor normal de tema -->
             <LcarsBlock
+              :color="getSystemStatus(sys.integrity).color"
+              :class="{ blink: getSystemStatus(sys.integrity).isBlinking }"
               :label="getSystemStatus(sys.integrity).text"
               :style="{ width: '9rem' }"
             />

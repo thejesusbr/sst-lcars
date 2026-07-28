@@ -157,6 +157,34 @@
   --ra-crimson: #bf2042;
   --ra-dark-red: #a30e24;
   --ra-maroon: #330512;
+
+  /* Picard (Star Trek: Picard, Seculo XXV) -- fonte: "The final Season One
+     palette", ion.studio/25th-century-lcars (captura enviada pelo usuario,
+     2026-07-28). Paleta propria (nao faz parte do Okudagrams Color Complete
+     Set v4.1 das secoes 13.3+), sem correspondente proximo em nenhuma cor
+     ja existente acima -- todas novas. Ordem primary>secondary>tertiary por
+     luminancia perceptual (0.299R+0.587G+0.114B, mesma formula da secao
+     13.3): bali-hai 165.3 > shuttle-gray 116.6 > ebony-clay 54.7.
+     highlight/highlight-dark sao escolha manual do usuario (laranja pro
+     destaque, a cor mais escura da paleta pro 5o papel), nao luminancia. */
+  --trinidad: #e7442a; /* Picard: highlight (laranja da paleta) */
+  --bali-hai: #9ea5ba; /* Picard: primary */
+  --shuttle-gray: #6d748c; /* Picard: secondary */
+  --ebony-clay: #2f3749; /* Picard: tertiary */
+  --woodsmoke: #111419; /* Picard: highlight-dark (a mais escura) */
+
+  /* Vermelhos do tema Picard -- sem paleta de alerta oficial na fonte (so'
+     a paleta normal), entao criados por luminancia: pra cada um dos 4
+     papeis acima (exceto highlight-dark, que reusa tertiary-alert como todo
+     tema, ver theme.css), um vermelho com luminancia perceptual proxima da
+     cor substituida -- NAO reusa o pool --ra-* (esse pool e' calibrado pros
+     tons mais saturados/escuros do Okudagrams; bali-hai sozinho (165.3) ja'
+     passa da luminancia maxima de um vermelho puro #f00 (76.2), entao
+     precisa de vermelho bem mais claro/rosado que qualquer --ra-*). */
+  --salmon: #fa8072; /* alerta de primary (bali-hai 165.3 -> 162.9) */
+  --indian-red: #cd5c5c; /* alerta de secondary (shuttle-gray 116.6 -> 125.8) */
+  --falu-red: #801818; /* alerta de tertiary (ebony-clay 54.7 -> 55.1) */
+  --jasper: #d05340; /* alerta de highlight (trinidad 113.8 -> 118.2) */
 }
 
 /* Color classes */

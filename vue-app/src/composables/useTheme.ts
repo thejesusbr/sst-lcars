@@ -35,6 +35,11 @@ const THEMES: ThemeDef[] = [
     id: '23rd-century',
     label: 'Século XXIII',
     description: 'Paleta vívida, verde e azul saturados'
+  },
+  {
+    id: 'picard',
+    label: 'Picard',
+    description: 'Star Trek: Picard -- cinza-azulado com destaque laranja'
   }
 ]
 
