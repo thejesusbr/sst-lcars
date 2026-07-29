@@ -1686,6 +1686,21 @@ propósito — sob alerta o fundo de `highlight-dark-interactive` vira `--role-t
 (ver seção 13.5), e ajustar a cor do texto nesse estado também fica pro usuário revisar
 manualmente (mesmo motivo do parágrafo anterior).
 
+### 13.11. Bug: `-static` sob Red Alert colapsava num vermelho só (2026-07-28)
+
+Usuário notou que o pad direcional do `HelmConsole` (3 papéis distintos —
+`primary-static`/`secondary-static`/`tertiary-static` nos paths do SVG) virava um único
+tom de vermelho sob Red Alert, em vez de manter 3 tons diferentes como no modo normal.
+
+Causa: `.red-alert .secondary-static` e `.red-alert .tertiary-static` em `theme.css`
+liam `var(--role-primary-alert)` por engano (copy-paste), em vez de
+`--role-secondary-alert`/`--role-tertiary-alert` respectivamente — comparado às regras
+`-interactive` equivalentes (`.red-alert .secondary-interactive`/`.tertiary-interactive`),
+que sempre leram a var certa. Afetava **todo elemento `-static` em qualquer tema**, não
+só o pad do Helm — só ficou visível ali por ser o único lugar com os 3 papéis static lado
+a lado sem nenhum `-interactive` misturado pra disfarçar. Corrigido trocando pras vars
+corretas, mesmo padrão das `-interactive`.
+
 \---
 
 *Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20; item 9

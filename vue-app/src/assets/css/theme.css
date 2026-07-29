@@ -169,16 +169,16 @@
 
 .red-alert .secondary-static,
 .red-alert .secondary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
-  fill: var(--role-primary-alert);
-  background-color: var(--role-primary-alert);
-  border-color: var(--role-primary-alert);
+  fill: var(--role-secondary-alert);
+  background-color: var(--role-secondary-alert);
+  border-color: var(--role-secondary-alert);
 }
 
 .red-alert .tertiary-static,
 .red-alert .tertiary-static > *:not([class*="-bg"], [class*="-fg"], [class*="-static"], [class*="-interactive"]) {
-  fill: var(--role-primary-alert);
-  background-color: var(--role-primary-alert);
-  border-color: var(--role-primary-alert);
+  fill: var(--role-tertiary-alert);
+  background-color: var(--role-tertiary-alert);
+  border-color: var(--role-tertiary-alert);
 }
 
 .red-alert .primary-interactive,
