@@ -24,6 +24,11 @@ decision #38).
    progression, LRS/Star Chart confidence decay, passive phaser cooldown, and the
    Weapons Lock sensor-damage roll.
 
+**Each step SHALL tag the events it produces with its own identity**, so the
+presentation layer can tell the player's action apart from the enemy's response
+(see `turn-presentation` capability). The engine itself stays synchronous — the
+whole turn resolves and returns before anything is presented.
+
 #### Scenario: Repair resolves before terminal checks cannot save a doomed ship
 - **WHEN** a turn resolves in which Damage Control repair would raise a subsystem
   above a critical threshold, and a terminal condition is already true at step 4
@@ -39,6 +44,10 @@ decision #38).
 - **WHEN** a player action ends a turn
 - **THEN** Warp Core damage/explosion/breach rolls are resolved before any enemy
   attack is calculated for that same turn
+
+#### Scenario: Events carry the step that produced them
+- **WHEN** a turn resolves with both a player attack and an enemy response
+- **THEN** the events are distinguishable by step without inspecting their text
 
 ### Requirement: Klingon attack damage — exact formula reused from the 1978 source
 The damage formula is unchanged
@@ -127,6 +136,10 @@ The engine SHALL distinguish two classes of player interaction:
   capability), and End Turn / Skip N Turns (see below). Undocking remains free (no
   turn cost, design.md decision #13).
 
+**While a warp trip is in progress, every turn-consuming action SHALL be
+rejected** — not only navigation ones. The free class stays available: the crew
+can still adjust dials and work Damage Control in transit.
+
 #### Scenario: Adjusting a dial mid-sector does not trigger enemy response
 - **WHEN** the player adjusts Phaser Power, Shield Energy, or the Overload dial any
   number of times
@@ -135,6 +148,15 @@ The engine SHALL distinguish two classes of player interaction:
 #### Scenario: Firing always resolves exactly one turn
 - **WHEN** the player clicks "Fire Phasers" or "Fire Torpedoes"
 - **THEN** the fixed turn resolution order runs once for that action
+
+#### Scenario: Turn-consuming actions are refused at warp
+- **WHEN** a warp trip is in progress and any turn-consuming action is dispatched
+- **THEN** it is rejected with a reason and consumes no turn
+
+#### Scenario: Free adjustments survive warp
+- **WHEN** a warp trip is in progress and the player retargets a Damage Control
+  team or changes the shield level
+- **THEN** it applies normally
 
 ### Requirement: End Turn — explicit no-op turn advance
 The engine SHALL support an "End Turn" action, exposed from `SituationPanel`
@@ -293,12 +315,18 @@ nor kill.
 
 ### Requirement: Movement actions resolve real displacement
 `move_impulse` and `move_warp` SHALL perform actual movement via the `navigation`
-capability. Both are currently declared in `PlayerActionType` with no
-implementation branch — they are accepted, consume a turn, and do nothing.
-Resolution SHALL respect the `navigation` capability's rules: manual navigation
-stops short of obstacles, Auto-Nav routes around them, Warp Engines damage caps
-speed and can stall or paralyze, and enemies in the departing sector reposition
-before displacement (`fase-4-engine` decision #22).
+capability. Resolution SHALL respect the `navigation` capability's rules: manual
+navigation stops short of obstacles, Auto-Nav routes around them, Warp Engines
+damage caps speed and can stall or paralyze, and enemies in the departing sector
+reposition before displacement (`fase-4-engine` decision #22).
+
+**Engaging warp additionally clears `currentSector`**, taking the ship out of
+reach for the whole trip (see `warp-travel-mode` capability). Enemy repositioning
+still happens on the engaging turn — the departure is the last moment they can
+react — but nothing reaches the ship afterwards.
+
+**A warp trip's remaining turns advance automatically.** The player does not
+advance them, and no turn-consuming action is accepted until arrival.
 
 #### Scenario: Engaging warp moves the ship
 - **WHEN** the player engages warp toward a reachable destination
@@ -314,6 +342,11 @@ before displacement (`fase-4-engine` decision #22).
 - **WHEN** movement is engaged with enemies present in the current sector
 - **THEN** each enemy repositions and attacks before the ship's displacement is
   computed
+
+#### Scenario: Engaging warp empties the sector
+- **WHEN** the player engages a warp trip
+- **THEN** `currentSector` is cleared on that turn and no enemy reaches the ship
+  for the remainder of the trip
 
 ### Requirement: Send Party action resolves the landing-party mission
 `send_party` SHALL launch the landing-party mission defined by the

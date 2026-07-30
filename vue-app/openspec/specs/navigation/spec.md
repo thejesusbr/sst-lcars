@@ -51,9 +51,21 @@ from the classic source, which has no equivalent stress concept). Warp 6 adds +4
 (still in the Fibonacci table's low-risk zone); warp 8 adds +8 (well into its
 steep-risk zone).
 
+**Those turns advance automatically and the ship is unreachable during them** (see
+`warp-travel-mode` capability): engaging clears `currentSector`, no turn-consuming
+action is accepted until arrival, and the destination quadrant is materialised on
+the final turn. The turn count therefore stops being something the player clicks
+through and becomes the trip's actual length — which the presentation duration is
+derived from.
+
 #### Scenario: Higher warp factor shortens the trip
 - **WHEN** the player engages the same destination at warp 4 versus warp 2
 - **THEN** the warp-4 trip takes half as many turns as the warp-2 trip
+
+#### Scenario: The trip runs itself
+- **WHEN** a multi-turn warp trip is engaged
+- **THEN** its remaining turns resolve without player input, and the ship is out
+  of reach of enemies for the whole trip
 
 #### Scenario: Cruising at warp 4 or below adds no Warp Core stress
 - **WHEN** a warp trip is resolved entirely at `warpFactor <= 4`

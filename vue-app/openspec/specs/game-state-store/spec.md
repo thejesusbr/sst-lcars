@@ -97,14 +97,15 @@ it read (design.md decision #27).
 
 ### Requirement: Consoles drive the engine through the store
 Every gameplay console SHALL read its displayed state from `useGameState` and route
-every player action through the store's engine-backed actions. Today the store
-exposes `dispatchPlayerAction`, `executeEndTurn`, `executeSkipTurns` and
-`executeDockingRepairTurn`, and **no console calls any of them** — the engine is
-unreachable from the UI (`fase-4-engine` design.md decision #38).
+every player action through the store's engine-backed actions.
 
 Scope: `ShieldConsole`, `WeaponsConsole`, `EngineeringConsole`, `NavSensingConsole`,
-`StarChartConsole`, `SituationPanel`, `GameScreen`. `HelmConsole` is already bound
-and serves as the reference pattern.
+`StarChartConsole`, `SituationPanel`, `GameScreen`, `HelmConsole`.
+
+**Turn-consuming controls SHALL additionally be unavailable while the store is
+presenting a resolved turn or while a warp trip is in progress.** Free controls
+stay available in both cases. Availability is read from the store, not decided per
+console — otherwise the consoles disagree about whether the player may act.
 
 #### Scenario: A turn-consuming control resolves a real turn
 - **WHEN** the player activates any turn-consuming control (fire, hail, lock,
@@ -121,6 +122,34 @@ and serves as the reference pattern.
 - **WHEN** any console is inspected for local `ref`s mirroring `GameState` domains
 - **THEN** it holds none — shared domains are read from the store, and only
   pure-UI state (open tab, selected cell, animation flags) stays local
+
+#### Scenario: Every console agrees on when the player may act
+- **WHEN** a turn is being presented or a warp trip is in progress
+- **THEN** turn-consuming controls are unavailable in **all** consoles at once,
+  from the same shared flag
+
+### Requirement: The store owns the presentation queue and travel mode
+`useGameState` SHALL hold the queue of the current turn's staged events, a flag
+for whether a presentation is running, and the warp travel mode. These are the
+single source of truth the consoles read.
+
+Timers driving the queue SHALL have exactly one owner. The `engine-integration`
+shipped a bug of this shape already — `warpVisualTimer` living in `HelmConsole`
+survived unmount — and per-console timers would also drift out of sync with each
+other.
+
+#### Scenario: Presentation state survives console switching
+- **WHEN** the player switches console mid-presentation
+- **THEN** the presentation continues from where it was, driven by the store
+
+#### Scenario: A new turn cannot start over a running presentation
+- **WHEN** a turn's presentation is running and another turn-consuming action is
+  dispatched
+- **THEN** it is refused — the queue is not overwritten mid-drain
+
+#### Scenario: Travel mode ends exactly once
+- **WHEN** a warp trip's last turn resolves
+- **THEN** travel mode clears once and control returns, with no timer left behind
 
 ### Requirement: Store action surface is frozen before consoles are wired
 The store's action surface SHALL be finalized and reviewed against these
