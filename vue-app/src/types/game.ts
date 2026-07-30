@@ -64,6 +64,18 @@ export const STARBASE_TYPES = [
 
 export type StarbaseType = (typeof STARBASE_TYPES)[number]
 
+/**
+ * Rótulo de exibição por tipo de base. É o dado que decide se a viagem vale a
+ * pena — o Hail revela o tipo justamente porque um nível de pool sozinho não
+ * diz se a base reforma casco ou só resupre torpedo (hail-and-identity
+ * design.md decisão 2).
+ */
+export const STARBASE_TYPE_LABELS: Record<StarbaseType, string> = {
+  starbase_dock: 'Drydock',
+  starbase_supply: 'Supply Depot',
+  starbase_science: 'Science Station',
+}
+
 /** Tipos hostis atacáveis (KLINGON_BASE é cenário, não entra na contagem). */
 export const ENEMY_TYPES = [
   SectorEntityType.KLINGON_CRUISER,

@@ -14,7 +14,7 @@ import type {
   TurnEventDraft,
   TurnStep,
 } from '@/types/game'
-import { SUBSYSTEM_KEYS } from '@/types/game'
+import { STARBASE_TYPE_LABELS, SUBSYSTEM_KEYS } from '@/types/game'
 import {
   HULL_DAMAGE_DIVISOR,
   STARDATE_PER_TURN,
@@ -144,12 +144,33 @@ interface ActionOutcome {
   events: TurnEventDraft[]
 }
 
+/**
+ * Texto de log por status de Hail.
+ *
+ * `base_status` e `rejected` recebem o texto FORA daqui, montado a partir dos
+ * dados que o `HailResult` carrega (tipo/quadrante/pool da base; a recusa
+ * sorteada) — sem eles a mensagem genérica não dizia nada de útil.
+ */
 const HAIL_MESSAGES: Record<string, string> = {
   surrender: 'Inimigo se rendeu — tripulação capturada e levada à cela.',
   base_status: 'Base respondeu com o status do seu pool de recursos.',
   rejected: 'Hail ignorado — o inimigo não responde.',
   full_brig: 'Rendição recusada: a cela está lotada.',
   not_found: 'Alvo não encontrado.',
+}
+
+/** Monta a linha de log do Hail a partir do `HailResult`, não de um texto fixo. */
+function hailLogText(res: ReturnType<typeof hailTarget>): string {
+  if (res.status === 'base_status') {
+    const type = res.revealedBaseType ? STARBASE_TYPE_LABELS[res.revealedBaseType] : 'Base'
+    const at = res.revealedBaseQuadrant
+      ? ` em ${res.revealedBaseQuadrant.col},${res.revealedBaseQuadrant.row}`
+      : ''
+    const pool = res.revealedBasePool !== undefined ? ` — pool ${res.revealedBasePool}.` : '.'
+    return `${type}${at} responde ao hail${pool}`
+  }
+  if (res.status === 'rejected' && res.refusalText) return res.refusalText
+  return HAIL_MESSAGES[res.status]
 }
 
 /** Carimba a etapa nos eventos que um módulo folha produziu sem saber dela. */
@@ -286,7 +307,7 @@ function applyPlayerAction(
       events.push({
         type: 'hail',
         entityId: action.targetId,
-        text: HAIL_MESSAGES[res.status],
+        text: hailLogText(res),
       })
       return ok()
     }

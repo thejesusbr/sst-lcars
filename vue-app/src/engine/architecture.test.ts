@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 const ENGINE_DIR = dirname(fileURLToPath(import.meta.url))
 
 /** Folhas: não importam nada do engine, todos podem importar delas. */
-const LEAVES = ['constants', 'prng', 'sector']
+const LEAVES = ['constants', 'prng', 'sector', 'hailRefusals']
 
 /**
  * Compositores: podem importar irmãos, porque orquestrar é o trabalho deles.

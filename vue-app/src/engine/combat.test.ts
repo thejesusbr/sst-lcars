@@ -64,6 +64,56 @@ describe('engine/combat', () => {
     expect(state.currentSector.length).toBe(0)
   })
 
+  // ── hail-and-identity: alcance, resposta de base, rendição escalada ────────
+
+  it('hailTarget reaches a base by id alone — no cell/distance check', () => {
+    const state = createNewGameState(1)
+    state.position.quadrant = { row: 4, col: 4 }
+    state.currentSector = [
+      { id: 'b1', type: SectorEntityType.STARBASE_DOCK, position: { row: 8, col: 8 }, enemyPower: 0 },
+    ]
+    state.starbases = [
+      {
+        id: 'b1',
+        type: SectorEntityType.STARBASE_DOCK,
+        quadrant: { row: 4, col: 4 },
+        sector: { row: 8, col: 8 },
+        resourcePool: 275,
+        destroyed: false,
+      },
+    ]
+    const res = hailTarget(state, 'b1')
+    expect(res.status).toBe('base_status')
+    expect(res.revealedBasePool).toBe(275)
+    expect(res.revealedBaseType).toBe(SectorEntityType.STARBASE_DOCK)
+    expect(res.revealedBaseQuadrant).toEqual({ row: 4, col: 4 })
+  })
+
+  it('surrender chance rises as the target takes damage, floor at intact', () => {
+    const state = createNewGameState(1)
+    state.currentSector = [
+      { id: 'intact', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
+    ]
+    // Piso: 0.30. Um roll logo acima do piso falha pro alvo intacto...
+    expect(hailTarget(state, 'intact', () => 0.31).status).toBe('rejected')
+
+    state.currentSector = [
+      { id: 'crippled', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 20 },
+    ]
+    // ...mas o MESMO roll rende o alvo em farrapos, porque a chance subiu.
+    expect(hailTarget(state, 'crippled', () => 0.31).status).toBe('surrender')
+  })
+
+  it('a failed surrender roll answers back with a refusal line', () => {
+    const state = createNewGameState(1)
+    state.currentSector = [
+      { id: 'k1', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
+    ]
+    const res = hailTarget(state, 'k1', () => 0.99)
+    expect(res.status).toBe('rejected')
+    expect(res.refusalText).toBeTruthy()
+  })
+
   it('tickCloakStress accumulates stress and forces decloak at cap', () => {
     const state = createNewGameState(1)
     state.currentSector = [

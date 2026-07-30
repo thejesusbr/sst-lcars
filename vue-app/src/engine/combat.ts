@@ -10,7 +10,6 @@ import {
   CLOAK_COOLDOWN_TURNS,
   CLOAK_STRESS_CAP,
   CLOAK_STRESS_PER_TURN,
-  HAIL_SURRENDER_CHANCE,
   INTERROGATION_CHANCE,
   PHASER_TEMP_MAX,
   PHASER_TEMP_PER_SHOT,
@@ -20,16 +19,18 @@ import {
   clamp,
   damageFraction,
   degradedChance,
+  hailSurrenderChance,
   isCritical,
   round4,
 } from '@/engine/constants'
-import type { GameState, GridCoord, TurnEventDraft } from '@/types/game'
+import type { GameState, GridCoord, StarbaseType, TurnEventDraft } from '@/types/game'
 import {
   cellKey,
   getVisibleEnemies,
   isEnemyType,
   isStarbaseType,
 } from '@/engine/sector'
+import { pickHailRefusal } from '@/engine/hailRefusals'
 
 // ── Phasers (seções 2.3 e specs de Combat) ──────────────────────────────────
 
@@ -410,14 +411,29 @@ export interface HailResult {
   success: boolean
   status: 'surrender' | 'base_status' | 'rejected' | 'full_brig' | 'not_found'
   revealedBasePool?: number
+  /** O dado que decide se a viagem vale a pena — sem ele, um pool sozinho não diz nada. */
+  revealedBaseType?: StarbaseType
+  /** Vai pro combat log: "a base respondeu" sem coordenada é inútil dois turnos depois. */
+  revealedBaseQuadrant?: GridCoord
   intelRevealed?: boolean
+  /** Presente só em `status: 'rejected'` — a recusa que confirma que o hail aconteceu. */
+  refusalText?: string
 }
 
 /**
  * Envia mensagem Hail para um alvo no setor atual.
- * - Inimigos têm 30% de chance de rendição.
+ *
+ * `targetId` pode ser qualquer entidade do setor — inimigo ou base — não
+ * apenas uma na célula que o jogador selecionou no scanner: hail não é arma,
+ * não tem por que exigir precisão espacial (design.md decisão 1). A
+ * disambiguação entre múltiplos alvos válidos é responsabilidade da UI, não
+ * deste engine escolher sozinho.
+ *
+ * - Rendição escala com o dano do alvo (`hailSurrenderChance`): intacto rende
+ *   no piso, em farrapos rende bem mais.
  * - Rendição bem-sucedida captura prisioneiro para a cela (capacidade 4).
  * - Interrogatório no momento da captura tem 50% de chance de revelar quadrante inimigo.
+ * - Roll falho responde com uma recusa, sorteada no tom da espécie do alvo.
  */
 export function hailTarget(
   state: GameState,
@@ -437,6 +453,8 @@ export function hailTarget(
       success: true,
       status: 'base_status',
       revealedBasePool: base ? base.resourcePool : undefined,
+      revealedBaseType: base?.type,
+      revealedBaseQuadrant: base ? { ...base.quadrant } : undefined,
     }
   }
 
@@ -445,7 +463,7 @@ export function hailTarget(
       return { success: false, status: 'full_brig' }
     }
 
-    if (rng() < HAIL_SURRENDER_CHANCE) {
+    if (rng() < hailSurrenderChance(target.enemyPower ?? 0)) {
       // `captured` ja soma em `klingonsCaptured` -- nao somar aqui de novo.
       removeEnemyFromSector(state, target.id, 'captured')
       state.brig.count = Math.min(state.brig.capacity, state.brig.count + 1)
@@ -458,7 +476,11 @@ export function hailTarget(
       return { success: true, status: 'surrender', intelRevealed }
     }
 
-    return { success: false, status: 'rejected' }
+    return {
+      success: false,
+      status: 'rejected',
+      refusalText: pickHailRefusal(target.type, rng),
+    }
   }
 
   return { success: false, status: 'not_found' }

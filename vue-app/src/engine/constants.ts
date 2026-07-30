@@ -79,8 +79,15 @@ export const TORPEDO_DAMAGE_SPREAD = 100
  * faixa 100-300. Reusa o `S9=200` do fonte de 1978 (decisão #22).
  */
 export const ENEMY_BASE_POWER = 200
-/** Chance de rendição ao dar Hail num inimigo (decisão #23). */
+/** Chance de rendição ao dar Hail num inimigo intacto — o PISO da escala (decisão #23). */
 export const HAIL_SURRENDER_CHANCE = 0.3
+/**
+ * Teto da escala de rendição: chance quando o alvo está reduzido a 0 de poder
+ * (o instante antes de morrer). Constante de playtest — o freio real contra
+ * captura virar dominante sobre destruição é a cela de 4 lugares e a equipe de
+ * CdD travada em `guard` (hail-and-identity design.md decisão 3, risco 1).
+ */
+export const HAIL_SURRENDER_CHANCE_MAX = 0.75
 /** Chance de um prisioneiro revelar posição de frota, 1x por captura. */
 export const INTERROGATION_CHANCE = 0.5
 /** Estresse de cloak por turno, na mesma escala 0-20 do overload. */
@@ -297,6 +304,27 @@ export function damageFraction(integrity: number): number {
   // fronteira exata das bandas (integridade 55 -> 15%) falha por ponto
   // flutuante, fazendo o roll disparar num limite onde a spec diz que não.
   return round4(clamp((100 - integrity) / 100, 0, 1))
+}
+
+/**
+ * Chance de rendição no Hail, escalando com o dano do alvo.
+ *
+ * `enemyPower` é o único stat de vida do inimigo — não existe um `initialPower`
+ * guardado por entidade (hail-and-identity design.md decisão 3, Open Question
+ * 1). Duas opções: acrescentar `initialPower` ao schema, ou usar
+ * `ENEMY_BASE_POWER` como denominador nominal. A segunda é mais barata e não
+ * muda o schema — decisão tomada aqui — ao custo de um inimigo que nasceu acima
+ * da média (até 300, contra o nominal 200) começar já "acima de 100%" e ler como
+ * intacto até o dano real alcançar o nominal, o que é aceitável: o efeito é só
+ * atrasar o início da escala, nunca invertê-la.
+ *
+ * Alvo intacto (`enemyPower >= ENEMY_BASE_POWER`) rende no piso
+ * `HAIL_SURRENDER_CHANCE`; caindo a 0 de poder, no teto
+ * `HAIL_SURRENDER_CHANCE_MAX`.
+ */
+export function hailSurrenderChance(enemyPower: number): number {
+  const damaged = clamp(1 - enemyPower / ENEMY_BASE_POWER, 0, 1)
+  return HAIL_SURRENDER_CHANCE + (HAIL_SURRENDER_CHANCE_MAX - HAIL_SURRENDER_CHANCE) * damaged
 }
 
 /** Banda em que a integridade cai. */

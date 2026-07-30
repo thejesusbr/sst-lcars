@@ -24,6 +24,7 @@ import {
   corruptKbsCode,
 } from "@/composables/sensorDisplay";
 import { scanConfidence as scanConfidenceOf } from "@/engine/navigation";
+import { isEnemyType, isStarbaseType } from "@/engine/sector";
 
 const { playSound } = useSound();
 
@@ -221,15 +222,32 @@ const sendToHelm = () => {
   gameState.setDestinationSector({ ...selectedSector.value });
 };
 
-/** Alvo do hail: entidade na célula selecionada, por `id` estável. */
+/**
+ * Todo alvo hailável do setor — inimigo ou base, não cloacado. Hail alcança
+ * o setor INTEIRO, não só a célula selecionada: não é arma, não precisa de
+ * mira (hail-and-identity design.md decisão 1).
+ */
+const hailTargets = computed(() =>
+  gameState.currentSector.filter(
+    (e) => !e.cloaked && (isEnemyType(e.type) || isStarbaseType(e.type))
+  )
+);
+
+/**
+ * Alvo do hail, por `id` estável.
+ *
+ * Um só alvo válido no setor: implícito, de qualquer célula selecionada. Mais
+ * de um: o jogador escolhe clicando a célula do alvo desejado — o engine NÃO
+ * decide por conta própria entre, por exemplo, uma base e um inimigo no mesmo
+ * setor, que têm consequências opostas.
+ */
 const hailTargetId = computed(() => {
+  if (hailTargets.value.length === 0) return null;
+  if (hailTargets.value.length === 1) return hailTargets.value[0].id;
   const target = selectedSector.value;
   return (
-    gameState.currentSector.find(
-      (e) =>
-        e.position.row === target.row &&
-        e.position.col === target.col &&
-        !e.cloaked
+    hailTargets.value.find(
+      (e) => e.position.row === target.row && e.position.col === target.col
     )?.id ?? null
   );
 });
