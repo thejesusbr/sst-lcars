@@ -59,6 +59,25 @@ nor kill.
 - **WHEN** teams raise `containment` to 100 before `turnsRemaining` reaches 0
 - **THEN** the breach resolves and no terminal condition fires from it
 
+### Requirement: Klingon attack damage — exact formula reused from the 1978 source
+The damage formula is unchanged
+(`H = floor((enemyPower / euclideanDistance) * (2 + random(0,1)))`, Euclidean
+distance, and the attacker weakening itself to `enemyPower / (3 + random(0,1))`).
+
+**Where the damage lands changes:** the engine SHALL reduce `shieldEnergy` by `H`,
+and once shields are saturated the remainder SHALL consume **`hullIntegrity`**
+(scaled by `HULL_DAMAGE_DIVISOR`), not `mainEnergy`. There is no energy stock for
+overflow damage to drain (see `game-state-store` capability, "Energy is throughput,
+not a depletable stock") — hull is the sink.
+
+#### Scenario: Shields absorb what they can, hull takes the rest
+- **WHEN** an attack of `H` exceeds the current `shieldEnergy`
+- **THEN** `shieldEnergy` goes to 0 and the remainder reduces `hullIntegrity`
+
+#### Scenario: Full shields keep the hull untouched
+- **WHEN** an attack lands with `shieldEnergy` well above `H`
+- **THEN** `shieldEnergy` absorbs all of it and `hullIntegrity` is unchanged
+
 ## ADDED Requirements
 
 ### Requirement: Movement actions resolve real displacement

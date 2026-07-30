@@ -1,29 +1,33 @@
-## ADDED Requirements
+# energy-management
+
+## Purpose
+
+Modelo de energia da nave: o Warp Core gera potência por turno e os 9 subsistemas
+consomem dela. Energia é **vazão, não estoque** — consumir acima do que o core
+gera produz sobrecarga, não esgotamento.
+
+## Requirements
 
 ### Requirement: Shared energy pool
-`mainEnergy` (Warp Core nominal output) SHALL be one value in `GameState`, read by
+The ship's energy figures SHALL live in `GameState` as single values read by
 `EngineeringConsole`, `HelmConsole` (Impulse), `WeaponsConsole` (Phaser),
-`ShieldConsole` (transfer), and `SituationPanel` (read-only "Energy Level" widget)
-— not a separately-seeded local copy in any of them.
+`ShieldConsole` (level) and `SituationPanel` (read-only "Energy Level" widget) —
+never a separately-seeded local copy in any of them.
 
-#### Scenario: Shield transfer reflects in Engineering
-- **WHEN** `ShieldConsole` transfers energy from main to shield pool
-- **THEN** `EngineeringConsole`'s Main Energy/Subsystem Load display updates in the
-  same tick, without a page reload or console switch
+**The shared figure is no longer `mainEnergy`.** That field is removed; energy is
+throughput. What the consoles share is the derived pair: the core's effective
+output (`warpCoreOutput(warpCore integrity)`) and `subsystemDraw`, whose
+difference is the **budget** the `SituationPanel` displays.
 
-#### Scenario: SituationPanel shows the energy budget
-- **WHEN** `SituationPanel` renders its "Energy Level" indicator
-- **THEN** it displays the **budget** — what the Warp Core generates minus what
-  the subsystems consume — not `subsystemDraw` alone and not a stock
+#### Scenario: Shield level change reflects in Engineering immediately
+- **WHEN** `ShieldConsole` changes the held shield level
+- **THEN** `EngineeringConsole`'s Core Output/Subsystem Load display and the
+  `SituationPanel` budget update in the same tick, without a reload or console
+  switch
 
-> ⚠️ **Corrigido pela `engine-integration`** (2026-07-30): a redação original
-> deste requirement chamava `mainEnergy` de "Warp Core nominal output" (vazão) e
-> este cenário chamava de "the depletable reserve" (estoque) — duas coisas
-> incompatíveis, e o código acabou implementando as duas. Não existe estoque de
-> energia nesta versão: energia é vazão, sobrecarga e breach substituem a perda
-> por esgotamento, e o excedente de dano vai pro casco. Ver o requirement
-> "Energy is throughput, not a depletable stock" em
-> `engine-integration/specs/game-state-store/spec.md`.
+#### Scenario: No console keeps its own energy number
+- **WHEN** any console displays an energy figure
+- **THEN** it derives it from the store, never from a local `ref` seeded by a prop
 
 ### Requirement: All 9 subsystems contribute to subsystemDraw
 `subsystemDraw` SHALL be the real sum of consumption from all 9 subsystems, not a
@@ -162,14 +166,42 @@ direction the toggle went.
 - **THEN** none is exposed — both always contribute their passive baseline
 
 ### Requirement: Automatic overload from over-consumption
-When total routed energy exceeds `WARP_CORE_OUTPUT`, the engine SHALL compute
-`autoOverload = max(1, round((consumo - output) / output * 100))`; otherwise
-`autoOverload = 0`. `autoOverload` feeds into the effective overload used for
-Warp Core damage/explosion rolls together with `manualOverload` and any
-warp-travel stress — see `turn-engine` capability's "Warp Core overload and
-breach rolls" for the unified, clamped formula (design.md decision #29).
+When total routed energy exceeds what the Warp Core can currently generate, the
+engine SHALL compute
+`autoOverload = clamp(ceil((consumo - output) / OVERLOAD_PER_EXCESS), 1, 20)`;
+otherwise `autoOverload = 0`.
 
-#### Scenario: Over-consumption triggers at least 1% overload
-- **WHEN** total routed energy exceeds `WARP_CORE_OUTPUT` by any amount
-- **THEN** `autoOverload` is at least 1 and scales with how much the output was
-  exceeded
+Two corrections to the earlier formula
+(`max(1, round((consumo - output) / output * 100))`):
+
+1. **The scale is the absolute excess, not a percentage of output.** The
+   percentage form is hyperbolic — a damaged core's shrinking output shrinks the
+   denominator, so the ratio explodes — and it indexed a Fibonacci damage table.
+   Two stacked exponentials made 7 points of Warp Core integrity span the entire
+   table. See `game-state-store` capability, "Automatic overload scales linearly
+   with absolute excess".
+2. **`output` is the core's EFFECTIVE output, not the nominal constant.**
+   `warpCoreOutput(integrity) = WARP_CORE_OUTPUT × (1 - d)`: a damaged core
+   generates less, so unchanged consumption can begin to exceed it. That is the
+   intended spiral, and it is what gives the subsystem toggles their purpose.
+
+`autoOverload` feeds the effective overload used for Warp Core damage/explosion
+rolls together with `manualOverload` and any warp-travel stress — see
+`turn-engine` capability's "Warp Core overload and breach rolls" for the unified,
+clamped formula (design.md decision #29).
+
+#### Scenario: Over-consumption triggers at least 1 point of overload
+- **WHEN** total routed energy exceeds the core's effective output by any amount
+- **THEN** `autoOverload` is at least 1 and scales with the size of the excess
+
+#### Scenario: Same excess yields the same overload regardless of output
+- **WHEN** the excess is 500 energy units, once against a healthy core and once
+  against a heavily damaged one
+- **THEN** `autoOverload` is the same in both cases — the percentage form gave 11
+  and 111 respectively, which is what produced the cliff
+
+#### Scenario: A damaged core overloads on unchanged consumption
+- **WHEN** Warp Core integrity falls while the ship's consumption stays constant
+- **THEN** the effective output falls with it and `autoOverload` can rise from 0
+  without the player changing anything
+

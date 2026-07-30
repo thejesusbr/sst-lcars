@@ -1,4 +1,99 @@
-## ADDED Requirements
+# game-state-store
+
+## Purpose
+
+O `GameState` como fonte única reativa, a store Pinia como camada fina sobre o
+engine, e o contrato que os consoles consomem.
+
+## Requirements
+
+### Requirement: Single reactive GameState
+The system SHALL expose one Pinia store (`useGameState`) as the single source of truth
+for position, energy, subsystems, damage-control teams, Warp Core status, alert level,
+and combat log. No console SHALL keep its own local copy of any of these domains.
+
+#### Scenario: Store is the only owner of shared domains
+- **WHEN** any console component needs the energy budget, ship position, or subsystem
+  integrity
+- **THEN** it reads/writes exclusively through `useGameState`, never a local `ref`
+  seeded from props
+
+### Requirement: Automatic persistence to localStorage
+The system SHALL persist the full `GameState` to `localStorage` automatically on every
+mutation and restore it on load, using `pinia-plugin-persistedstate`.
+
+#### Scenario: Store persists across reload
+- **WHEN** state changes and the page is reloaded
+- **THEN** the restored state matches what was saved, not the initial constants
+
+### Requirement: New Game resets to initial constants
+Starting a New Game SHALL reset `GameState` and **generate a fresh world**. The
+previously listed fixed values `enemiesLeft 12` and `starbasesLeft 5` are replaced
+by generation outcomes (`world-generation` capability, "Enemy and starbase totals
+are derived from generation") — those counts now vary per playthrough, expected
+~17.3 enemies and ~4.6 starbases.
+
+The remaining initial constants are unchanged: stardate 3600.0, torpedoes 8, probes
+3, shieldEnergy 1500, subsystems at 100%, no CdD fatigue, no active Warp Core
+overload/breach, no tribble infestation, `lifeSupportTurnsRemaining` unset.
+
+`GameState` additionally carries the generation **seed**, so a playthrough is
+reproducible.
+
+#### Scenario: New Game produces a brand-new galaxy
+- **WHEN** the player confirms "New Game" from `ResultScreen`
+- **THEN** a new galaxy is generated with a new seed — the previous game's quadrant
+  contents, base placements and planet charges are not reused
+
+#### Scenario: Enemy count comes from generation, not a constant
+- **WHEN** a new game starts
+- **THEN** `enemiesLeft` equals the number of Klingons the generator actually placed
+
+#### Scenario: A fresh game starts in playable state
+- **WHEN** a new game starts
+- **THEN** `currentSector` is populated for the starting quadrant and `starbases`
+  contains every placed base — neither is empty
+
+#### Scenario: New Game clears a finished game's state
+- **WHEN** player confirms "New Game" from `ResultScreen`
+- **THEN** every non-generated `GameState` field returns to its initial constant
+  value, overwriting the persisted save
+
+### Requirement: Combat Log unread tracking per category
+`GameState` SHALL track a read marker per `LogCategory` (`captain`/`general`/
+`engineering`) — a count of how many of that category's entries have been read.
+A category counts as unread when its filtered entry count exceeds its read marker.
+The marker only advances when the player scrolls the `CombatLog` widget to the
+bottom while that category's tab is active — opening the tab alone does NOT mark
+it read (design.md decision #27).
+
+#### Scenario: New entry in a category arrives while its tab is active but not scrolled to bottom
+- **WHEN** a new `combatLog` entry of the active category is appended and the
+  widget is scrolled up (not at the bottom)
+- **THEN** the read marker for that category does NOT advance and the tab's
+  unread indicator (blink) turns on
+
+#### Scenario: Scrolling to the bottom marks the active category read
+- **WHEN** the player scrolls the `CombatLog` widget to its bottom while a given
+  category's tab is active
+- **THEN** that category's read marker advances to match its current entry count
+  and its tab stops blinking
+
+#### Scenario: Switching tabs does not mark anything read
+- **WHEN** the player clicks a different category's tab
+- **THEN** neither the newly active nor the previously active category's read
+  marker changes — only reaching the bottom of the scroll does
+
+#### Scenario: Unread category tab blinks
+- **WHEN** a category's entry count is greater than its read marker
+- **THEN** that category's tab button SHALL render with a blinking state,
+  independent of whether it is the currently active tab
+
+#### Scenario: Scroll position holds at the last-read entry, not the newest
+- **WHEN** a new entry is appended to a category the player has already scrolled
+  through, and the player has not reached the bottom again
+- **THEN** the widget's scroll position SHALL NOT jump to the newest entry — it
+  stays where the player left it, same as any passive log the player controls
 
 ### Requirement: Consoles drive the engine through the store
 Every gameplay console SHALL read its displayed state from `useGameState` and route
