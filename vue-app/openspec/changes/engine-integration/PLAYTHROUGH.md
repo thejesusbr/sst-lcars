@@ -179,7 +179,10 @@ integridade 20 em ~12 turnos em vez de 23).
 - [x] 6.6 Torpedo destrói cruiser em 1 acerto (dano 200–300 vs poder 100–300).
 - [ ] 6.7 Dano no SRS às vezes **perde** o lock no fim do turno.
 - [x] 6.8 Toggle "Photon Tubes" muda o consumo e toca power up/down.
-- [ ] 6.9 Hail: ~30% de rendição; captura enche a cela; cela cheia recusa.
+- [ ] 6.9 Hail: rendição escala com dano (piso 30% intacto, teto 75% em
+      farrapos — `hailSurrenderChance`); captura enche a cela; cela cheia
+      recusa; roll falho responde com recusa variada no combat log
+      (`hail-and-identity`, ver seção 15).
 - [ ] 6.10 Prisioneiro na cela **trava 1 equipe** de CdD em `guard`.
 - [ ] 6.11 Escudo erguido protege o casco: tomar dano com escudo no teto não
       mexe em "Hull". Com escudo em 0, "Hull" cai.
@@ -210,7 +213,8 @@ integridade 20 em ~12 turnos em vez de 23).
 - [x] 9.1 "Dock" desabilitado sem base adjacente.
 - [ ] 9.2 Atracar repõe **casco** e torpedos, baixa escudo, zera overload,
       transfere prisioneiros, libera guarda. (Só `STARBASE_DOCK` reforma casco;
-      `STARBASE_SUPPLY` só repõe torpedo; `STARBASE_SCIENCE` nada.)
+      `STARBASE_SUPPLY` só repõe torpedo; `STARBASE_SCIENCE` acelera o
+      descanso das equipes de CdD em vez de repor material — ver seção 15.)
 - [ ] 9.3 "REPAIR TURN (DOCKED)" no Engineering repara em tier 5 e redireciona o
       dano inimigo pro pool da base.
 - [ ] 9.4 Pool da base zerado → base destruída → se você estiver atracado,
@@ -256,11 +260,72 @@ Ordem de prioridade Kobayashi Maru: derrota sempre supera vitória.
 
 Sem número esperado — é pra registrar sensação:
 
-- [x] 13.1 30 stardates dão pra caçar ~17 inimigos?
+- [ ] 13.1 30 stardates dão pra caçar ~17 inimigos? (inconclusivo nas 2
+      primeiras rodadas por falta de ritmo perceptível — retestar agora)
 - [ ] 13.2 Overload/breach está punitivo demais?
 - [ ] 13.3 Fadiga de CdD faz o reparo valer a pena?
 - [ ] 13.4 Send Party às cegas (70% dos planetas estéreis) é dilema ou frustração?
 - [ ] 13.5 3 sondas é pouco?
+
+## 14. Encenação e ritmo (`game-feel-and-pacing`)
+
+- [ ] 14.1 Disparar phaser com inimigo visível: linha pulsante aparece entre a
+      nave e o alvo antes do dano refletir no painel.
+- [ ] 14.2 Disparar torpedo: asterisco percorre as células até o alvo, não
+      salta direto.
+- [ ] 14.3 Turno com contra-ataque inimigo: a MESMA animação (linha) aparece
+      partindo do inimigo — dá pra ver o inimigo agindo, não só ler o log.
+- [ ] 14.4 Absorção de escudo e dano de casco pulsam na própria nave, em
+      sequência, depois do feixe que os causou.
+- [ ] 14.5 Turno sem combate (só movimento/reparo) resolve **sem espera** —
+      nenhuma fila de encenação vazia.
+- [ ] 14.6 Durante a encenação de um turno, nenhum botão que consome turno
+      responde; volta a responder quando a fila termina.
+- [ ] 14.7 SRS/LRS com dano moderado (`d > 0.30`) **piscam**; dano crítico
+      apaga o display por completo.
+- [ ] 14.8 LRS com dano moderado ou pior: dígitos do KBS variam sozinhos na
+      tela, mas o Star Chart mantém o dado real depois de reparar o sensor.
+- [ ] 14.9 Engajar warp: setor esvazia na hora (fuga limpa), nenhum inimigo
+      alcança a nave durante a viagem.
+- [ ] 14.10 Warp multi-turno resolve sozinho — sem clicar "End Turn" — e o
+      Helm mostra o efeito visual pela duração certa a cada turno de viagem.
+- [ ] 14.11 Warp 1 na diagonal completa da galáxia dura **~30s**; warp 8 dura
+      **~3s**. A diferença é perceptível sem cronômetro (calibrar a LUT pelo
+      feeling aqui, não é medida final).
+- [ ] 14.12 Nenhuma ação que consome turno é aceita enquanto a nave está em
+      trânsito de warp; ajustes livres (dial, escudo, despacho de CdD)
+      continuam funcionando.
+
+## 15. Hail, base científica e identidade (`hail-and-identity`)
+
+- [ ] 15.1 Com base E inimigo no mesmo setor, o botão Hail não decide
+      sozinho — exige selecionar a célula de qual dos dois.
+- [ ] 15.2 Com um só alvo hailável no setor, o botão funciona de qualquer
+      célula selecionada (não precisa mais acertar a célula exata do alvo).
+- [ ] 15.3 Hail numa base responde tipo (Drydock/Supply Depot/Science
+      Station), quadrante e nível de pool — dá pra decidir se vale a viagem
+      só pelo log.
+- [ ] 15.4 Amassar um inimigo antes de chamar (phaser/torpedo até baixo
+      poder) muda perceptivelmente a taxa de rendição, sem tornar captura
+      dominante sobre destruição.
+- [ ] 15.5 Hail contra alvo intacto: rendição na taxa de sempre (~30%), sem
+      surpresa.
+- [ ] 15.6 Roll de rendição falho aparece no combat log como recusa, com
+      variação entre tentativas (não a mesma linha sempre).
+- [ ] 15.7 Atracar em base científica com equipes de CdD exaustas: fadiga
+      recupera mais rápido que numa doca comum, com as mesmas equipes e o
+      mesmo tempo atracado.
+- [ ] 15.8 Base científica segue sem repor torpedo ou casco — só o bônus de
+      descanso.
+- [ ] 15.9 O painel do NavSensing mostra qual bônus a base adjacente oferece
+      antes de atracar, não só depois.
+- [ ] 15.10 Captain's Lounge: escolher uma das 7 naves atualiza o ícone no
+      SRS/LRS e sugere o nome da nave; o nome (e o do capitão) é editável por
+      cima da sugestão.
+- [ ] 15.11 Nome de nave/capitão escolhidos aparecem no Briefing e no Result
+      Screen ao fim da partida.
+- [ ] 15.12 F5 no meio da partida: identidade escolhida volta igual (survive
+      reload); "New Game" volta aos defaults.
 
 ---
 
@@ -335,35 +400,87 @@ automaticamente até a **primeira mensagem não lida** (o marcador de leitura é
 Itens destravados: 5.1–5.8 (fluxo Engage completo), 2.2/2.4/2.5, 8.6, 10.5.
 Atenção nova: item 3.2 (Skip 5) ficou sem observação na 1ª rodada.
 
-#### Comentários
+## Observado — 2ª rodada (todos tratados, 2026-07-30)
 
-    - Temos um problema de balanceamento, a nave do jogador está muito mais poderosa que a nave dos inimigos, os combates estão fáceis demais.
-    - Sinto que faltam animações de ataques, principalmente para sinalizar o turno do inimigo, a sensação geral é que o jogo está muito rápido
+**Hull integrity sem indicador visível.**
+→ **Corrigido**, commit `4963377`. Indicador abaixo do bracket de escudos no
+`ShieldConsole`.
 
-5. Comentários
+**Inimigos destruídos ressuscitavam** — ir e voltar entre dois setores hostis
+zerava o contador de inimigos sem realmente destruí-los todos.
+→ **Corrigido**, commit `525677f`. `removeEnemyFromSector` grava a baixa em
+`galaxy[quadrante].clearedEnemies`, não só no setor atual; `materializeSector`
+lê esse contador ao repovoar. Era o mesmo Klingon voltando porque nada
+incrementava a baixa persistente.
 
-   - Warps curtos, de 1 turno, terminam muito rápido, nem dá tempo de ativar a animação. Uma viagem de warp devia durar pelo menos 5 segundos, para dar tempo de ativar e desativar a animação de warp.
+**Scan de LRS apagava o mapa conhecido** — reescanear derrubava tudo que já
+tinha sido descoberto, quando deveria só renovar confiança.
+→ **Corrigido**, commit `525677f`. `scanLongRange` faz merge no bloco 3×3
+tocado; o resto do mapa envelhece, nunca desaparece.
 
-6. Comentários
+**Equipes de CdD ficavam presas em sistema já reparado.**
+→ **Corrigido**, commit `525677f`. `resolveDamageControlTurn` libera a equipe
+(idle ou cooldown, conforme a fadiga) no instante em que o subsistema
+designado chega a 100%.
 
-   - Temos que colocar um indicador de hull integrity abaixo do bracket de escudos.
-   - Inimigos destruídos ressucitam... Eles devem ser removidos permanentemente, senão basta ficar ir e voltando entre dois setores com inimigos até zerar o contador (a destruição contava, mas os inimigos estavam de volta ao retornar ao setor).
+**Warp de 1 turno terminava rápido demais pra animação rodar.**
+→ **Corrigido em dois estágios.** Primeiro um piso fixo de 5s (commit
+`4963377`), que resolvia o sintoma apagando a informação — warp 1 e warp 8
+ficavam visualmente idênticos. Nesta sessão (`game-feel-and-pacing`), o piso
+saiu e entrou uma LUT decrescente por fator de warp
+(`WARP_ANIMATION_MS`): diagonal completa da galáxia dura **~30s em warp 1** e
+**~3s em warp 8** — ver seção 14.
 
-7. Comentários
+**Faltam animações de ataque; jogo parece rápido demais pra sentir o turno
+inimigo.**
+→ **Endereçado nesta sessão** pela `game-feel-and-pacing`: eventos de turno
+tipados, fila de apresentação, linha de phaser/asterisco de torpedo
+desenhados no scanner (jogador E inimigo), degradação visual de sensor por
+dano. Ver seção 14 — é o que esta rodada precisa validar.
 
-   - scan ativo no LRS apagou toda a informação anterior. Não deveria, a informação no LRS nunca é perdida, somente perde confiança. Scan ou sonda renova confiança.
-   - as equipes de CdD devem retornar para Idle ou Cooldown automaticamente se o sistema em que estão alocadas for totalmente reparado.
+**Captain's Lounge sem seleção de nave/capitão.**
+→ **Implementado nesta sessão** pela `hail-and-identity`: seção de ícone (7
+naves), nome da nave e nome do capitão, refletidos no scanner, Briefing e
+Result. Ver seção 15.
 
-8. Comentários
+**Hail exigia célula exata; base não informava tipo; rendição era fixa em
+30%; roll falho era silêncio.**
+→ **Implementado nesta sessão** pela `hail-and-identity`: hail alcança
+qualquer alvo do setor com desambiguação pelo jogador quando há mais de um;
+resposta de base traz tipo + quadrante + pool; rendição escala com dano
+(piso 30%, teto 75%); recusa responde com fala variada por espécie. Ver
+seção 15.
 
-   - se houver uma base no setor em que a nave se encontra, hail deve estar disponível. Bases respondem informando tipo, quadrante em que se encontram e nível de recursos atuais. Se houver inimigos, eles respondem ao hail conforme os rolls de rendição. Nota: verificar a chance de rendição, ela deve aumentar um pouco se o inimigo estiver danificado, proporcionalmente. Rolls falhos resultam em respostas... não muito educadas. Já tentou perguntar a um Klingon se ele quer se render? Nada saudável.
-   - Bases científicas não recuperam torpedos ou dano, mas oferecem o bonus de recuperação para os engenheiros, pois eles ainda podem visitar a base em licença e descansar. Engenheiros em uma base científica? Parque de diversões.
+**Base científica sem função** — só existia pra não ser as outras duas.
+→ **Implementado nesta sessão** pela `hail-and-identity`: acelera a
+recuperação de fadiga das equipes de CdD atracadas (multiplicador sobre o
+dobro do idle, que também estava morto — ver seção 15, é achado da própria
+implementação). Continua sem repor torpedo ou casco.
 
-9. Comentários
+**Tentativa de testar a infestação de Tribbles não deu tempo/não funcionou.**
+→ **Ainda não verificado.** Editar `sst-lcars-game-state` no DevTools sem
+tocar em `sst-lcars:save-checksum` (chave separada, mesmo `localStorage`) é
+o que dispara o marcador — mudar só o primeiro e recarregar. Continua item
+12.2 em aberto pra esta rodada.
 
-- Tentei editar os dados para testar a infestação de tribbles, mas não consegui, ou não deu tempo de aparecerem.
+**Balanceamento de combate (nave do jogador forte demais).**
+→ **Deliberadamente NÃO corrigido ainda.** Medir/ajustar dano antes de o
+jogador conseguir acompanhar o combate (sem animação) é medir no escuro —
+foi a própria observação sobre o item 13.1. Fica como Non-Goal explícito da
+`game-feel-and-pacing` (task 6.1): com a encenação em vigor nesta rodada, o
+ritmo passa a ser perceptível e o balanceamento vira mensurável de verdade.
 
-13. Comentários
+### Retestar na 3ª rodada
 
-    13.1 - Inconclusivo, mas parece curto. Como o pace do jogo está muito rápido pela falta de animações, não deu tempo de sentir o efeito do tempo.
-    13.2 -
+Itens destravados por esta rodada de implementação:
+
+- **Seção 14** (nova, `game-feel-and-pacing`): encenação de combate, LUT de
+  warp, degradação de sensor por dano.
+- **Seção 15** (nova, `hail-and-identity`): hail de setor inteiro, rendição
+  escalada, recusas, base científica, identidade da nave/capitão.
+- Itens **6.9** e **9.2** desta lista, reescritos acima pra refletir a
+  mecânica nova.
+- Item **13.1** (30 stardates são suficientes?) pode ser reavaliado agora que
+  o pace deixou de ser instantâneo.
+- Item **13.2** (overload/breach punitivo demais?) segue em aberto — ainda
+  sem observação registrada desde a 1ª rodada.
