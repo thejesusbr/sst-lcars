@@ -18,26 +18,27 @@ const decorator = () => ({
   template: '<div style="width: 100%; min-height: 600px; background: #000; padding: 2rem; box-sizing: border-box;"><story /></div>',
 })
 
-const makeStateDecorator = (shield: number, main: number) => () => ({
+// Só o nível do escudo: não há estoque de energia de onde ele saia. O custo do
+// escudo erguido é vazão por turno (`subsystemDraw`), não um saque de tanque.
+const makeStateDecorator = (shield: number) => () => ({
   setup() {
     const gs = useGameState()
     gs.shieldEnergy = shield
-    gs.mainEnergy = main
   },
   template: '<story />',
 })
 
 export const Default: Story = {
   args: {},
-  decorators: [makeStateDecorator(1500, 3000), decorator],
+  decorators: [makeStateDecorator(1500), decorator],
 }
 
 export const ShieldsDown: Story = {
   args: {},
-  decorators: [makeStateDecorator(0, 4500), decorator],
+  decorators: [makeStateDecorator(0), decorator],
 }
 
 export const MaxShields: Story = {
   args: {},
-  decorators: [makeStateDecorator(2500, 2000), decorator],
+  decorators: [makeStateDecorator(2500), decorator],
 }
