@@ -63,7 +63,7 @@ const scrollToFirstUnread = () => {
 // mesma aba muda só o length — e essa não rola nada.
 watch(
   () => props.entries,
-  () => nextTick(scrollToFirstUnread),
+  () => nextTick(scrollToFirstUnread)
 );
 </script>
 
@@ -87,7 +87,7 @@ watch(
 .log-content {
   width: 0;
   min-width: 100%;
-  max-height: 7.5rem;
+  max-height: 15rem;
   box-sizing: border-box;
   padding: 0.5rem 1rem;
   overflow-y: auto;
