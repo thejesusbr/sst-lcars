@@ -15,11 +15,13 @@ import LcarsToggleSwitch from "../elements/LcarsToggleSwitch.vue";
 import CombatLog from "@/components/widgets/CombatLog.vue";
 import { Sound, useSound } from "@/composables/useSound";
 import { useGameState } from "@/stores/useGameState";
+import { usePresentation } from "@/stores/usePresentation";
 import { OVERLOAD_MAX } from "@/engine/constants";
 import type { CombatLogEntry } from "@/types/game";
 
 const { playSound } = useSound();
 const gameState = useGameState();
+const presentation = usePresentation();
 
 const { lcarsColors, statusColor } = useLcarsColors();
 
@@ -451,7 +453,7 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
               id="end-turn-btn"
               label="End Turn"
               color="primary-interactive"
-              :disabled="busy"
+              :disabled="busy || presentation.busy"
               :style="{ flex: '1' }"
               @click="endTurn"
             />
@@ -459,7 +461,7 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
               id="skip-turns-btn"
               :label="`Skip ${SKIP_TURNS}`"
               color="tertiary-interactive"
-              :disabled="busy"
+              :disabled="busy || presentation.busy"
               :style="{ flex: '1' }"
               @click="skipTurns"
             />

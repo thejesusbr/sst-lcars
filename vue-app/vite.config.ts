@@ -25,7 +25,14 @@ export default defineConfig({
       test: {
         name: 'unit',
         environment: 'node',
-        include: ['src/engine/**/*.test.ts', 'src/stores/**/*.test.ts']
+        // `composables/` entra pelas partes PURAS (ex.: corrupção de exibição
+        // do KBS): são funções sem Vue nem DOM, e verificá-las aqui não exige
+        // subir o browser.
+        include: [
+          'src/engine/**/*.test.ts',
+          'src/stores/**/*.test.ts',
+          'src/composables/**/*.test.ts'
+        ]
       }
     }, {
       extends: true,

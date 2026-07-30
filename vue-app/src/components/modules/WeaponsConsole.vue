@@ -15,6 +15,8 @@ import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
 import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
 import { Sound, useSound } from "@/composables/useSound";
 import { useGameState } from "@/stores/useGameState";
+import { usePresentation } from "@/stores/usePresentation";
+import { useCombatOverlay } from "@/composables/useCombatOverlay";
 import { useQuadrantCells } from "@/composables/useQuadrantCells";
 import {
   PHASER_POWER_MAX,
@@ -28,6 +30,8 @@ const { playSound } = useSound();
 const { statusColor } = useLcarsColors();
 const { sectorCells, cellKey } = useQuadrantCells();
 const gameState = useGameState();
+const presentation = usePresentation();
+const combatOverlay = useCombatOverlay();
 
 // ── Phasers ──────────────────────────────────────────────────────────────────
 
@@ -330,7 +334,7 @@ const togglePhotons = () => {
           color="highlight-dark-interactive"
           label="Lock"
           :style="{ width: '6rem', flex: 'none' }"
-          :disabled="!canLock || busy"
+          :disabled="!canLock || busy || presentation.busy"
           @click="lockTargets"
         />
         <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
@@ -349,7 +353,7 @@ const togglePhotons = () => {
         version="round dark-light"
         :color="statusColor('critical')"
         label="Fire Phasers"
-        :disabled="!canFirePhasers || busy"
+        :disabled="!canFirePhasers || busy || presentation.busy"
         :style="{ width: '50%' }"
         @click="firePhasers"
       />
@@ -382,6 +386,7 @@ const togglePhotons = () => {
             :width="8"
             :height="8"
             :grid-data="scannerGrid"
+            :overlay="combatOverlay"
           />
         </DefaultBracket>
       </LcarsRow>
@@ -478,7 +483,7 @@ const togglePhotons = () => {
           version="round"
           color="tertiary-interactive"
           :label="tube.loaded ? `Unload ${tube.id}` : `Load ${tube.id}`"
-          :disabled="(!tube.loaded && torpedoStock === 0) || photonsCritical || busy"
+          :disabled="(!tube.loaded && torpedoStock === 0) || photonsCritical || busy || presentation.busy"
           :style="{ width: '7rem', flex: 'none' }"
           @click="toggleTubeLoad(tube.id)"
         />
@@ -500,7 +505,7 @@ const togglePhotons = () => {
         version="round dark-light"
         :color="statusColor('critical')"
         label="Fire Torpedoes"
-        :disabled="!canFireTorpedoes || busy"
+        :disabled="!canFireTorpedoes || busy || presentation.busy"
         :style="{ width: '50%' }"
         @click="fireTorpedoes"
       />

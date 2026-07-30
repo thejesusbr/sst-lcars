@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLcarsRegistry } from '@/composables/useLcarsRegistry'
 
 export interface ScannerCell {
@@ -12,6 +12,27 @@ export interface ScannerCell {
 
 export type GridDataType = Record<string, string | ScannerCell> | Array<Array<string | ScannerCell>>
 
+/**
+ * Efeito transitório desenhado POR CIMA do grid, nunca dentro do `gridData`.
+ *
+ * A animação vive **entre** células (o feixe) e **através** delas (o asterisco
+ * do torpedo), o que o modelo por célula não expressa; e escrever quadro de
+ * animação no `gridData` apagaria o conteúdo real da célula na passagem.
+ *
+ * Coordenadas são de célula central, 1-based — as mesmas de `GridCoord`.
+ */
+export interface ScannerOverlay {
+  /** `beam`: feixe pulsante. `travel`: asterisco percorrendo. `impact`: pulso no alvo. */
+  kind: 'beam' | 'travel' | 'impact'
+  from: { row: number; col: number }
+  to: { row: number; col: number }
+  /** Duração da animação, em ms. */
+  durationMs: number
+  /** Chave que força reinício da animação a cada evento novo. */
+  key: string | number
+  color?: string
+}
+
 const props = withDefaults(defineProps<{
   id?: string
   version?: 'short' | 'long'
@@ -22,6 +43,7 @@ const props = withDefaults(defineProps<{
   colLabels?: string[]
   coordsColor?: string
   style?: Record<string, string>
+  overlay?: ScannerOverlay | null
 }>(), {
   id: undefined,
   version: 'short',
@@ -31,7 +53,8 @@ const props = withDefaults(defineProps<{
   rowLabels: undefined,
   colLabels: undefined,
   coordsColor: 'text-light',
-  style: () => ({})
+  style: () => ({}),
+  overlay: null
 })
 
 const emit = defineEmits<{
@@ -160,17 +183,68 @@ const handleCellClick = (row: number, col: number, event: MouseEvent) => {
   emit('cell-click', { row, col, isBorder, label, cellData, event })
 }
 
-onMounted(() => {
-  register(elementId.value, null, { type: 'scanner', ...props })
+// ── Camada de overlay ──────────────────────────────────────────────────────
+
+const containerRef = ref<HTMLElement | null>(null)
+const boxSize = ref({ w: 0, h: 0 })
+
+/**
+ * Centro de uma célula em px, MEDIDO no DOM.
+ *
+ * O grid é flexbox com `space-evenly` e tamanhos em `rem` que mudam por versão
+ * (short/long) e por tema — derivar a posição de constantes daria um número
+ * certo hoje e errado no próximo ajuste de CSS. Medir é a única fonte que não
+ * mente.
+ */
+const cellCenter = (row: number, col: number): { x: number; y: number } | null => {
+  const el = containerRef.value
+  if (!el) return null
+  const cell = el.children[row * (props.width + 1) + col] as HTMLElement | undefined
+  if (!cell) return null
+  const c = cell.getBoundingClientRect()
+  const b = el.getBoundingClientRect()
+  return { x: c.left - b.left + c.width / 2, y: c.top - b.top + c.height / 2 }
+}
+
+const measure = () => {
+  const el = containerRef.value
+  if (!el) return
+  const b = el.getBoundingClientRect()
+  boxSize.value = { w: b.width, h: b.height }
+}
+
+/** Geometria do overlay atual, em px do próprio scanner. */
+const overlayGeom = computed(() => {
+  const o = props.overlay
+  if (!o || boxSize.value.w === 0) return null
+  const from = cellCenter(o.from.row, o.from.col)
+  const to = cellCenter(o.to.row, o.to.col)
+  if (!from || !to) return null
+  return { ...o, from, to, dur: `${o.durationMs}ms` }
 })
 
+let resizeObserver: ResizeObserver | undefined
+
+onMounted(() => {
+  register(elementId.value, null, { type: 'scanner', ...props })
+  measure()
+  if (containerRef.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(measure)
+    resizeObserver.observe(containerRef.value)
+  }
+})
+
+// Overlay novo pode chegar antes de o layout assentar (ex.: console recém-montado).
+watch(() => props.overlay?.key, () => nextTick(measure))
+
 onUnmounted(() => {
+  resizeObserver?.disconnect()
   unregister(elementId.value)
 })
 </script>
 
 <template>
-  <div :id="elementId" :class="classes" :style="style">
+  <div ref="containerRef" :id="elementId" :class="classes" :style="style">
     <!-- Row loop: i from 0 to height -->
     <template v-for="i in height + 1" :key="`row-${i - 1}`">
       <!-- Col loop: j from 0 to width -->
@@ -211,10 +285,139 @@ onUnmounted(() => {
         </slot>
       </div>
     </template>
+
+    <!-- Overlay transitório: fica FORA do fluxo das células e não intercepta
+         clique, então o conteúdo real de cada célula segue intacto e clicável
+         mesmo durante a animação. -->
+    <svg
+      v-if="overlayGeom"
+      :key="overlayGeom.key"
+      class="scanner-overlay"
+      :width="boxSize.w"
+      :height="boxSize.h"
+    >
+      <line
+        v-if="overlayGeom.kind === 'beam'"
+        class="scanner-beam"
+        :x1="overlayGeom.from.x"
+        :y1="overlayGeom.from.y"
+        :x2="overlayGeom.to.x"
+        :y2="overlayGeom.to.y"
+        :stroke="overlayGeom.color ?? 'currentColor'"
+        :style="{ animationDuration: overlayGeom.dur }"
+      />
+
+      <!-- Asterisco percorrendo as células até o alvo. SMIL em vez de timer em
+           JS: quem move é o navegador, então não há relógio novo pra
+           dessincronizar com a fila da store. -->
+      <text
+        v-else-if="overlayGeom.kind === 'travel'"
+        class="scanner-torpedo"
+        :fill="overlayGeom.color ?? 'currentColor'"
+        text-anchor="middle"
+        dominant-baseline="central"
+      >
+        *
+        <animate
+          attributeName="x"
+          :from="overlayGeom.from.x"
+          :to="overlayGeom.to.x"
+          :dur="overlayGeom.dur"
+          fill="freeze"
+        />
+        <animate
+          attributeName="y"
+          :from="overlayGeom.from.y"
+          :to="overlayGeom.to.y"
+          :dur="overlayGeom.dur"
+          fill="freeze"
+        />
+      </text>
+
+      <circle
+        v-else
+        class="scanner-impact"
+        :cx="overlayGeom.to.x"
+        :cy="overlayGeom.to.y"
+        r="12"
+        fill="none"
+        :stroke="overlayGeom.color ?? 'currentColor'"
+        :style="{ animationDuration: overlayGeom.dur }"
+      />
+    </svg>
   </div>
 </template>
 
 <style scoped>
+/* O overlay é posicionado em relação ao scanner. O global `.scanner` não define
+   `position`, então sem isto o SVG ancoraria no primeiro ancestral posicionado
+   e a animação apareceria fora do grid. */
+.scanner {
+  position: relative;
+}
+
+.scanner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+  color: var(--red-alert, #ff4d4d);
+}
+
+.scanner-beam {
+  stroke-width: 2;
+  stroke-linecap: round;
+  animation-name: scanner-beam-pulse;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes scanner-beam-pulse {
+  0%,
+  100% {
+    stroke-opacity: 0.25;
+    stroke-width: 1;
+  }
+  50% {
+    stroke-opacity: 1;
+    stroke-width: 3;
+  }
+}
+
+.scanner-torpedo {
+  font-family: "LCARS", monospace;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.scanner-impact {
+  stroke-width: 2;
+  animation-name: scanner-impact-ring;
+  animation-timing-function: ease-out;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+@keyframes scanner-impact-ring {
+  from {
+    r: 3;
+    stroke-opacity: 1;
+  }
+  to {
+    r: 18;
+    stroke-opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanner-beam,
+  .scanner-impact {
+    animation: none;
+    stroke-opacity: 0.9;
+  }
+}
+
 .scanner > .item {
   position: relative;
   display: flex;

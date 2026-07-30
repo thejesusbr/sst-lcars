@@ -12,6 +12,7 @@ import LcarsButton from "@/components/elements/LcarsButton.vue";
 import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
 import { Sound, useSound } from "@/composables/useSound";
 import { useGameState } from "@/stores/useGameState";
+import { usePresentation } from "@/stores/usePresentation";
 import { OVERLOAD_MAX, isCritical } from "@/engine/constants";
 import { autoOverload as autoOverloadOf, effectiveOverload } from "@/engine/warpCore";
 import { warpStress } from "@/engine/navigation";
@@ -25,6 +26,7 @@ import {
 const { statusColor } = useLcarsColors();
 const { playSound } = useSound();
 const gameState = useGameState();
+const presentation = usePresentation();
 
 // ── Matriz de energia ────────────────────────────────────────────────────────
 
@@ -410,7 +412,7 @@ const repairTurn = async () => {
           id="dock-repair-btn"
           label="REPAIR TURN (DOCKED)"
           color="primary-interactive"
-          :disabled="!gameState.docked || busy"
+          :disabled="!gameState.docked || busy || presentation.busy"
           :style="{ width: '20rem' }"
           @click="repairTurn"
         />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onUnmounted, watch } from "vue";
 
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
@@ -15,8 +15,14 @@ import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
 import { Sound, useSound } from "@/composables/useSound";
 import { useGameState } from "@/stores/useGameState";
+import { usePresentation } from "@/stores/usePresentation";
+import { useCombatOverlay } from "@/composables/useCombatOverlay";
 import { useQuadrantCells } from "@/composables/useQuadrantCells";
-import { isCritical, kbsCode } from "@/engine/constants";
+import { damageFraction, isCritical, kbsCode } from "@/engine/constants";
+import {
+  SENSOR_MODERATE_DAMAGE,
+  corruptKbsCode,
+} from "@/composables/sensorDisplay";
 import { scanConfidence as scanConfidenceOf } from "@/engine/navigation";
 
 const { playSound } = useSound();
@@ -31,6 +37,8 @@ const props = withDefaults(
 );
 
 const gameState = useGameState();
+const presentation = usePresentation();
+const combatOverlay = useCombatOverlay();
 const { sectorCells, quadrantCells } = useQuadrantCells();
 
 const selectedSector = ref({ ...gameState.position.sector });
@@ -54,13 +62,62 @@ const srsOnline = computed(
   () => gameState.subsystemsOn.srs && !isCritical(gameState.subsystems.srs)
 );
 
-const activeShortRangeGrid = computed(
+// ── Degradação do DISPLAY por dano no sensor ───────────────────────────────
+//
+// Distinto da perda de confiança, que segue inalterada (esmaecimento gradual
+// por turno). Aqui é EQUIPAMENTO falhando, não informação envelhecendo: um
+// quadrante pode estar esmaecido (dado velho) e estável, ou nítido e tremendo
+// (sensor quebrado) — problemas diferentes, soluções diferentes (rescanear vs.
+// reparar).
+
+const srsBlinking = computed(
   () =>
+    damageFraction(gameState.subsystems.srs) > SENSOR_MODERATE_DAMAGE &&
+    !isCritical(gameState.subsystems.srs)
+);
+const lrsBlinking = computed(
+  () =>
+    damageFraction(gameState.subsystems.lrs) > SENSOR_MODERATE_DAMAGE &&
+    !isCritical(gameState.subsystems.lrs)
+);
+/** Em crítico o display apaga por completo — nem a própria nave aparece. */
+const srsDark = computed(() => isCritical(gameState.subsystems.srs));
+const lrsDark = computed(() => isCritical(gameState.subsystems.lrs));
+
+/**
+ * Contador que faz os dígitos do KBS dançarem enquanto o LRS está danificado.
+ *
+ * Timer local de exibição, sem relação com a fila de turno — o que ele muda é
+ * um número na tela, nunca o estado.
+ */
+const jitter = ref(0);
+let jitterTimer: ReturnType<typeof setInterval> | undefined;
+
+watch(
+  () => lrsBlinking.value,
+  (damaged) => {
+    clearInterval(jitterTimer);
+    jitterTimer = damaged
+      ? setInterval(() => (jitter.value += 1), 420)
+      : undefined;
+  },
+  { immediate: true }
+);
+
+onUnmounted(() => clearInterval(jitterTimer));
+
+const corruptCode = (code: string, key: string): string =>
+  corruptKbsCode(code, key, jitter.value);
+
+const activeShortRangeGrid = computed(() => {
+  if (srsDark.value) return {};
+  return (
     props.shortRangeGrid ??
     sectorCells(gameState.currentSector, gameState.position.sector, {
       srsOnline: srsOnline.value,
     })
-);
+  );
+});
 
 // LRS classico so cobre os quadrantes VIZINHOS (bloco 3x3 ao redor da nave)
 // e nao tem memoria -- some de novo ate o proximo Scan. Isso que o distingue
@@ -82,12 +139,17 @@ const scanConfidence = computed(() =>
 );
 
 const longRangeGrid = computed(() => {
+  if (lrsDark.value) return quadrantCells({}, gameState.position.quadrant, {});
+
   // Confiança POR ENTRADA: sonda cria entrada com idade própria (datalink), o
   // scan clássico zera todas — cada uma esmaece no seu ritmo.
   const codes: Record<string, { code: string }> = {};
   const confidence: Record<string, number> = {};
   for (const [key, entry] of Object.entries(gameState.lrsScan)) {
-    codes[key] = entry;
+    // Cópia, nunca a entrada do estado: a corrupção abaixo escreveria no save.
+    codes[key] = {
+      code: lrsBlinking.value ? corruptCode(entry.code, key) : entry.code,
+    };
     confidence[key] = scanConfidenceOf(entry.age, gameState.subsystems.lrs);
   }
 
@@ -97,12 +159,13 @@ const longRangeGrid = computed(() => {
   const hereKey = `${here.row},${here.col}`;
   const content = gameState.galaxy?.[hereKey];
   if (content) {
+    const here_code = kbsCode({
+      klingons: content.klingons,
+      bases: content.baseIds.length,
+      stars: content.stars,
+    });
     codes[hereKey] = {
-      code: kbsCode({
-        klingons: content.klingons,
-        bases: content.baseIds.length,
-        stars: content.stars,
-      }),
+      code: lrsBlinking.value ? corruptCode(here_code, hereKey) : here_code,
     };
     confidence[hereKey] = 1;
   }
@@ -277,14 +340,17 @@ const toggleLrs = () => {
             animated: 'pale-canary-bg',
           }"
         >
-          <LcarsScanner
-            id="shtRngScn"
-            version="short"
-            :width="8"
-            :height="8"
-            :grid-data="activeShortRangeGrid"
-            @cell-click="handleShortRangeCellClick"
-          />
+          <div :class="{ 'sensor-blink': srsBlinking }">
+            <LcarsScanner
+              id="shtRngScn"
+              version="short"
+              :width="8"
+              :height="8"
+              :grid-data="activeShortRangeGrid"
+              :overlay="combatOverlay"
+              @cell-click="handleShortRangeCellClick"
+            />
+          </div>
         </DefaultBracket>
       </LcarsRow>
 
@@ -327,7 +393,7 @@ const toggleLrs = () => {
           version="round"
           color="tertiary-interactive"
           label="Hail"
-          :disabled="!hailTargetId || busy"
+          :disabled="!hailTargetId || busy || presentation.busy"
           :style="{ width: '7rem' }"
           @click="hail"
         />
@@ -336,7 +402,7 @@ const toggleLrs = () => {
           version="round"
           color="highlight-interactive"
           :label="gameState.docked ? 'Undock' : 'Dock'"
-          :disabled="!gameState.docked && !gameState.canDockNow"
+          :disabled="(!gameState.docked && !gameState.canDockNow) || presentation.busy"
           :style="{ width: '7rem' }"
           @click="dock"
         />
@@ -345,7 +411,7 @@ const toggleLrs = () => {
           version="round"
           color="highlight-dark-interactive"
           label="Snd Party"
-          :disabled="!availableTeam || busy"
+          :disabled="!availableTeam || busy || presentation.busy"
           :style="{ width: '8rem' }"
           @click="sendParty"
         />
@@ -388,14 +454,16 @@ const toggleLrs = () => {
             animated: 'pale-canary-bg',
           }"
         >
-          <LcarsScanner
-            id="lngRngScn"
-            version="long"
-            :width="8"
-            :height="8"
-            :grid-data="longRangeGrid"
-            @cell-click="handleLongRangeCellClick"
-          />
+          <div :class="{ 'sensor-blink': lrsBlinking }">
+            <LcarsScanner
+              id="lngRngScn"
+              version="long"
+              :width="8"
+              :height="8"
+              :grid-data="longRangeGrid"
+              @cell-click="handleLongRangeCellClick"
+            />
+          </div>
         </DefaultBracket>
       </LcarsRow>
 
@@ -500,7 +568,7 @@ const toggleLrs = () => {
             label="Send to selected system"
             color="primary-interactive"
             :style="{ width: '16rem' }"
-            :disabled="remainingProbes === 0 || probeStatus !== 'Offline' || busy"
+            :disabled="remainingProbes === 0 || probeStatus !== 'Offline' || busy || presentation.busy"
             @click="sendProbe"
           />
         </LcarsComplexButton>
@@ -508,3 +576,32 @@ const toggleLrs = () => {
     </LcarsColumn>
   </LcarsRow>
 </template>
+
+<style scoped>
+/* Dano MODERADO no sensor: o display pisca. É equipamento falhando, distinto do
+   esmaecimento por confiança, que é informação envelhecendo (spec
+   `turn-presentation`, "Sensor damage degrades the display itself"). */
+.sensor-blink {
+  animation: sensor-flicker 1.1s steps(1, end) infinite;
+}
+
+@keyframes sensor-flicker {
+  0%,
+  62%,
+  74%,
+  100% {
+    opacity: 1;
+  }
+  66%,
+  70% {
+    opacity: 0.18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sensor-blink {
+    animation: none;
+    opacity: 0.65;
+  }
+}
+</style>
