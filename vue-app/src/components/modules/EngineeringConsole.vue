@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { computed, ref } from "vue";
 import { useLcarsColors } from "@/composables/useLcarsColors";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
@@ -10,140 +10,57 @@ import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsTitle from "@/components/elements/LcarsTitle.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
 import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
-
-// Props to control values from outside (e.g. Storybook)
-const props = withDefaults(
-  defineProps<{
-    warpIntegrity?: number;
-    srsIntegrity?: number;
-    lrsIntegrity?: number;
-    phaserIntegrity?: number;
-    photonIntegrity?: number;
-    shieldIntegrity?: number;
-    lifeIntegrity?: number;
-    warpCoreIntegrity?: number;
-  }>(),
-  {
-    warpIntegrity: 100,
-    srsIntegrity: 100,
-    lrsIntegrity: 100,
-    phaserIntegrity: 100,
-    photonIntegrity: 100,
-    shieldIntegrity: 100,
-    lifeIntegrity: 100,
-    warpCoreIntegrity: 100,
-  }
-);
+import { Sound, useSound } from "@/composables/useSound";
+import { useGameState } from "@/stores/useGameState";
+import { OVERLOAD_MAX, isCritical } from "@/engine/constants";
+import { autoOverload as autoOverloadOf, effectiveOverload } from "@/engine/warpCore";
+import { warpStress } from "@/engine/navigation";
+import {
+  SUBSYSTEM_KEYS,
+  SUBSYSTEM_LABELS,
+  type DamageControlTeam,
+  type SubsystemKey,
+} from "@/types/game";
 
 const { statusColor } = useLcarsColors();
+const { playSound } = useSound();
+const gameState = useGameState();
 
-// Nova mecanica de energia (substitui o antigo Main Energy dreno/carga):
-// o WC entrega um output nominal fixo, e os subsistemas da nave consomem
-// dele. Main Energy sempre mostra esse nominal -- nao e mais um recurso que
-// esvazia. Se o consumo total passar do output, o WC entra em sobrecorga
-// automaticamente.
-const WARP_CORE_OUTPUT = 4500;
+// ── Matriz de energia ────────────────────────────────────────────────────────
 
-// Mock local do consumo total roteado aos subsistemas -- indicador passivo,
-// soma da energia alocada em cada console de subsistema (Weapons/Helm/Shield).
-// Alocacao real por subsistema ainda nao existe (Fase 4, useGameState); ate
-// la fica fixo. Ver SST_LCARS_SPECS.md.
-const subsystemDraw = ref(3000);
+// O WC entrega output nominal fixo e os subsistemas consomem dele. `subsystemLoad`
+// e a MESMA funcao que alimenta `autoOverload` no turno -- painel e mecanica nao
+// podem divergir, e antes divergiam: aqui era um `ref(3000)` cravado.
+const subsystemDraw = computed(() => Math.round(gameState.subsystemLoad));
 
-// Interface for subsystems in Damage Control
-interface Subsystem {
-  name: string;
-  key: string;
-  integrity: number;
-}
+// Output EFETIVO do core, nao o nominal: core danificado gera menos e o mesmo
+// consumo passa a estourar o orcamento.
+const energyProduced = computed(() => Math.round(gameState.energyProduced));
 
-// Reactive state for subsystems
-const subsystems = ref<Subsystem[]>([
-  { name: "Warp Engines", key: "warp", integrity: props.warpIntegrity },
-  { name: "Short-Range Sensors", key: "srs", integrity: props.srsIntegrity },
-  { name: "Long-Range Sensors", key: "lrs", integrity: props.lrsIntegrity },
-  { name: "Phaser Banks", key: "phasers", integrity: props.phaserIntegrity },
-  { name: "Photon Tubes", key: "photons", integrity: props.photonIntegrity },
-  { name: "Shield Control", key: "shields", integrity: props.shieldIntegrity },
-  { name: "Life Support", key: "life", integrity: props.lifeIntegrity },
-  { name: "Warp Core", key: "warpCore", integrity: props.warpCoreIntegrity },
-]);
-
-// Watch props to sync Storybook changes dynamically
-watch(
-  () => props.warpIntegrity,
-  (val) => {
-    subsystems.value[0].integrity = val;
-  }
-);
-watch(
-  () => props.srsIntegrity,
-  (val) => {
-    subsystems.value[1].integrity = val;
-  }
-);
-watch(
-  () => props.lrsIntegrity,
-  (val) => {
-    subsystems.value[2].integrity = val;
-  }
-);
-watch(
-  () => props.phaserIntegrity,
-  (val) => {
-    subsystems.value[3].integrity = val;
-  }
-);
-watch(
-  () => props.photonIntegrity,
-  (val) => {
-    subsystems.value[4].integrity = val;
-  }
-);
-watch(
-  () => props.shieldIntegrity,
-  (val) => {
-    subsystems.value[5].integrity = val;
-  }
-);
-watch(
-  () => props.lifeIntegrity,
-  (val) => {
-    subsystems.value[6].integrity = val;
-  }
-);
-watch(
-  () => props.warpCoreIntegrity,
-  (val) => {
-    subsystems.value[7].integrity = val;
-  }
+const autoOverload = computed(() =>
+  autoOverloadOf(gameState.subsystemLoad, gameState.energyProduced)
 );
 
-// Sobrecarga automatica: dispara so quando subsystemDraw > WARP_CORE_OUTPUT,
-// valor = % de quanto passou do output, minimo 1% assim que estourar.
-const autoOverload = computed(() => {
-  if (subsystemDraw.value <= WARP_CORE_OUTPUT) return 0;
-  const excessPercent =
-    ((subsystemDraw.value - WARP_CORE_OUTPUT) / WARP_CORE_OUTPUT) * 100;
-  return Math.max(1, Math.round(excessPercent));
+const manualOverload = computed({
+  get: () => gameState.manualOverload,
+  set: (value) => gameState.setManualOverload(value),
 });
 
-// Sobrecarga manual: dial que o engenheiro roda de proposito (0-20%, curva
-// de risco da seção 10.2 do specs). Soma com a automatica no overload real
-// do core -- as duas empurram o WC alem da capacidade, uma de proposito,
-// outra por consequencia de rotear energia demais.
-const manualOverload = ref(0);
-const OVERLOAD_MAX = 20;
-// Label mostra o valor real de overload (0/5/10/15/20%), nao a fracao do
-// dial (0/25/50/75/100%) -- rotulo antigo dava a entender que "50%" era
-// metade da sobrecarga do reator, quando na verdade era so metade do dial
-// (10% de overload de verdade, ja que OVERLOAD_MAX e' 20%).
+// Label mostra o valor real de overload (0/5/10/15/20%), nao a fracao do dial.
 const OVERLOAD_PRESETS = [0, 5, 10, 15, 20].map((value) => ({
   label: value === 0 ? "OFF" : `${value}%`,
   value,
 }));
 
-const overload = computed(() => manualOverload.value + autoOverload.value);
+// Estresse de viagem entra no overload efetivo: warp acima de 4 empurra o core
+// junto com o manual e o automatico (decisao #29).
+const overload = computed(() =>
+  effectiveOverload(
+    gameState.manualOverload,
+    autoOverload.value,
+    gameState.warpTrip ? warpStress(gameState.warpTrip.warpFactor) : 0
+  )
+);
 
 const overloadColor = computed(() => {
   if (overload.value < 8) return statusColor("nominal");
@@ -151,27 +68,49 @@ const overloadColor = computed(() => {
   return statusColor("critical");
 });
 
-// Equipes de Controle de Danos (CdD) — mock local, sem lógica de fadiga real (Fase 3.5)
-interface DamageControlTeam {
-  id: number;
-  efficiency: number;
-  assignedSystem: string | null;
-  status: "idle" | "working" | "cooldown";
-}
+// ── Subsistemas: os 9, incluindo Auto-Navigation Computer ────────────────────
 
-const teams = ref<DamageControlTeam[]>([
-  { id: 1, efficiency: 100, assignedSystem: null, status: "idle" },
-  { id: 2, efficiency: 79, assignedSystem: "Warp Core", status: "working" },
-  {
-    id: 3,
-    efficiency: 63,
-    assignedSystem: "Shield Control",
-    status: "working",
-  },
-  { id: 4, efficiency: 100, assignedSystem: null, status: "idle" },
-  { id: 5, efficiency: 39, assignedSystem: null, status: "cooldown" },
-  { id: 6, efficiency: 20, assignedSystem: "Warp Core", status: "working" },
-]);
+// Ordem e rotulos vem de `types/game.ts` (fonte unica): a lista antiga tinha 8
+// entradas escritas a mao e nao incluia o Auto-Navigation Computer.
+const subsystems = computed(() =>
+  SUBSYSTEM_KEYS.map((key) => ({
+    key,
+    name: SUBSYSTEM_LABELS[key],
+    integrity: Math.round(gameState.subsystems[key]),
+  }))
+);
+
+const getSystemStatus = (integrity: number) => {
+  if (integrity >= 100) {
+    return { text: "OPERATIONAL", color: statusColor("nominal"), isBlinking: false };
+  }
+  // Critico (< 40) e paralisado, nao "danificado": a diferenca importa porque o
+  // subsistema para de funcionar de fato (decisoes #35/#37).
+  if (isCritical(integrity)) {
+    return { text: "OFFLINE", color: statusColor("critical"), isBlinking: true };
+  }
+  return { text: "DAMAGED", color: statusColor("damaged"), isBlinking: false };
+};
+
+// ── Toggles de subsistema nao-essencial ─────────────────────────────────────
+
+const TOGGLEABLE: SubsystemKey[] = ["srs", "lrs", "photons", "autoNav"];
+
+const isToggleable = (key: SubsystemKey) => TOGGLEABLE.includes(key);
+
+const isOn = (key: SubsystemKey) =>
+  !isToggleable(key) ||
+  gameState.subsystemsOn[key as "srs" | "lrs" | "photons" | "autoNav"];
+
+const toggleSubsystem = (key: SubsystemKey) => {
+  if (!isToggleable(key)) return;
+  playSound(isOn(key) ? Sound.POWER_DOWN : Sound.POWER_UP);
+  gameState.toggleSubsystemOn(key as "srs" | "lrs" | "photons" | "autoNav");
+};
+
+// ── Equipes de Controle de Danos ────────────────────────────────────────────
+
+const teams = computed(() => gameState.teams);
 
 const teamEfficiencyColor = (efficiency: number) => {
   if (efficiency > 60) return statusColor("nominal");
@@ -179,69 +118,46 @@ const teamEfficiencyColor = (efficiency: number) => {
   return statusColor("critical");
 };
 
-const dispatchTargets = subsystems.value.map((sys) => sys.name);
+const teamLabel = (team: DamageControlTeam) =>
+  team.assignedSystem ? SUBSYSTEM_LABELS[team.assignedSystem] : "—";
 
+/**
+ * Cicla o subsistema atribuido. Despacho e LIVRE (nao consome turno), mas o
+ * reparo so comeca a contar no turno SEGUINTE -- e o engine que garante isso
+ * via `turnsWorked`, nao esta tela.
+ */
 const cycleAssignment = (team: DamageControlTeam) => {
-  if (team.assignedSystem === null) {
-    team.assignedSystem = dispatchTargets[0];
-    team.status = "working";
+  if (team.status === "cooldown" || team.status === "guard" || team.status === "away") {
     return;
   }
-  const currentIndex = dispatchTargets.indexOf(team.assignedSystem);
-  const nextIndex = currentIndex + 1;
-  if (nextIndex >= dispatchTargets.length) {
-    team.assignedSystem = null;
-    team.status = "idle";
+  const current = team.assignedSystem;
+  const idx = current ? SUBSYSTEM_KEYS.indexOf(current) : -1;
+  const next = idx + 1;
+  if (next >= SUBSYSTEM_KEYS.length) {
+    gameState.recallTeam(team.id);
   } else {
-    team.assignedSystem = dispatchTargets[nextIndex];
+    gameState.dispatchTeam(team.id, SUBSYSTEM_KEYS[next]);
   }
 };
 
-// Recolhe a equipe (botao de status) -- so' faz sentido enquanto "working";
-// em "idle" nao ha o que recolher, em "cooldown" a equipe so' volta sozinha
-// com o tempo (mecanica de fadiga, secao 10.3), nao por acao manual daqui.
 const recallTeam = (team: DamageControlTeam) => {
   if (team.status !== "working") return;
-  team.assignedSystem = null;
-  team.status = "idle";
+  gameState.recallTeam(team.id);
 };
 
-// Helper to return style class and status text based on integrity level
-const getSystemStatus = (integrity: number) => {
-  if (integrity === 100) {
-    return {
-      text: "OPERATIONAL",
-      color: statusColor("nominal"),
-      isBlinking: false,
-    };
-  } else if (integrity > 0) {
-    return {
-      text: "DAMAGED",
-      color: statusColor("damaged"),
-      isBlinking: false,
-    };
-  } else {
-    return {
-      text: "OFFLINE",
-      color: statusColor("critical"),
-      isBlinking: true, // Red blinking offline status
-    };
+// ── Loop de docking ─────────────────────────────────────────────────────────
+
+const busy = ref(false);
+
+/** Turno de reparo em base atracada: tier 5, dano redirecionado pra base. */
+const repairTurn = async () => {
+  if (busy.value || !gameState.docked) return;
+  busy.value = true;
+  try {
+    await gameState.executeDockingRepairTurn();
+  } finally {
+    busy.value = false;
   }
-};
-
-// Simulated interaction controls
-const repairAll = () => {
-  subsystems.value.forEach((sys) => {
-    sys.integrity = 100;
-  });
-};
-
-const simulateDamage = () => {
-  const randomIndex = Math.floor(Math.random() * subsystems.value.length);
-  const isOffline = Math.random() > 0.5;
-  subsystems.value[randomIndex].integrity = isOffline
-    ? 0
-    : Math.floor(Math.random() * 90) + 5;
 };
 </script>
 
@@ -264,17 +180,18 @@ const simulateDamage = () => {
     >
       <LcarsTitle version="centered" size="small" text="Energy Matrix" />
 
-      <!-- Main Energy: sempre mostra o output nominal do WC, nao e mais um
-           recurso que drena -- consumo/sobrecarga sao controlados abaixo -->
+      <!-- Main Energy = o que o core CONSEGUE gerar agora (cai com o dano no
+           core). Nao e estoque: energia e vazao, e consumir acima disso gera
+           sobrecarga em vez de esvaziar tanque. -->
       <LcarsComplexButton
         color="primary-interactive"
         size="large"
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
-        <LcarsBlock label="Main Energy" :style="{ width: '8.5rem' }" />
+        <LcarsBlock label="Core Output" :style="{ width: '8.5rem' }" />
         <LcarsText
-          :text="String(WARP_CORE_OUTPUT)"
+          :text="String(energyProduced)"
           color="text-light"
           :style="{ flex: '1', textAlign: 'center' }"
         />
@@ -282,7 +199,7 @@ const simulateDamage = () => {
         <LcarsText
           :text="String(subsystemDraw)"
           :color="
-            subsystemDraw > WARP_CORE_OUTPUT
+            subsystemDraw > energyProduced
               ? statusColor('critical')
               : 'text-light'
           "
@@ -416,7 +333,7 @@ const simulateDamage = () => {
             <LcarsButton
               version="round-right"
               color="highlight-interactive"
-              :label="team.assignedSystem ?? 'Dispatch'"
+              :label="team.assignedSystem ? teamLabel(team) : 'Dispatch'"
               :style="{ width: '11rem' }"
               @click="cycleAssignment(team)"
             />
@@ -448,8 +365,15 @@ const simulateDamage = () => {
             <LcarsCap version="round-left" />
             <!-- System Label -->
             <LcarsBlock
-              :label="sys.name"
-              :style="{ width: '13rem', 'text-align': 'left' }"
+              :label="isToggleable(sys.key) && !isOn(sys.key)
+                ? `${sys.name} (OFF)`
+                : sys.name"
+              :style="{
+                width: '13rem',
+                'text-align': 'left',
+                cursor: isToggleable(sys.key) ? 'pointer' : 'default',
+              }"
+              @click="toggleSubsystem(sys.key)"
             />
             <!-- Textual Status: unico elemento com cor semantica, resto da
                  linha usa cor normal de tema -->
@@ -474,7 +398,7 @@ const simulateDamage = () => {
         </div>
       </div>
 
-      <!-- Damage/Repair Simulation Controls -->
+      <!-- Loop de docking: unico jeito de reparar em tier 5 -->
       <LcarsRow
         :style="{
           'margin-top': '1.5rem',
@@ -483,16 +407,12 @@ const simulateDamage = () => {
         }"
       >
         <LcarsButton
-          label="SIMULATE DAMAGE"
-          color="bg-orange-3"
-          :style="{ width: '15rem' }"
-          @click="simulateDamage"
-        />
-        <LcarsButton
-          label="REPAIR ALL"
-          color="bg-green-3"
-          :style="{ width: '15rem' }"
-          @click="repairAll"
+          id="dock-repair-btn"
+          label="REPAIR TURN (DOCKED)"
+          color="primary-interactive"
+          :disabled="!gameState.docked || busy"
+          :style="{ width: '20rem' }"
+          @click="repairTurn"
         />
       </LcarsRow>
     </LcarsColumn>

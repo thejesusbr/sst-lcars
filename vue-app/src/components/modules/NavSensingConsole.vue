@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { useScannerIcons, ScannerEntity } from "@/composables/useScannerIcons";
+
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
 import LcarsTitle from "@/components/elements/LcarsTitle.vue";
@@ -14,6 +14,10 @@ import LcarsBlock from "@/components/elements/LcarsBlock.vue";
 import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
 import { Sound, useSound } from "@/composables/useSound";
+import { useGameState } from "@/stores/useGameState";
+import { useQuadrantCells } from "@/composables/useQuadrantCells";
+import { isCritical, kbsCode } from "@/engine/constants";
+import { scanConfidence as scanConfidenceOf } from "@/engine/navigation";
 
 const { playSound } = useSound();
 
@@ -26,107 +30,84 @@ const props = withDefaults(
   }
 );
 
-const { getIcon, getRandomPlanet } = useScannerIcons();
+const gameState = useGameState();
+const { sectorCells, quadrantCells } = useQuadrantCells();
 
-const selectedSector = ref("3,4");
-const selectedSystem = ref("3,4");
-const remainingProbes = ref(3);
-const probeStatus = ref<"Offline" | "Active">("Offline");
+const selectedSector = ref({ ...gameState.position.sector });
+const selectedSystem = ref({ ...gameState.position.quadrant });
 
-// Demo grid: called once at setup so the random planet stays stable
-const demoShortRangeGrid: Record<string, ScannerCell> = {
-  "4,4": { img: getIcon(ScannerEntity.PLAYER) },
-  "2,3": { img: getRandomPlanet() },
-  "6,6": { img: getIcon(ScannerEntity.STARBASE_DOCK) },
-  "3,6": { img: getIcon(ScannerEntity.KLINGON_CRUISER) },
-  "5,2": { img: getIcon(ScannerEntity.ROMULAN_WARBIRD) },
-  "7,5": { text: "★", color: "golden-tanoi-fg" },
-};
+// Display SEMPRE X,Y (col,row) — a convenção interna row,col nunca vaza pra UI.
+const xy = (c: { row: number; col: number }) => `${c.col},${c.row}`;
+const selectedSectorLabel = computed(() => xy(selectedSector.value));
+const selectedSystemLabel = computed(() => xy(selectedSystem.value));
 
-const activeShortRangeGrid = ref<Record<string, ScannerCell>>(
-  props.shortRangeGrid ?? demoShortRangeGrid
+const remainingProbes = computed(() => gameState.remainingProbes);
+// Status vem da missão de sonda no estado, não de um `setTimeout`: a sonda
+// resolve no relógio de TURNOS (distância + 1), não em tempo real.
+const probeStatus = computed(() =>
+  gameState.probe ? ("Active" as const) : ("Offline" as const)
+);
+const probeTurnsLeft = computed(() => gameState.probe?.turnsRemaining ?? 0);
+
+// SRS em crítico ou desligado se comporta como cego: só a própria nave aparece.
+const srsOnline = computed(
+  () => gameState.subsystemsOn.srs && !isCritical(gameState.subsystems.srs)
 );
 
-// Codigo LRS: KBS (Klingons/Bases/Stars, ver SST_LCARS_SPECS.md 2.1). Cor
-// deriva do conteudo, nao e fixada por celula: inimigo (K>0) chama mais
-// atencao que base aliada (B>0); sem nenhum dos dois, so estrelas, nada de
-// interesse -- branco neutro.
-const lrsCodeColor = (code: string) => {
-  const klingons = Number(code[0] ?? 0);
-  const bases = Number(code[1] ?? 0);
-  if (klingons > 0) return "alert-fg";
-  if (bases > 0) return "anakiwa-fg";
-  return "text-light";
-};
+const activeShortRangeGrid = computed(
+  () =>
+    props.shortRangeGrid ??
+    sectorCells(gameState.currentSector, gameState.position.sector, {
+      srsOnline: srsOnline.value,
+    })
+);
 
 // LRS classico so cobre os quadrantes VIZINHOS (bloco 3x3 ao redor da nave)
 // e nao tem memoria -- some de novo ate o proximo Scan. Isso que o distingue
 // do Star Chart (COM 4, StarChartConsole.vue), que e o mapa acumulado de tudo
-// ja explorado na galaxia inteira e nao precisa ser re-escaneado. Grid
-// continua 8x8 cheio (mesmo tamanho/posicoes absolutas do Star Chart) pra
-// nao quebrar a mecanica de clicar no sistema e mandar a coordenada real pro
-// Helm -- so os 9 quadrantes vizinhos tem dado, o resto fica em branco.
+// ja explorado na galaxia inteira e nao precisa ser re-escaneado.
 // Ver SST_LCARS_SPECS.md 3.2/5.2/12.7.
-const playerQuadrant = ref({ row: 4, col: 4 });
-const longRangeScanned = ref(false);
-
-// Confianca do LRS decai com o tempo (ping de submarino -- informacao vai
-// ficando defasada desde o ultimo Scan). 5%/turno, piso em 30% (nunca some
-// de vez -- estrelas nao se movem, so inimigos/bases realmente ficam
-// desatualizados). "Turno" ainda nao existe como conceito global (Fase 4);
-// Advance Turn abaixo e so pra testar o decaimento ate la.
-const scanAge = ref(0);
-const SCAN_CONFIDENCE_FLOOR = 0.3;
-const SCAN_DECAY_PER_TURN = 0.05;
-const scanConfidence = computed(() =>
-  Math.max(SCAN_CONFIDENCE_FLOOR, 1 - SCAN_DECAY_PER_TURN * scanAge.value)
+const longRangeScanned = computed(
+  () => Object.keys(gameState.lrsScan).length > 0
 );
 
-// Moldura na celula da posicao atual da nave -- so a nave sempre sabe onde
-// ela esta, isso nao depende do Scan revelar o conteudo dos vizinhos.
-const PLAYER_MARKER_STYLE = { boxShadow: "inset 0 0 0 3px #ffffff" };
+const lrsDisabled = computed(
+  () => !gameState.subsystemsOn.lrs || isCritical(gameState.subsystems.lrs)
+);
 
-// Codigos por quadrante absoluto (galaxia 1-8x1-8), so os vizinhos do
-// jogador tem entrada aqui -- o resto da galaxia esta fora do alcance do LRS.
-const LRS_DEMO_CODES: Record<string, string> = {
-  "3,3": "000",
-  "3,4": "104",
-  "4,3": "012",
-  "4,4": "003",
-  "4,5": "001",
-  "5,4": "201",
-  "5,5": "000",
-};
+// Confiança decai com a idade do scan, e o dano no LRS ACELERA o decaimento
+// (`5% × (1 + d)`/turno, piso 30%). É a mesma função do engine, não uma cópia.
+const scanConfidence = computed(() =>
+  scanConfidenceOf(gameState.lrsScanAge, gameState.subsystems.lrs)
+);
 
 const longRangeGrid = computed(() => {
-  const grid: Record<string, ScannerCell> = {};
-  if (longRangeScanned.value) {
-    for (let dRow = -1; dRow <= 1; dRow++) {
-      for (let dCol = -1; dCol <= 1; dCol++) {
-        const absRow = playerQuadrant.value.row + dRow;
-        const absCol = playerQuadrant.value.col + dCol;
-        if (absRow < 1 || absRow > 8 || absCol < 1 || absCol > 8) continue;
-        const code = LRS_DEMO_CODES[`${absRow},${absCol}`];
-        if (!code) continue;
-        grid[`${absRow},${absCol}`] = {
-          text: code,
-          color: lrsCodeColor(code),
-          style: { opacity: String(scanConfidence.value) },
-        };
-      }
-    }
+  // Confiança POR ENTRADA: sonda cria entrada com idade própria (datalink), o
+  // scan clássico zera todas — cada uma esmaece no seu ritmo.
+  const codes: Record<string, { code: string }> = {};
+  const confidence: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(gameState.lrsScan)) {
+    codes[key] = entry;
+    confidence[key] = scanConfidenceOf(entry.age, gameState.subsystems.lrs);
   }
-  // Posicao atual da nave: o SRS ja escaneou o sistema, entao essa info
-  // sempre aparece e nunca esmaece -- independe do LRS ter sido acionado.
-  const playerKey = `${playerQuadrant.value.row},${playerQuadrant.value.col}`;
-  const playerCode = LRS_DEMO_CODES[playerKey];
-  grid[playerKey] = {
-    ...(playerCode
-      ? { text: playerCode, color: lrsCodeColor(playerCode) }
-      : {}),
-    style: PLAYER_MARKER_STYLE,
-  };
-  return grid;
+
+  // O quadrante ATUAL aparece sempre, a 100% — o SRS já escaneou onde a nave
+  // está, isso não depende do LRS nem esmaece.
+  const here = gameState.position.quadrant;
+  const hereKey = `${here.row},${here.col}`;
+  const content = gameState.galaxy?.[hereKey];
+  if (content) {
+    codes[hereKey] = {
+      code: kbsCode({
+        klingons: content.klingons,
+        bases: content.baseIds.length,
+        stars: content.stars,
+      }),
+    };
+    confidence[hereKey] = 1;
+  }
+
+  return quadrantCells(codes, here, confidence);
 });
 
 const handleShortRangeCellClick = (data: {
@@ -138,7 +119,7 @@ const handleShortRangeCellClick = (data: {
   event: MouseEvent;
 }) => {
   if (!data.isBorder) {
-    selectedSector.value = `${data.row},${data.col}`;
+    selectedSector.value = { row: data.row, col: data.col };
   }
 };
 
@@ -151,52 +132,101 @@ const handleLongRangeCellClick = (data: {
   event: MouseEvent;
 }) => {
   if (!data.isBorder) {
-    selectedSystem.value = `${data.row},${data.col}`;
+    selectedSystem.value = { row: data.row, col: data.col };
   }
 };
 
+const busy = ref(false);
+
+/** Envolve ação que consome turno: evita duplo clique disparar 2 turnos. */
+const withTurn = async (fn: () => Promise<unknown>) => {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await fn();
+  } finally {
+    busy.value = false;
+  }
+};
+
+/**
+ * Só INFORMA o Helm (indicador Set Destination). O movimento em si dispara no
+ * "Engage Impulse"/"Engage Warp" de lá — é o que permite ajustar potência/fator
+ * antes de partir, e são eles que decidem a duração da viagem.
+ */
 const sendToHelm = () => {
-  console.log(`Sending sector ${selectedSector.value} to Helm`);
+  gameState.setDestinationSector({ ...selectedSector.value });
 };
 
-const hail = () => {
-  playSound(Sound.HAIL);
-  console.log("Hailing target...");
-};
+/** Alvo do hail: entidade na célula selecionada, por `id` estável. */
+const hailTargetId = computed(() => {
+  const target = selectedSector.value;
+  return (
+    gameState.currentSector.find(
+      (e) =>
+        e.position.row === target.row &&
+        e.position.col === target.col &&
+        !e.cloaked
+    )?.id ?? null
+  );
+});
 
+const hail = () =>
+  withTurn(async () => {
+    if (!hailTargetId.value) return;
+    playSound(Sound.HAIL);
+    await gameState.hail(hailTargetId.value);
+  });
+
+// Atracagem é LIVRE (não resolve turno): é o loop de docking que consome.
 const dock = () => {
-  console.log("Initiating docking sequence...");
+  if (gameState.docked) {
+    gameState.undock();
+    playSound(Sound.POWER_DOWN);
+    return;
+  }
+  const res = gameState.dock();
+  if (res.docked) playSound(Sound.POWER_UP);
 };
 
-const sendParty = () => {
-  playSound(Sound.TRANSPORTER);
-  console.log("Sending landing party...");
-};
+/** Equipe emprestável: idle é a primeira escolha. */
+const availableTeam = computed(
+  () => gameState.teams.find((t) => t.status === "idle") ?? null
+);
 
+const sendParty = () =>
+  withTurn(async () => {
+    if (!availableTeam.value) return;
+    playSound(Sound.TRANSPORTER);
+    await gameState.sendPartyTo(availableTeam.value.id, {
+      ...selectedSector.value,
+    });
+  });
+
+/** Scan de LRS: revela o bloco 3x3 no estado, sem custo de turno. */
 const scanLongRange = () => {
-  longRangeScanned.value = true;
-  scanAge.value = 0;
-};
-
-// Mock de teste pro decaimento de confianca do LRS -- Fase 4 tem turno de
-// verdade (useGameState); ate la, so avanca a idade do ultimo scan.
-const advanceTurn = () => {
-  if (longRangeScanned.value) scanAge.value += 1;
+  if (lrsDisabled.value) return;
+  gameState.scanLongRange();
 };
 
 const sendSystemToHelm = () => {
-  console.log(`Sending system ${selectedSystem.value} to Helm`);
+  gameState.setDestination({ ...selectedSystem.value });
 };
 
-const sendProbe = () => {
-  if (remainingProbes.value > 0 && probeStatus.value === "Offline") {
+const sendProbe = () =>
+  withTurn(async () => {
     playSound(Sound.PROBE_LAUNCH);
-    probeStatus.value = "Active";
-    remainingProbes.value -= 1;
-    setTimeout(() => {
-      probeStatus.value = "Offline";
-    }, 2000);
-  }
+    await gameState.launchProbe({ ...selectedSystem.value });
+  });
+
+const toggleSrs = () => {
+  playSound(gameState.subsystemsOn.srs ? Sound.POWER_DOWN : Sound.POWER_UP);
+  gameState.toggleSubsystemOn("srs");
+};
+
+const toggleLrs = () => {
+  playSound(gameState.subsystemsOn.lrs ? Sound.POWER_DOWN : Sound.POWER_UP);
+  gameState.toggleSubsystemOn("lrs");
 };
 </script>
 
@@ -268,7 +298,7 @@ const sendProbe = () => {
         <LcarsBlock label="Selected sector" :style="{ width: '10rem' }" />
         <LcarsText
           id="snd-hlm-sec-txt"
-          :text="selectedSector"
+          :text="selectedSectorLabel"
           :style="{ width: '4rem', 'text-align': 'center' }"
         />
         <LcarsBlock version="decorator" :style="{ width: '2rem' }" />
@@ -285,10 +315,19 @@ const sendProbe = () => {
       <!-- Auxiliary controls -->
       <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '24rem' }">
         <LcarsButton
+          id="srs-toggle-btn"
+          version="round"
+          :label="gameState.subsystemsOn.srs ? 'SRS On' : 'SRS Off'"
+          :color="gameState.subsystemsOn.srs ? 'secondary-interactive' : 'primary-static'"
+          :style="{ width: '6rem' }"
+          @click="toggleSrs"
+        />
+        <LcarsButton
           id="hail-btn"
           version="round"
           color="tertiary-interactive"
           label="Hail"
+          :disabled="!hailTargetId || busy"
           :style="{ width: '7rem' }"
           @click="hail"
         />
@@ -296,7 +335,8 @@ const sendProbe = () => {
           id="dock-btn"
           version="round"
           color="highlight-interactive"
-          label="Dock"
+          :label="gameState.docked ? 'Undock' : 'Dock'"
+          :disabled="!gameState.docked && !gameState.canDockNow"
           :style="{ width: '7rem' }"
           @click="dock"
         />
@@ -305,6 +345,7 @@ const sendProbe = () => {
           version="round"
           color="highlight-dark-interactive"
           label="Snd Party"
+          :disabled="!availableTeam || busy"
           :style="{ width: '8rem' }"
           @click="sendParty"
         />
@@ -382,23 +423,24 @@ const sendProbe = () => {
           color="text-light"
           :style="{ textAlign: 'center', fontSize: '1rem', opacity: '0.6' }"
         />
-        <LcarsButton
-          id="advTurnBtn"
-          version="round"
-          label="Advance Turn"
-          color="primary-interactive"
-          :style="{ width: '9rem' }"
-          @click="advanceTurn"
-        />
       </LcarsRow>
 
       <!-- Controls row: Scan, Selected System, Snd to Helm -->
       <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '42rem' }">
         <LcarsButton
+          id="lrs-toggle-btn"
+          version="round"
+          :label="gameState.subsystemsOn.lrs ? 'LRS On' : 'LRS Off'"
+          :color="gameState.subsystemsOn.lrs ? 'secondary-interactive' : 'primary-static'"
+          :style="{ width: '6rem' }"
+          @click="toggleLrs"
+        />
+        <LcarsButton
           id="lngScnBtn"
           version="round"
           label="Scan"
           color="secondary-interactive"
+          :disabled="lrsDisabled"
           :style="{ width: '8rem' }"
           @click="scanLongRange"
         />
@@ -410,7 +452,7 @@ const sendProbe = () => {
           <LcarsBlock label="Selected System" :style="{ width: '12rem' }" />
           <LcarsText
             id="sndHlmSysTxt"
-            :text="selectedSystem"
+            :text="selectedSystemLabel"
             :style="{ width: '4rem', 'text-align': 'center' }"
           />
           <LcarsBlock version="decorator" :style="{ width: '4rem' }" />
@@ -447,7 +489,7 @@ const sendProbe = () => {
           <LcarsBlock version="decorator" :style="{ width: '2rem' }" />
           <LcarsBlock
             id="prbStsInd"
-            :label="probeStatus"
+            :label="probeStatus === 'Active' ? `T-${probeTurnsLeft}` : probeStatus"
             :version="probeStatus === 'Offline' ? 'red-dark-light' : undefined"
             :color="probeStatus !== 'Offline' ? 'bg-green-5' : undefined"
             :style="{ width: '7rem' }"
@@ -458,7 +500,7 @@ const sendProbe = () => {
             label="Send to selected system"
             color="primary-interactive"
             :style="{ width: '16rem' }"
-            :disabled="remainingProbes === 0 || probeStatus !== 'Offline'"
+            :disabled="remainingProbes === 0 || probeStatus !== 'Offline' || busy"
             @click="sendProbe"
           />
         </LcarsComplexButton>

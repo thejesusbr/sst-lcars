@@ -81,6 +81,21 @@ export function getRandomPlanet(): string {
   return planetIcons[Math.floor(Math.random() * planetIcons.length)]
 }
 
+/**
+ * Ícone de planeta DETERMINÍSTICO por chave (id da entidade). O aleatório puro
+ * fazia o planeta trocar de arte a cada re-render — e cada console sortear o
+ * seu: SRS e Weapons mostravam planetas diferentes pra MESMA entidade. A arte é
+ * cosmética, mas identidade visual tem que ser estável na sessão inteira; o id
+ * (`q{row}{col}-p-0`) já é estável por construção.
+ */
+export function getPlanetIconFor(key: string): string {
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  }
+  return planetIcons[hash % planetIcons.length]
+}
+
 // ── Main composable ──────────────────────────────────────────────────────────
 
 export function useScannerIcons(playerShipKey = 'enterprise-d') {
@@ -100,6 +115,7 @@ export function useScannerIcons(playerShipKey = 'enterprise-d') {
     scannerIconMap,
     planetIcons,
     getRandomPlanet,
+    getPlanetIconFor,
     ScannerEntity,
   }
 }

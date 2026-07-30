@@ -12,114 +12,164 @@ import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsComplexButton from "@/components/elements/LcarsComplexButton.vue";
 import LcarsWrapper from "@/components/elements/LcarsWrapper.vue";
 import LcarsToggleSwitch from "../elements/LcarsToggleSwitch.vue";
-import CombatLog, {
-  type CombatLogEntry,
-} from "@/components/widgets/CombatLog.vue";
+import CombatLog from "@/components/widgets/CombatLog.vue";
 import { Sound, useSound } from "@/composables/useSound";
+import { useGameState } from "@/stores/useGameState";
+import { OVERLOAD_MAX } from "@/engine/constants";
+import type { CombatLogEntry } from "@/types/game";
 
 const { playSound } = useSound();
-
-const props = withDefaults(
-  defineProps<{
-    energyLevel?: number;
-    stardate?: number;
-    enemiesLeft?: number;
-    starbasesLeft?: number;
-    sectorCoords?: string;
-    torpedoStock?: number;
-    shieldStatus?: "UP" | "DOWN";
-    warpCoreStatus?: "NOM" | "DAM" | "BRC";
-    overloadPercent?: number;
-    breachTurnsRemaining?: number;
-  }>(),
-  {
-    energyLevel: 3000,
-    stardate: 3600.0,
-    enemiesLeft: 12,
-    starbasesLeft: 14,
-    sectorCoords: "9876 54",
-    torpedoStock: 8,
-    shieldStatus: "UP",
-    warpCoreStatus: "NOM",
-    overloadPercent: 0,
-    breachTurnsRemaining: 5,
-  }
-);
-
-const emit = defineEmits<{ (e: "toggle-red-alert"): void }>();
+const gameState = useGameState();
 
 const { lcarsColors, statusColor } = useLcarsColors();
 
+// ── Leitura do estado real ───────────────────────────────────────────────────
+
+// ORÇAMENTO: gerada − consumida. Sobra positiva = dentro do orçamento; negativa
+// = consumo passou do output do WC, que é o gatilho do `autoOverload`.
+// Antes lia `mainEnergy`, que é um estoque separado e nunca é descontado pelo
+// consumo por turno — ficava travado em 3000 numa partida tranquila.
+const energyLevel = computed(() => Math.round(gameState.energyBudget));
+const stardate = computed(() => gameState.stardate.toFixed(1));
+const enemiesLeft = computed(() => gameState.enemiesLeft);
+const starbasesLeft = computed(() => gameState.starbasesLeft);
+const torpedoStock = computed(() => gameState.torpedoStock);
+
+const sectorCoords = computed(() => {
+  const q = gameState.position.quadrant;
+  const s = gameState.position.sector;
+  return `${q.row}${q.col} ${s.row}${s.col}`;
+});
+
+const shieldStatus = computed(() =>
+  gameState.shieldEnergy > 0 && gameState.shieldIntegrity > 0 ? "UP" : "DOWN"
+);
+
+const warpCoreStatus = computed<"NOM" | "DAM" | "BRC">(() => {
+  if (gameState.breach.active) return "BRC";
+  return gameState.subsystems.warpCore < 100 ? "DAM" : "NOM";
+});
+
+const breachTurnsRemaining = computed(() => gameState.breach.turnsRemaining);
+
+// Casco: o que o dano inimigo consome depois que os escudos saturam. Zerar é
+// destruição da nave.
+const hullIntegrity = computed(() => Math.round(gameState.hullIntegrity));
+const hullColor = computed(() => {
+  if (hullIntegrity.value > 60) return statusColor("nominal");
+  if (hullIntegrity.value > 25) return statusColor("damaged");
+  return `${statusColor("critical")} blink`;
+});
+
+// Overload efetivo em % da escala 0-20, incluindo o automático do consumo real.
+const overloadPercent = computed(() =>
+  Math.round((gameState.manualOverload / OVERLOAD_MAX) * 100)
+);
+
+const prisoners = computed(
+  () => `${gameState.brig.count}/${gameState.brig.capacity}`
+);
+
+// Limiares em cima do ORÇAMENTO, não do estoque: sobra alta é folga, sobra
+// negativa é sobrecarga automática em curso.
 const energyStatus = computed(() =>
-  props.energyLevel > 1500
+  energyLevel.value > 1500
     ? "Nominal"
-    : props.energyLevel > 500
+    : energyLevel.value > 0
     ? "Warning"
-    : "Critical"
+    : "Overload"
 );
 const starbasesStatus = computed(() =>
-  props.starbasesLeft > 0 ? "Nominal" : "None"
+  starbasesLeft.value > 0 ? "Nominal" : "None"
 );
 
 const warpCoreColor = computed(() => {
-  if (props.warpCoreStatus === "BRC") return `${statusColor("critical")} blink`;
-  if (props.warpCoreStatus === "DAM") return statusColor("damaged");
+  if (warpCoreStatus.value === "BRC") return `${statusColor("critical")} blink`;
+  if (warpCoreStatus.value === "DAM") return statusColor("damaged");
   return statusColor("nominal");
 });
 
-// Mesmo mecanismo do app legado (src/modules/situation-panel.js:182-187):
-// so alterna a classe "red-alert" no body. O resto (botoes com cor fixa de
-// papel de tema mudando pra tons de vermelho) ja vem do CSS portado em
-// theme.css (.red-alert .primary-interactive etc), sem precisar de logica
-// extra aqui.
-const redAlert = ref(false);
+// ── Alerta: bidirecional ─────────────────────────────────────────────────────
 
-watch(redAlert, (value) => {
-  document.body.classList.toggle("red-alert", value);
-  if (value) playSound(Sound.RED_ALERT);
-  emit("toggle-red-alert");
+// O toggle escreve no estado e o estado dirige a classe do body — não um `ref`
+// local. Bidirecional de verdade: o engine também pode subir o nível (entrar em
+// quadrante hostil) e o painel reflete sem o jogador tocar em nada.
+const redAlert = computed({
+  get: () => gameState.alertLevel === "red",
+  set: (value) => gameState.setAlertLevel(value ? "red" : "green"),
 });
+
+// Texto mostra o NÍVEL, não um booleano: `yellow` é estado válido desde já,
+// só não tem tema próprio (design.md decisão 7).
+const alertLabel = computed(() => gameState.alertLevel.toUpperCase());
+
+watch(
+  () => gameState.alertLevel,
+  (level) => {
+    // A camada de tema é binária por construção: só `red` tem tratamento.
+    document.body.classList.toggle("red-alert", level === "red");
+    if (level === "red") playSound(Sound.RED_ALERT);
+  },
+  { immediate: true }
+);
 
 onUnmounted(() => {
   document.body.classList.remove("red-alert");
 });
 
-// Combat Log embutido na 4a coluna (painel fixo inferior antes -- fundido
-// aqui pra caber no grid de 4 colunas). Exibicao/scroll ficam no componente
-// CombatLog.vue; aqui so os dados e o filtro por aba.
+// ── Controles de turno ───────────────────────────────────────────────────────
+
+const busy = ref(false);
+
+const endTurn = async () => {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await gameState.executeEndTurn();
+  } finally {
+    busy.value = false;
+  }
+};
+
+const SKIP_TURNS = 5;
+
+const skipTurns = async () => {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await gameState.executeSkipTurns(SKIP_TURNS);
+  } finally {
+    busy.value = false;
+  }
+};
+
+// ── Combat Log ───────────────────────────────────────────────────────────────
+
 const activeLogTab = ref<CombatLogEntry["category"]>("general");
 
+// Trocar de aba NÃO marca como lida: só rolar até o fim marca (decisão #27).
 const toggleLogTab = (tab: CombatLogEntry["category"]) => {
   activeLogTab.value = tab;
 };
 
-const logEntries = ref<CombatLogEntry[]>([
-  {
-    stardate: 3600.1,
-    category: "general",
-    text: "*** RED ALERT *** Klingons in this quadrant!",
-  },
-  {
-    stardate: 3600.2,
-    category: "engineering",
-    text: "Shields absorb 340 units.",
-  },
-  {
-    stardate: 3600.3,
-    category: "captain",
-    text: "Captain's Log: entering hostile quadrant 3,4.",
-  },
-  { stardate: 3600.4, category: "general", text: "*** KLINGON DESTROYED ***" },
-  {
-    stardate: 3600.5,
-    category: "engineering",
-    text: "Warp Core overload at 12%. Damage control team dispatched to warp core.",
-  },
-]);
-
 const filteredLogEntries = computed(() =>
-  logEntries.value.filter((entry) => entry.category === activeLogTab.value)
+  gameState.combatLog.filter((entry) => entry.category === activeLogTab.value)
 );
+
+/** Aba pisca enquanto a categoria tiver entrada acima do marcador de leitura. */
+const tabClass = (tab: CombatLogEntry["category"]) =>
+  gameState.unreadByCategory[tab] > 0 ? "blink" : "";
+
+// Primeira não lida da aba ativa = o próprio marcador de leitura (é uma
+// contagem de lidas, logo o índice da próxima). O CombatLog rola até ela ao
+// trocar de aba; a aba para de piscar quando o scroll atingir o fim
+// (`reached-end` -> `markLogRead`).
+const firstUnreadIndex = computed(
+  () => gameState.logReadMarkers[activeLogTab.value]
+);
+
+const tabDim = (tab: CombatLogEntry["category"]) =>
+  activeLogTab.value === tab ? "" : "brightness(0.6)";
 </script>
 
 <template>
@@ -309,6 +359,27 @@ const filteredLogEntries = computed(() =>
             </LcarsComplexButton>
           </LcarsRow>
 
+          <!-- Hull integrity -->
+          <LcarsRow>
+            <LcarsComplexButton color="primary-interactive">
+              <LcarsCap :style="{ background: 'transparent' }" />
+              <LcarsBlock
+                label="Hull"
+                :style="{ flex: 'none', width: '5.5rem' }"
+              />
+              <LcarsBlock version="decorator" />
+              <LcarsText
+                color="text-light"
+                :text="`${hullIntegrity}%`"
+                :style="{ flex: '1' }"
+              />
+              <LcarsBlock
+                :color="hullColor"
+                :style="{ flex: 'none', width: '3rem' }"
+              />
+            </LcarsComplexButton>
+          </LcarsRow>
+
           <!-- Overload -->
           <LcarsRow>
             <LcarsComplexButton color="secondary-interactive">
@@ -328,7 +399,7 @@ const filteredLogEntries = computed(() =>
             </LcarsComplexButton>
           </LcarsRow>
         </LcarsColumn>
-        <!-- Botão Toggle Red Alert -->
+        <!-- Botão Toggle Red Alert, Brig, Avanço de turno -->
         <LcarsColumn id="stn-pnl-dsp-c" :style="{ flex: '1' }">
           <LcarsRow
             :style="{ width: '100%', gap: '0.5rem', 'align-items': 'stretch' }"
@@ -346,15 +417,52 @@ const filteredLogEntries = computed(() =>
               <LcarsText
                 color="text-light"
                 :style="{ 'min-width': '7.5rem' }"
-                :text="redAlert ? 'RED' : 'GREEN'"
+                :text="alertLabel"
               />
             </LcarsComplexButton>
             <LcarsToggleSwitch
-              color="highlight-dark-interactive"
+              color="highlight-interactive"
               :style="{ flex: '1' }"
               v-model="redAlert"
             />
             <LcarsCap version="round-right" color="tertiary-static" />
+          </LcarsRow>
+
+          <!-- Prisioneiros na cela: count/capacity -->
+          <LcarsRow>
+            <LcarsComplexButton color="secondary-interactive">
+              <LcarsCap version="round-left" />
+              <LcarsBlock
+                label="Prisoners"
+                :style="{ flex: 'none', width: '5.5rem' }"
+              />
+              <LcarsText
+                color="text-light"
+                :text="prisoners"
+                :style="{ flex: '1' }"
+              />
+              <LcarsCap version="round-right" />
+            </LcarsComplexButton>
+          </LcarsRow>
+
+          <!-- Avanço de turno -->
+          <LcarsRow :style="{ gap: '0.35rem' }">
+            <LcarsButton
+              id="end-turn-btn"
+              label="End Turn"
+              color="primary-interactive"
+              :disabled="busy"
+              :style="{ flex: '1' }"
+              @click="endTurn"
+            />
+            <LcarsButton
+              id="skip-turns-btn"
+              :label="`Skip ${SKIP_TURNS}`"
+              color="tertiary-interactive"
+              :disabled="busy"
+              :style="{ flex: '1' }"
+              @click="skipTurns"
+            />
           </LcarsRow>
         </LcarsColumn>
         <!-- Logs -->
@@ -369,32 +477,33 @@ const filteredLogEntries = computed(() =>
               id="cap-log-tab"
               label="Cap. Log"
               color="primary-static"
-              :style="{
-                filter: activeLogTab === 'captain' ? '' : 'brightness(0.6)',
-              }"
+              :class="tabClass('captain')"
+              :style="{ filter: tabDim('captain') }"
               @click="toggleLogTab('captain')"
             />
             <LcarsButton
               id="shp-log-tab"
               label="Ship Log"
               color="secondary-static"
-              :style="{
-                filter: activeLogTab === 'general' ? '' : 'brightness(0.6)',
-              }"
+              :class="tabClass('general')"
+              :style="{ filter: tabDim('general') }"
               @click="toggleLogTab('general')"
             />
             <LcarsButton
               id="eng-log-tab"
               label="Eng. Log"
               color="tertiary-static"
-              :style="{
-                filter: activeLogTab === 'engineering' ? '' : 'brightness(0.6)',
-              }"
+              :class="tabClass('engineering')"
+              :style="{ filter: tabDim('engineering') }"
               @click="toggleLogTab('engineering')"
             />
             <LcarsCap version="round-right" :color="lcarsColors.primary[4]" />
           </LcarsComplexButton>
-          <CombatLog :entries="filteredLogEntries" />
+          <CombatLog
+            :entries="filteredLogEntries"
+            :first-unread-index="firstUnreadIndex"
+            @reached-end="gameState.markLogRead(activeLogTab)"
+          />
         </LcarsColumn>
       </LcarsRow>
 

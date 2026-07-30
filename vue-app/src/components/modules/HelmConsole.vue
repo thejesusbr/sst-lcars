@@ -25,31 +25,37 @@ const toggleSysSec = (opt: "sec" | "quad") => {
   activeDstToggle.value = opt;
 };
 
-// Destino do setor (local para movimentação de impulso ou dentro do setor)
-const sectorTarget = ref({
-  row: gameState.position.sector.row,
-  col: gameState.position.sector.col,
-});
-
+// Destinos vêm da STORE: "Snd Helm"/"Snd to Helm" do NavSensing e Star Chart
+// escrevem lá, e o D-Pad daqui ajusta o mesmo campo. Set Destination é só
+// informação — mover é Engage.
 const destination = computed(() => ({
   quadrant: gameState.destination ?? { ...gameState.position.quadrant },
-  sector: sectorTarget.value,
+  sector: gameState.destinationSector ?? { ...gameState.position.sector },
 }));
 
 const adjustDestination = (dCol: number, dRow: number) => {
   if (activeDstToggle.value === "sec") {
-    const target = sectorTarget.value;
-    target.col = Math.min(8, Math.max(1, target.col + dCol));
-    target.row = Math.min(8, Math.max(1, target.row + dRow));
-  } else {
-    const current = gameState.destination ?? { ...gameState.position.quadrant };
-    const next = {
+    const current = destination.value.sector;
+    gameState.setDestinationSector({
       col: Math.min(8, Math.max(1, current.col + dCol)),
       row: Math.min(8, Math.max(1, current.row + dRow)),
-    };
-    gameState.setDestination(next);
+    });
+  } else {
+    const current = destination.value.quadrant;
+    gameState.setDestination({
+      col: Math.min(8, Math.max(1, current.col + dCol)),
+      row: Math.min(8, Math.max(1, current.row + dRow)),
+    });
   }
 };
+
+// Posição atual, sempre X,Y (col,row). Antes era texto cravado "3, 4".
+const currentSectorLabel = computed(
+  () => `${gameState.position.sector.col}, ${gameState.position.sector.row}`
+);
+const currentQuadrantLabel = computed(
+  () => `${gameState.position.quadrant.col}, ${gameState.position.quadrant.row}`
+);
 
 const dirPadSvg = `<svg width="70mm" height="70mm" 
   version="1.1" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" 
@@ -126,7 +132,10 @@ const warpFactor = computed({
   get: () => gameState.warpFactor,
   set: (val) => gameState.setWarpFactor(val),
 });
-const warpEngaged = ref(false);
+// Engajado = viagem REAL em curso no estado, não um toggle visual local. O
+// warp desengaja sozinho quando `warpTrip` resolve (chegada, aborto por dano).
+const warpEngaged = computed(() => gameState.warpTrip !== null);
+const busy = ref(false);
 let warpEffect: WarpSpeed | undefined;
 
 // A lib nao trava TARGET_SPEED (so floor em 0) -- default da lib e SPEED=0.7,
@@ -142,18 +151,47 @@ const WARP_SPEED_SCALE = 15;
 const WARP_ACCEL_FACTOR = 0.08;
 const WARP_DECEL_FACTOR = 0.2;
 
-const engageWarp = () => {
-  warpEngaged.value = !warpEngaged.value;
-  playSound(warpEngaged.value ? Sound.WARP_ENTER : Sound.WARP_EXIT);
+/**
+ * Engage Warp: despacha o movimento DE VERDADE (antes só ligava o efeito
+ * visual — a nave nunca saía do lugar). O destino vem do Set Destination; a
+ * duração é `ceil(distância / warpFactor)`, então o fator escolhido aqui
+ * decide quantos turnos a viagem leva. O efeito visual segue `warpTrip` via
+ * watch — inclusive o desengate automático na chegada.
+ */
+const engageWarp = async () => {
+  if (busy.value || warpEngaged.value) return;
+  busy.value = true;
+  try {
+    await gameState.moveWarp();
+  } finally {
+    busy.value = false;
+  }
+};
+
+/** Engage Impulse: movimento intra-setor até o Set Destination de setor. */
+const engageImpulse = async () => {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await gameState.moveImpulse();
+  } finally {
+    busy.value = false;
+  }
+};
+
+// Efeito visual e sons dirigidos pelo ESTADO da viagem: engajar (aqui ou por
+// qualquer caminho futuro) acelera, resolver desengaja e desacelera sozinho.
+watch(warpEngaged, (engaged) => {
+  playSound(engaged ? Sound.WARP_ENTER : Sound.WARP_EXIT);
   if (!warpEffect) return;
-  if (warpEngaged.value) {
+  if (engaged) {
     warpEffect.SPEED_ADJ_FACTOR = WARP_ACCEL_FACTOR;
     warpEffect.TARGET_SPEED = warpFactor.value * WARP_SPEED_SCALE;
   } else {
     warpEffect.SPEED_ADJ_FACTOR = WARP_DECEL_FACTOR;
     warpEffect.TARGET_SPEED = 0;
   }
-};
+});
 
 onMounted(() => {
   bindPadButtons();
@@ -213,9 +251,9 @@ watch(warpFactor, (value) => {
           color="highlight-dark-interactive"
           :style="{ width: '3.75rem' }"
         />
-        <LcarsText id="cur-loc-sec" color="text-light" text="3, 4" />
+        <LcarsText id="cur-loc-sec" color="text-light" :text="currentSectorLabel" />
         <LcarsBlock label="System" :style="{ width: '3.75rem' }" />
-        <LcarsText id="cur-loc-sys" color="text-light" text="3, 4" />
+        <LcarsText id="cur-loc-sys" color="text-light" :text="currentQuadrantLabel" />
         <LcarsCap version="round-right" color="tertiary-static" />
       </LcarsComplexButton>
 
@@ -361,7 +399,9 @@ watch(warpFactor, (value) => {
         class="dark-light"
         color="highlight-interactive"
         version="round"
+        :disabled="busy || warpEngaged"
         :style="{ alignSelf: 'center', width: '50%' }"
+        @click="engageImpulse"
       />
     </LcarsColumn>
     <!-- Controles de dobra -->
@@ -420,9 +460,10 @@ watch(warpFactor, (value) => {
       <LcarsButton
         id="wrpEng"
         version="round"
-        label="Engage Warp"
+        :label="warpEngaged ? 'Warp Engaged' : 'Engage Warp'"
         color="highlight-interactive"
         :class="{ 'white-flash': warpEngaged, 'dark-lite': !warpEngaged }"
+        :disabled="busy || warpEngaged"
         :style="{
           width: '15rem',
           flex: 'none',

@@ -12,6 +12,8 @@ import LcarsCap from "@/components/elements/LcarsCap.vue";
 import LcarsBlock from "@/components/elements/LcarsBlock.vue";
 import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
+import { useGameState } from "@/stores/useGameState";
+import { useQuadrantCells } from "@/composables/useQuadrantCells";
 
 const props = withDefaults(
   defineProps<{
@@ -22,43 +24,29 @@ const props = withDefaults(
   }
 );
 
-// Grid demo: codigos KBS (Klingons/Bases/Estrelas) para quadrantes explorados,
-// '???' para inexplorado. Ver SST_LCARS_SPECS.md secao 2.1.
-const demoGalaxyGrid: Record<string, ScannerCell> = {
-  "1,1": { text: "???", color: "text-light" },
-  "1,2": { text: "003", color: "golden-tanoi-fg" },
-  "2,2": { text: "104", color: "alert-fg" },
-  "2,3": { text: "???", color: "text-light" },
-  "3,4": { text: "012", color: "anakiwa-fg" },
-  "4,4": { text: "000", color: "text-light" },
-  "5,6": { text: "201", color: "alert-fg" },
-  "6,6": { text: "???", color: "text-light" },
-  "7,5": { text: "001", color: "golden-tanoi-fg" },
-  "8,8": { text: "???", color: "text-light" },
-};
+const gameState = useGameState();
+const { quadrantCells } = useQuadrantCells();
 
-const baseGalaxyGrid = ref<Record<string, ScannerCell>>(
-  props.galaxyGrid ?? demoGalaxyGrid
+// Mapa acumulado do que o jogador JÁ explorou — não a verdade da galáxia.
+// `gameState.galaxy` tem o conteúdo real dos 64 quadrantes, mas ler dali aqui
+// daria omnisciência: o Star Chart só mostra `exploredQuadrants`.
+// Opacidade por confiança: dado velho de LRS esmaece até o piso de 30%.
+const activeGalaxyGrid = computed(() =>
+  props.galaxyGrid ??
+  quadrantCells(
+    gameState.exploredQuadrants,
+    gameState.position.quadrant,
+    gameState.quadrantConfidence
+  )
 );
 
-// Mesmo mock de posicao usado no LRS (NavSensingConsole.vue) -- moldura
-// marcando o quadrante onde a nave esta agora, mesma convencao das duas
-// telas. Ver SST_LCARS_SPECS.md 12.7.
-const playerQuadrant = ref({ row: 4, col: 4 });
-const PLAYER_MARKER_STYLE = { boxShadow: "inset 0 0 0 3px #ffffff" };
+// Seleção começa no quadrante da nave, não numa coordenada fixa.
+const selectedSystem = ref({ ...gameState.position.quadrant });
 
-const activeGalaxyGrid = computed(() => {
-  const playerKey = `${playerQuadrant.value.row},${playerQuadrant.value.col}`;
-  return {
-    ...baseGalaxyGrid.value,
-    [playerKey]: {
-      ...baseGalaxyGrid.value[playerKey],
-      style: PLAYER_MARKER_STYLE,
-    },
-  };
-});
-
-const selectedSystem = ref("3,4");
+// Display sempre X,Y (col,row); a chave interna row,col não vaza pra UI.
+const selectedSystemLabel = computed(() =>
+  `${selectedSystem.value.col},${selectedSystem.value.row}`
+);
 
 const handleCellClick = (data: {
   row: number;
@@ -69,12 +57,13 @@ const handleCellClick = (data: {
   event: MouseEvent;
 }) => {
   if (!data.isBorder) {
-    selectedSystem.value = `${data.row},${data.col}`;
+    selectedSystem.value = { row: data.row, col: data.col };
   }
 };
 
+/** "Snd to Helm": grava o destino no estado — é o Helm que engaja o warp. */
 const sendSystemToHelm = () => {
-  console.log(`Sending system ${selectedSystem.value} to Helm`);
+  gameState.setDestination({ ...selectedSystem.value });
 };
 </script>
 
@@ -145,7 +134,7 @@ const sendSystemToHelm = () => {
           <LcarsCap version="round-left" />
           <LcarsBlock label="Selected System" :style="{ width: '10rem' }" />
           <LcarsText
-            :text="selectedSystem"
+            :text="selectedSystemLabel"
             :style="{ flex: '1', 'text-align': 'center' }"
           />
           <LcarsBlock version="decorator" :style="{ width: '2rem' }" />

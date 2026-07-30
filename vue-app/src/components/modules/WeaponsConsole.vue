@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { computed, ref } from "vue";
 import { useLcarsColors } from "@/composables/useLcarsColors";
-import { useScannerIcons, ScannerEntity } from "@/composables/useScannerIcons";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
 import LcarsCap from "@/components/elements/LcarsCap.vue";
@@ -15,80 +14,44 @@ import LcarsToggleSwitch from "@/components/elements/LcarsToggleSwitch.vue";
 import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
 import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
 import { Sound, useSound } from "@/composables/useSound";
+import { useGameState } from "@/stores/useGameState";
+import { useQuadrantCells } from "@/composables/useQuadrantCells";
+import {
+  PHASER_POWER_MAX,
+  PHASER_TEMP_MAX,
+  isCritical,
+} from "@/engine/constants";
+import { getVisibleEnemies } from "@/engine/sector";
+import type { TorpedoTube } from "@/types/game";
 
 const { playSound } = useSound();
-
-const props = withDefaults(
-  defineProps<{
-    initialStock?: number;
-    initialPhaserTemp?: number;
-    initialTargets?: number;
-  }>(),
-  {
-    initialStock: 8,
-    initialPhaserTemp: 50,
-    initialTargets: 3,
-  }
-);
-
 const { statusColor } = useLcarsColors();
-const { getIcon } = useScannerIcons();
+const { sectorCells, cellKey } = useQuadrantCells();
+const gameState = useGameState();
 
-interface Tube {
-  targetIndex: number;
-  status: "Empty" | "Loaded";
-  autoLoad: boolean;
-}
+// ── Phasers ──────────────────────────────────────────────────────────────────
 
-const phaserTemp = ref(props.initialPhaserTemp);
-const PHASER_POWER_MAX = 3000;
-const phaserPower = ref(1500);
+const phaserTemp = computed(() => Math.round(gameState.phaserTemp));
+const torpedoStock = computed(() => gameState.torpedoStock);
+
+// `phaserPower` ja e em unidades de energia (0-3000) no estado -- os presets
+// abaixo tambem. Sem conversao: converter aqui era o que somava com o clamp
+// errado da store e derrubava o valor.
+const phaserPower = computed({
+  get: () => Math.round(gameState.phaserPower),
+  set: (value) => gameState.setPhaserPower(value),
+});
+
 const phaserPowerPresets = [25, 50, 75, 100].map((percent) => ({
   label: `${percent}%`,
   value: Math.round((percent / 100) * PHASER_POWER_MAX),
 }));
-const lockedTargets = ref(props.initialTargets);
-const torpedoStock = ref(props.initialStock);
 
-// Alvos disponiveis no setor (mock local -- vira parte do estado real dos
-// Klingons na Fase 4). Independente dos tubos: o computador de mira cicla
-// entre esses alvos, o capitao decide livremente como distribuir os tubos
-// entre eles (todos num alvo, um em cada, 2:1 etc), ver SST_LCARS_SPECS.md 12.6.
-const enemyTargets = ref([
-  { x: 3, y: 2 },
-  { x: 6, y: 7 },
-  { x: 2, y: 5 },
-]);
-
-const tubes = ref<Tube[]>([
-  { targetIndex: 0, status: "Empty", autoLoad: false },
-  { targetIndex: 1, status: "Empty", autoLoad: false },
-  { targetIndex: 2, status: "Empty", autoLoad: false },
-]);
-
-const targetOf = (tube: Tube) => enemyTargets.value[tube.targetIndex];
-
-watch(
-  () => props.initialPhaserTemp,
-  (val) => {
-    phaserTemp.value = val;
-  }
-);
-watch(
-  () => props.initialStock,
-  (val) => {
-    torpedoStock.value = val;
-  }
-);
-watch(
-  () => props.initialTargets,
-  (val) => {
-    lockedTargets.value = val;
-  }
-);
-
+// Efetividade cai com o calor. Dano no banco de phasers piora tudo: aquece
+// mais rapido, esfria mais devagar, causa menos dano (decisao #30) -- essa
+// parte mora no engine; aqui e so leitura.
 const phaserEffectiveness = computed(() =>
-  Math.max(0, 100 - phaserTemp.value / 2.7)
+  Math.max(0, 100 - phaserTemp.value / (PHASER_TEMP_MAX / 100))
 );
 
 const phaserTempColor = computed(() => {
@@ -103,21 +66,42 @@ const torpedoStockColor = computed(() => {
   return statusColor("critical");
 });
 
+// ── Alvos ────────────────────────────────────────────────────────────────────
+
+// Inimigos VISIVEIS no setor real -- cloacado nao entra, e a mesma funcao que o
+// engine usa pra mirar. Antes era uma lista mock de 3 coordenadas fixas,
+// desconectada do grid que o NavSensing desenhava.
+const enemyTargets = computed(() => getVisibleEnemies(gameState.$state));
+const lockedTargets = computed(() =>
+  gameState.weaponsLocked ? enemyTargets.value.length : 0
+);
+
+const tubes = computed(() => gameState.tubes);
+
+/** Alvo do tubo por `id` estavel, nunca por indice de array (decisao #6). */
+const targetOf = (tube: TorpedoTube) =>
+  enemyTargets.value.find((e) => e.id === tube.targetId) ?? null;
+
+const targetLabel = (tube: TorpedoTube) => {
+  const target = targetOf(tube);
+  return target ? `${target.position.col},${target.position.row}` : "—";
+};
+
+// Grid do setor com o numero do tubo sobreposto no alvo dele.
 const scannerGrid = computed(() => {
-  const grid: Record<string, { img?: string; text?: string }> = {
-    "4,4": { img: getIcon(ScannerEntity.PLAYER) },
-  };
-  enemyTargets.value.forEach((target, targetIndex) => {
-    const key = `${target.y},${target.x}`;
-    if (key === "4,4") return;
-    const assignedTubes = tubes.value
-      .map((tube, i) => (tube.targetIndex === targetIndex ? i + 1 : null))
-      .filter((n): n is number => n !== null);
-    grid[key] = {
-      img: getIcon(ScannerEntity.KLINGON_CRUISER),
-      text: assignedTubes.length ? assignedTubes.join(",") : undefined,
-    };
-  });
+  const grid = sectorCells(
+    gameState.currentSector,
+    gameState.position.sector
+  ) as Record<string, { img?: string; text?: string; color?: string }>;
+
+  for (const enemy of enemyTargets.value) {
+    const assigned = tubes.value
+      .filter((t) => t.targetId === enemy.id)
+      .map((t) => t.id);
+    if (assigned.length === 0) continue;
+    const key = cellKey(enemy.position);
+    grid[key] = { ...grid[key], text: assigned.join(",") };
+  }
   return grid;
 });
 
@@ -130,64 +114,84 @@ const bracketColoring = {
   animated: "highlight-interactive",
 };
 
-const firePhasers = () => {
-  playSound(Sound.PHASER);
-  phaserTemp.value = Math.min(270, phaserTemp.value + 30);
-};
+// ── Acoes ────────────────────────────────────────────────────────────────────
 
-const lockTargets = () => {
-  lockedTargets.value = Math.max(0, lockedTargets.value);
-};
+const busy = ref(false);
 
-const cycleTubeTarget = (index: number) => {
-  const tube = tubes.value[index];
-  tube.targetIndex = (tube.targetIndex + 1) % enemyTargets.value.length;
-};
-
-const loadTube = (index: number) => {
-  if (torpedoStock.value > 0 && tubes.value[index].status === "Empty") {
-    torpedoStock.value -= 1;
-    tubes.value[index].status = "Loaded";
+const withTurn = async (fn: () => Promise<unknown>) => {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await fn();
+  } finally {
+    busy.value = false;
   }
 };
 
-const unloadTube = (index: number) => {
-  const tube = tubes.value[index];
-  if (tube.status === "Loaded") {
-    torpedoStock.value += 1;
-    tube.status = "Empty";
-    tube.autoLoad = false;
-  }
-};
+const phasersCritical = computed(() => isCritical(gameState.subsystems.phasers));
+const photonsCritical = computed(() => isCritical(gameState.subsystems.photons));
 
-const toggleTubeLoad = (index: number) => {
-  if (tubes.value[index].status === "Loaded") {
-    unloadTube(index);
-  } else {
-    loadTube(index);
-  }
-};
+/** Sem trava ou em critico o disparo nao sai -- o botao fica desabilitado. */
+const canFirePhasers = computed(
+  () =>
+    gameState.weaponsLocked &&
+    !phasersCritical.value &&
+    enemyTargets.value.length > 0
+);
 
-const toggleAutoLoad = (index: number) => {
-  tubes.value[index].autoLoad = !tubes.value[index].autoLoad;
-};
+const canFireTorpedoes = computed(
+  () =>
+    !photonsCritical.value &&
+    gameState.subsystemsOn.photons &&
+    tubes.value.some((t) => t.loaded)
+);
 
-const fireTorpedoes = () => {
-  const hasLoaded = tubes.value.some((t) => t.status === "Loaded");
-  if (hasLoaded) {
+const firePhasers = () =>
+  withTurn(async () => {
+    playSound(Sound.PHASER);
+    await gameState.firePhasers();
+  });
+
+const fireTorpedoes = () =>
+  withTurn(async () => {
     playSound(Sound.TORPEDO);
-    tubes.value.forEach((tube) => {
-      if (tube.status === "Loaded") {
-        tube.status = "Empty";
-        if (tube.autoLoad && torpedoStock.value > 0) {
-          torpedoStock.value -= 1;
-          tube.status = "Loaded";
-        }
-      }
-    });
-    lockedTargets.value = Math.max(0, lockedTargets.value - 1);
-    phaserTemp.value = Math.min(270, phaserTemp.value + 30);
-  }
+    await gameState.fireTorpedoes();
+  });
+
+/** "Lock" e acao real: custa 1 turno de reaquisicao (decisao #23). */
+const lockTargets = () =>
+  withTurn(async () => {
+    await gameState.acquireLock();
+  });
+
+const canLock = computed(
+  () =>
+    gameState.subsystemsOn.srs &&
+    !isCritical(gameState.subsystems.srs) &&
+    enemyTargets.value.length > 0
+);
+
+/** Ciclar alvo e LIVRE: e so mira, nao gasta turno. */
+const cycleTubeTarget = (tubeId: number) => {
+  gameState.cycleTubeTarget(tubeId);
+};
+
+/** Carregar/descarregar custam 1 turno cada (decisao #31). */
+const toggleTubeLoad = (tubeId: number) =>
+  withTurn(async () => {
+    const tube = tubes.value.find((t) => t.id === tubeId);
+    if (!tube) return;
+    if (tube.loaded) await gameState.unloadTube(tubeId);
+    else await gameState.loadTube(tubeId);
+  });
+
+const toggleAutoLoad = (tubeId: number) => {
+  gameState.toggleTubeAutoLoad(tubeId);
+};
+
+const togglePhotons = () => {
+  playSound(gameState.subsystemsOn.photons ? Sound.POWER_DOWN : Sound.POWER_UP);
+  gameState.toggleSubsystemOn("photons");
 };
 </script>
 
@@ -326,6 +330,7 @@ const fireTorpedoes = () => {
           color="highlight-dark-interactive"
           label="Lock"
           :style="{ width: '6rem', flex: 'none' }"
+          :disabled="!canLock || busy"
           @click="lockTargets"
         />
         <LcarsComplexButton color="primary-interactive" :style="{ flex: '1' }">
@@ -344,6 +349,7 @@ const fireTorpedoes = () => {
         version="round dark-light"
         :color="statusColor('critical')"
         label="Fire Phasers"
+        :disabled="!canFirePhasers || busy"
         :style="{ width: '50%' }"
         @click="firePhasers"
       />
@@ -388,10 +394,10 @@ const fireTorpedoes = () => {
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
-        <LcarsBlock :label="`Tube ${i + 1}`" />
+        <LcarsBlock :label="`Tube ${tube.id}`" />
         <LcarsBlock label="Sector to fire" :style="{ width: '2rem' }" />
         <LcarsText
-          :text="String(targetOf(tube).x) + ',' + String(targetOf(tube).y)"
+          :text="targetLabel(tube)"
           color="text-light"
           :style="{ width: '2.5rem', 'text-align': 'center' }"
         />
@@ -401,7 +407,8 @@ const fireTorpedoes = () => {
           color="tertiary-interactive"
           label="Cycle"
           :style="{ width: '7rem' }"
-          @click="cycleTubeTarget(i)"
+          :disabled="enemyTargets.length === 0"
+          @click="cycleTubeTarget(tube.id)"
         />
       </LcarsComplexButton>
     </LcarsColumn>
@@ -470,27 +477,20 @@ const fireTorpedoes = () => {
         <LcarsButton
           version="round"
           color="tertiary-interactive"
-          :label="
-            tube.status === 'Loaded' ? `Unload ${i + 1}` : `Load ${i + 1}`
-          "
-          :disabled="tube.status === 'Empty' && torpedoStock === 0"
+          :label="tube.loaded ? `Unload ${tube.id}` : `Load ${tube.id}`"
+          :disabled="(!tube.loaded && torpedoStock === 0) || photonsCritical || busy"
           :style="{ width: '7rem', flex: 'none' }"
-          @click="toggleTubeLoad(i)"
+          @click="toggleTubeLoad(tube.id)"
         />
         <LcarsToggleSwitch
           :model-value="tube.autoLoad"
           color="highlight-interactive"
           :style="{ flex: '1' }"
-          @update:model-value="toggleAutoLoad(i)"
+          @update:model-value="toggleAutoLoad(tube.id)"
         />
         <LcarsBlock
-          :label="tube.status"
-          :version="tube.status === 'Empty' ? 'red-dark-light' : undefined"
-          :color="
-            tube.status === 'Loaded'
-              ? useLcarsColors().lcarsColors.primary[0]
-              : undefined
-          "
+          :label="tube.loaded ? 'Loaded' : 'Empty'"
+          :version="tube.loaded ? undefined : 'red-dark-light'"
           :style="{ width: '7rem', flex: 'none' }"
         />
       </LcarsRow>
@@ -500,9 +500,17 @@ const fireTorpedoes = () => {
         version="round dark-light"
         :color="statusColor('critical')"
         label="Fire Torpedoes"
-        :disabled="!tubes.some((t) => t.status === 'Loaded')"
+        :disabled="!canFireTorpedoes || busy"
         :style="{ width: '50%' }"
         @click="fireTorpedoes"
+      />
+      <LcarsButton
+        id="photons-toggle-btn"
+        version="round"
+        :label="gameState.subsystemsOn.photons ? 'Photon Tubes On' : 'Photon Tubes Off'"
+        :color="gameState.subsystemsOn.photons ? 'secondary-interactive' : 'primary-static'"
+        :style="{ width: '50%' }"
+        @click="togglePhotons"
       />
     </LcarsColumn>
   </LcarsRow>
