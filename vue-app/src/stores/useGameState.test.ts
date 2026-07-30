@@ -238,6 +238,34 @@ describe('stores/useGameState', () => {
     expect(gs.lrsScan['1,1']).toBeDefined() // o datalink
   })
 
+  it('scan de LRS MESCLA, não apaga o que já era conhecido', () => {
+    const gs = useGameState()
+    // Conhecimento antigo de um quadrante longe do bloco 3x3 atual.
+    gs.$state.lrsScan['1,1'] = { code: '105', age: 7 }
+
+    gs.scanLongRange()
+
+    // Dado de LRS nunca se perde — só perde confiança. A versão anterior
+    // substituía `lrsScan` inteiro pelo bloco novo, apagando o resto do mapa.
+    expect(gs.lrsScan['1,1']).toBeDefined()
+    expect(gs.lrsScan['1,1'].age).toBe(7) // idade preservada, não renovada
+    // E o bloco ao redor da nave entrou, com confiança cheia.
+    const here = `${gs.position.quadrant.row},${gs.position.quadrant.col}`
+    expect(gs.lrsScan[here]?.age).toBe(0)
+  })
+
+  it('rescanear renova a confiança só das células tocadas', () => {
+    const gs = useGameState()
+    gs.scanLongRange()
+    const here = `${gs.position.quadrant.row},${gs.position.quadrant.col}`
+
+    gs.$state.lrsScan['8,8'] = { code: '003', age: 5 }
+    gs.scanLongRange()
+
+    expect(gs.lrsScan[here].age).toBe(0)
+    expect(gs.lrsScan['8,8'].age).toBe(5)
+  })
+
   it('marcador de leitura do log zera o não-lido da categoria', async () => {
     const gs = useGameState()
     await gs.launchProbe({ row: 1, col: 1 })

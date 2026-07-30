@@ -415,6 +415,112 @@ describe('integração: energia é vazão, não estoque', () => {
   })
 })
 
+describe('integração: baixa de inimigo é permanente', () => {
+  /** Setor com N inimigos no quadrante atual, refletido na galáxia. */
+  function withEnemiesInGalaxy(state: GameState, count: number) {
+    const key = `${state.position.quadrant.row},${state.position.quadrant.col}`
+    state.galaxy[key] = {
+      klingons: count,
+      baseIds: [],
+      stars: 3,
+      planet: false,
+      dilithiumCharges: 0,
+      surveyed: false,
+      clearedEnemies: 0,
+    }
+    state.currentSector = Array.from({ length: count }, (_, i) =>
+      klingon(`k${i}`, { row: 2 + i, col: 2 }, 10),
+    )
+    state.enemiesLeft = count
+    state.weaponsLocked = true
+    state.phaserPower = 3000
+  }
+
+  it('destruir inimigo grava a baixa na galáxia, não só no setor', () => {
+    const state = fixture()
+    withEnemiesInGalaxy(state, 2)
+    const key = `${state.position.quadrant.row},${state.position.quadrant.col}`
+
+    resolvePlayerTurn(state, { type: 'fire_phasers' }, noRolls)
+
+    // Sem isto, reentrar no quadrante repovoa com os mesmos inimigos.
+    expect(state.galaxy[key].clearedEnemies).toBe(2)
+    expect(state.enemiesLeft).toBe(0)
+  })
+
+  it('sair e voltar ao quadrante NÃO ressuscita quem morreu', () => {
+    const state = fixture()
+    withEnemiesInGalaxy(state, 2)
+    resolvePlayerTurn(state, { type: 'fire_phasers' }, noRolls)
+    expect(state.currentSector.filter((e) => e.enemyPower).length).toBe(0)
+
+    // Rematerializa o setor como o hook `onQuadrantEnter` faria ao reentrar.
+    const key = `${state.position.quadrant.row},${state.position.quadrant.col}`
+    const content = state.galaxy[key]
+    const live = Math.max(0, content.klingons - content.clearedEnemies)
+
+    // O exploit era este número voltar a 2: dava pra vencer a partida indo e
+    // voltando entre dois setores, porque `enemiesLeft` continuava caindo.
+    expect(live).toBe(0)
+  })
+
+  it('captura não conta como destruição no rating', () => {
+    const state = fixture()
+    withEnemiesInGalaxy(state, 1)
+    // rng baixo: passa no roll de rendição (30%) e no de interrogatório.
+    resolvePlayerTurn(state, { type: 'hail', targetId: 'k0' }, () => 0.01)
+
+    expect(state.klingonsCaptured).toBe(1)
+    // Antes o mesmo Klingon somava nos dois contadores e inflava o rating.
+    expect(state.klingonsDestroyed).toBe(0)
+    expect(state.enemiesLeft).toBe(0)
+  })
+})
+
+describe('integração: equipe de CdD não fica presa em sistema reparado', () => {
+  it('subsistema a 100% dispensa quem estava nele', () => {
+    const state = fixture()
+    state.subsystems.warp = 99
+    state.teams[0].status = 'working'
+    state.teams[0].assignedSystem = 'warp'
+    state.teams[0].efficiency = 100
+    state.teams[0].turnsWorked = 1
+
+    endTurn(state, noRolls)
+
+    expect(state.subsystems.warp).toBe(100)
+    expect(state.teams[0].status).toBe('idle')
+    expect(state.teams[0].assignedSystem).toBeNull()
+  })
+
+  it('equipe exausta vai pra cooldown ao ser dispensada, não pro pool', () => {
+    const state = fixture()
+    state.subsystems.warp = 99
+    state.teams[0].status = 'working'
+    state.teams[0].assignedSystem = 'warp'
+    state.teams[0].efficiency = 20 // no piso
+    state.teams[0].turnsWorked = 9
+
+    endTurn(state, noRolls)
+
+    expect(state.teams[0].status).toBe('cooldown')
+  })
+
+  it('sistema ainda danificado mantém a equipe trabalhando', () => {
+    const state = fixture()
+    state.subsystems.warp = 50
+    state.teams[0].status = 'working'
+    state.teams[0].assignedSystem = 'warp'
+    state.teams[0].efficiency = 100
+    state.teams[0].turnsWorked = 1
+
+    endTurn(state, noRolls)
+
+    expect(state.subsystems.warp).toBeLessThan(100)
+    expect(state.teams[0].status).toBe('working')
+  })
+})
+
 describe('integração: combat ligado ao turnEngine', () => {
   it('phaser esfria em turno sem disparo e não esfria em turno com disparo', () => {
     const cooling = fixture()

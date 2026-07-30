@@ -25,6 +25,7 @@ import {
 } from '@/engine/constants'
 import type { GameState } from '@/types/game'
 import {
+  cellKey,
   getVisibleEnemies,
   isEnemyType,
   isStarbaseType,
@@ -93,7 +94,7 @@ export function firePhasers(
     const destroyed = remaining <= 0
 
     if (destroyed) {
-      removeEnemyFromSector(state, enemy.id)
+      removeEnemyFromSector(state, enemy.id, 'destroyed')
     } else {
       enemy.enemyPower = remaining
     }
@@ -173,7 +174,7 @@ export function fireTorpedoes(
     const destroyed = remaining <= 0
 
     if (destroyed) {
-      removeEnemyFromSector(state, target.id)
+      removeEnemyFromSector(state, target.id, 'destroyed')
     } else {
       target.enemyPower = remaining
     }
@@ -429,9 +430,9 @@ export function hailTarget(
     }
 
     if (rng() < HAIL_SURRENDER_CHANCE) {
-      removeEnemyFromSector(state, target.id)
+      // `captured` ja soma em `klingonsCaptured` -- nao somar aqui de novo.
+      removeEnemyFromSector(state, target.id, 'captured')
       state.brig.count = Math.min(state.brig.capacity, state.brig.count + 1)
-      state.klingonsCaptured++
 
       let intelRevealed = false
       if (rng() < INTERROGATION_CHANCE) {
@@ -447,11 +448,40 @@ export function hailTarget(
   return { success: false, status: 'not_found' }
 }
 
-/** Remove inimigo do setor, atualizando contagem e limpando alvos de tubos. */
-function removeEnemyFromSector(state: GameState, enemyId: string): void {
+/**
+ * Tira o inimigo do setor de vez.
+ *
+ * **Grava a baixa no quadrante da galáxia** (`clearedEnemies`), não só no setor
+ * atual. Sem isso o inimigo ressuscitava: `materializeSector` calcula
+ * `klingons - clearedEnemies` ao entrar num quadrante, e como nada incrementava
+ * o contador, sair e voltar repovoava o setor com os mesmos inimigos — enquanto
+ * `enemiesLeft` continuava caindo. Dava pra vencer a partida indo e voltando
+ * entre dois setores.
+ *
+ * `reason` separa baixa de captura: as duas tiram o inimigo do jogo, mas pesam
+ * diferente no rating (capturar vale 1.5×). Antes o caminho de rendição chamava
+ * esta função (que somava em `klingonsDestroyed`) E somava em
+ * `klingonsCaptured` — o mesmo Klingon contava duas vezes.
+ */
+function removeEnemyFromSector(
+  state: GameState,
+  enemyId: string,
+  reason: 'destroyed' | 'captured',
+): void {
   state.currentSector = state.currentSector.filter((e) => e.id !== enemyId)
   state.enemiesLeft = Math.max(0, state.enemiesLeft - 1)
-  state.klingonsDestroyed++
+
+  const quadrant = state.galaxy?.[cellKey(state.position.quadrant)]
+  if (quadrant) {
+    quadrant.clearedEnemies = Math.min(
+      quadrant.klingons,
+      quadrant.clearedEnemies + 1,
+    )
+  }
+
+  if (reason === 'captured') state.klingonsCaptured++
+  else state.klingonsDestroyed++
+
   for (const tube of state.tubes) {
     if (tube.targetId === enemyId) {
       tube.targetId = null

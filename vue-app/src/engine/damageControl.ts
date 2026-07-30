@@ -187,6 +187,8 @@ export function resolveBreachTurn(state: GameState): BreachTurnResult {
 
 export interface DamageControlTurnResult {
   repairs: Record<SubsystemKey, number>
+  /** Equipes dispensadas por terem levado o subsistema a 100%. */
+  released: string[]
 }
 
 /**
@@ -213,6 +215,21 @@ export function resolveDamageControlTurn(
     }
   }
 
+  // Subsistema chegou a 100%: dispensa quem estava nele. Sem isso a equipe
+  // ficava "trabalhando" num sistema intacto, acumulando fadiga a troco de
+  // nada — e o jogador só descobria olhando a tabela. Exausta vai pra
+  // `cooldown`, o resto volta ao pool na hora.
+  const released: string[] = []
+  for (const team of state.teams) {
+    if (team.status !== 'working' || !team.assignedSystem) continue
+    if (state.subsystems[team.assignedSystem] < 100) continue
+
+    team.assignedSystem = null
+    team.status =
+      team.efficiency <= TEAM_EFFICIENCY_FLOOR ? 'cooldown' : 'idle'
+    released.push(team.id)
+  }
+
   // Atualização de fadiga e recuperação das equipes
   for (const team of state.teams) {
     if (team.status === 'working') {
@@ -230,7 +247,7 @@ export function resolveDamageControlTurn(
     }
   }
 
-  return { repairs }
+  return { repairs, released }
 }
 
 // ── Send Party (Missão de 3 Turnos em Planeta Adjacente) ────────────────────

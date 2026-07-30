@@ -366,28 +366,37 @@ export const useGameState = defineStore('gameState', {
     },
 
     /**
-     * Scan de LRS: revela o bloco 3x3 ao redor da nave e zera a idade.
+     * Scan de LRS: revela o bloco 3x3 ao redor da nave e zera a idade DESSAS
+     * células.
      *
      * Livre (não consome turno) — o custo do LRS é o draw passivo por turno
-     * enquanto ligado. Escreve em `lrsScan`, que NÃO tem memória (some no
-     * próximo scan), e também em `exploredQuadrants`, que é o mapa acumulado do
-     * Star Chart. Planeta fica de fora do KBS de propósito: é o que torna
-     * planeta invisível a longa distância (world-generation decisão 8).
+     * enquanto ligado.
+     *
+     * **Mescla, não substitui.** A versão anterior trocava `lrsScan` inteiro
+     * pelo bloco novo, então escanear apagava tudo que o LRS já sabia. Dado de
+     * LRS nunca se perde: só perde confiança com a idade (piso 30%). Scan e
+     * sonda RENOVAM a confiança das células que tocam e deixam o resto
+     * envelhecendo.
+     *
+     * Planeta fica de fora do KBS de propósito — é o que torna planeta
+     * invisível a longa distância (world-generation decisão 8).
      */
     scanLongRange() {
-      const scan: GameState['lrsScan'] = {}
       for (const q of lrsNeighborhood(this.$state.position.quadrant)) {
-        const content = this.$state.galaxy?.[`${q.row},${q.col}`]
+        const key = `${q.row},${q.col}`
+        const content = this.$state.galaxy?.[key]
         if (!content) continue
-        const code = kbsCode({
-          klingons: content.klingons,
-          bases: content.baseIds.length,
-          stars: content.stars,
-        })
-        scan[`${q.row},${q.col}`] = { code, age: 0 }
-        this.$state.exploredQuadrants[`${q.row},${q.col}`] = { code, age: 0 }
+        const entry = {
+          code: kbsCode({
+            klingons: content.klingons,
+            bases: content.baseIds.length,
+            stars: content.stars,
+          }),
+          age: 0,
+        }
+        this.$state.lrsScan[key] = entry
+        this.$state.exploredQuadrants[key] = { ...entry }
       }
-      this.$state.lrsScan = scan
       this.$state.lrsScanAge = 0
     },
 
