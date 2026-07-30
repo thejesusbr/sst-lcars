@@ -1703,9 +1703,187 @@ corretas, mesmo padrão das `-interactive`.
 
 \---
 
+## 14\. Fase 4 — Agrupamento de Mecânicas por Painel e Arquitetura da Engine
+
+> Revisão pré-Fase 4 (2026-07-28), pedida pelo usuário: reler o dossiê inteiro (seções
+> 1–13) e reagrupar por **painel** — o que cada console precisa ler/escrever, o que
+> amarra mais de um painel, o que não pertence a nenhum (mecânica geral). O rascunho de
+> `GameState` da seção 8.1 é de antes da revisão de UX (seção 12) e ficou defasado —
+> faltam campos inteiros que hoje só existem como `ref` local em cada `.vue`. Também
+> inclui análise de viabilidade de um selo anti-adulteração do save (pedido do usuário)
+> e o design de uma mecânica de punição secreta associada (ideia do usuário, ver 14.6).
+
+### 14.1. Domínios de estado × painéis
+
+| Domínio (campo em `GameState`) | Painéis que leem | Painéis que escrevem |
+|-|-|-|
+| **Missão** (`stardate`, `stardateLimit`, `score`) | SituationPanel (HUD), GameScreen/ResultScreen (fim de jogo) | Engine (motor de turno avança stardate; combate/eventos alteram score) |
+| **Posição** (`quadrant`, `sector`) | HelmConsole, NavSensingConsole (SRS/LRS), StarChartConsole | HelmConsole (`NAV`/`WRP`); Engine (nunca move o jogador sozinho, só inimigos) |
+| **Energia & Armamento** (`mainEnergy`, `shieldEnergy`, `torpedoes`, `probes`, `phaserPower`, `phaserTemp`) | EngineeringConsole (overview/Subsystem Load), HelmConsole (Impulse), WeaponsConsole (Phaser/Torpedo), ShieldConsole (transferência) | HelmConsole (consumo de Impulse), WeaponsConsole (disparo consome/aquece), ShieldConsole (transferência +/-) |
+| **Subsistemas** (`systems: Record<SystemKey, number>`) | EngineeringConsole (tabela) | EngineeringConsole (Simulate Damage/Repair, efeito de dispatch de CdD); Engine (dano de combate/turno) |
+| **Equipes de CdD** (`teams: DamageControlTeam[]`, **campo novo, não existe em 8.1**) | EngineeringConsole | EngineeringConsole (dispatch/recall); Engine (fadiga/recuperação por turno, reset ao docar) |
+| **Warp Core** (`warpCoreOverload`, `radiationBreach`) | EngineeringConsole, SituationPanel (alerta de breach no HUD) | EngineeringConsole (dial manual); Engine (rolls de dano/explosão/breach) |
+| **Universo** (`galaxy`, `currentSector`, `exploredQuadrants`) | NavSensingConsole (SRS/LRS), StarChartConsole (mapa), WeaponsConsole (`enemyTargets` deriva do setor atual) | NavSensingConsole (Scan revela); Engine (movimento/spawn de inimigos) |
+| **Alerta** (`alertLevel`) | SituationPanel, sistema de tema (`document.body.classList`, já implementado) | SituationPanel (toggle manual); Engine (automático ao entrar em quadrante hostil) |
+| **Combat Log** (`combatLog[]`) | `CombatLog.vue` (embutido no SituationPanel) | Toda mecânica acima (sink comum de eventos) |
+
+### 14.2. Estado local hoje existente por console (auditoria via grep, 2026-07-28)
+
+Cada console já tem `ref`/`computed` reais (mock, mas com o shape certo) que a Fase 4
+precisa **absorver** no `GameState` — ou deixar de propósito como UI local se não for
+dado de jogo. Levantado direto do código atual:
+
+| Console | `ref`/`computed` hoje | Destino na Fase 4 |
+|-|-|-|
+| `HelmConsole.vue` | `destination` (`{sys,sec}`) | **GameState** — alvo de navegação (`NAV`), hoje sem contraparte na seção 8.1 |
+| | `impulsePower`, `impulseBoost`, `boostCooldownTotal/Remaining` | **GameState** — afeta consumo de energia/velocidade real (12.3) |
+| | `warpFactor`, `warpEngaged` | **GameState** — afeta stardate/energia por deslocamento (12.4) |
+| | `boostedImpulsePower`, `canActivateBoost` | Derivado (computed a partir do acima, não precisa campo próprio) |
+| `ShieldConsole.vue` | `shieldEnergy` | **GameState** (`Energia`, já previsto em 8.1) |
+| | `mainEnergy` (prop local `initialMainEnergy`) | **⚠️ Duplicata** — é o mesmo `mainEnergy` do Engineering, hoje 2 cópias desincronizadas (ver 14.3) |
+| | `shieldIntegrity` | **Derivado no engine** (de `shieldEnergy` + histórico de dano — decisão já tomada em 12.5, não reintroduzir como valor bruto) |
+| `WeaponsConsole.vue` | `phaserTemp`, `phaserPower`, `torpedoStock` | **GameState** (`Energia & Armamento`, já previsto em 8.1) |
+| | `enemyTargets`, `lockedTargets` | **GameState** (`Universo`/setor atual) — **⚠️ hoje é lista mock desconectada do SRS** (ver 14.3) |
+| `EngineeringConsole.vue` | `subsystems` (9 sistemas + integridade) | **GameState** (`Subsistemas`, já previsto em 8.1 como `systems`) |
+| | `teams` (6 `DamageControlTeam`) | **GameState** — **campo novo**, não existe em 8.1, precisa ser adicionado à interface |
+| | `manualOverload` | **GameState** (`Warp Core`, já previsto em 8.1) |
+| | `subsystemDraw` | **Substituído** por soma real dos consumidores (Helm/Weapons/Shield) — hoje é 1 número mockado, vira `computed` no engine |
+| `NavSensingConsole.vue` | `playerQuadrant` | **⚠️ Duplicata** — mesmo dado de `Posição`, hoje também mockado em `StarChartConsole.vue` **e ausente** do Helm (ver 14.3) |
+| | `remainingProbes` | **GameState** (`probes`, já previsto em 8.1) |
+| | `longRangeScanned`, `scanAge` | **GameState** — decaimento de confiança do LRS é por turno, precisa sobreviver entre consoles/sessão |
+| | `selectedSector`, `selectedSystem` | UI local — só "última célula clicada", não é dado de jogo, não precisa persistir |
+| `StarChartConsole.vue` | `playerQuadrant` | Mesma duplicata acima — **unificar com Helm/NavSensing num único campo** |
+| | `selectedSystem` | UI local (mesmo caso do NavSensing) |
+| `SituationPanel.vue` | `redAlert` | **GameState** (`alertLevel`) — hoje só muda `document.body.classList`, precisa virar estado real bidirecional (ver 14.1) |
+
+### 14.3. Mecânicas cross-panel (amarrações explícitas)
+
+* **Posição da nave** — Helm (move + deveria mostrar "Current Location" real, hoje
+hardcoded `3,4`) × NavSensing (SRS mostra o setor a partir dela, LRS mostra os 9
+quadrantes vizinhos) × StarChart (destaca o quadrante do jogador no mapa). Hoje são
+**3 fontes desencontradas**: `playerQuadrant` duplicado (valor idêntico, `{row:4,col:4}`)
+em `NavSensingConsole.vue` e `StarChartConsole.vue`, e o Helm **nem tem** o campo (usa
+texto hardcoded). Fase 4 precisa de **1 campo único** (`quadrant`/`sector` em
+`GameState`) que os 3 consomem.
+
+* **Pool de energia** — Engineering (dono do painel/overview, `Main Energy` +
+`Subsystem Load`) × Helm (Impulse consome) × Weapons (Phaser consome) × Shield
+(transferência consome/devolve, e **hoje tem sua própria cópia local de `mainEnergy`**,
+desincronizada da do Engineering). `subsystemDraw` do Engineering é 1 número mockado —
+Fase 4 precisa que seja a **soma real** dos 3 consumidores, não um mock solto.
+
+* **Entidades do setor atual** (Klingons/bases) — NavSensing (`demoShortRangeGrid`,
+o que a SRS mostra) × Weapons (`enemyTargets`, o que os tubos miram e o que recebe
+dano). Hoje são **2 listas desconectadas** com dados mock diferentes — precisam ser a
+mesma fonte (`GameState.currentSector`), senão destruir um Klingon no Weapons não o
+some do SRS do NavSensing.
+
+* **Docking** — 1 ação (botão "Dock" no NavSensing) afeta **4 painéis**: Engineering
+(repara subsistemas conforme tipo de base, seção 5.4; reseta fadiga das equipes de CdD,
+exceto `STARBASE_SUPPLY`, seção 10.3), Shield (reabastece energia conforme tipo),
+Weapons (reabastece torpedos conforme tipo). Precisa de um evento único no engine
+(`dock-complete`, já esboçado na seção 5.4) que os 3 painéis escutam, não 3 ações
+independentes.
+
+* **Subsystem Integrity → outros painéis (gap em aberto, não decidido ainda)** — a
+tabela de integridade do Engineering hoje **não afeta nada fora dela própria**. Falta
+decidir: "Phaser Banks" danificado deveria reduzir efetividade no Weapons? "Warp
+Engines" danificado deveria limitar velocidade/fator de dobra no Helm? "Shield Control"
+danificado deveria limitar `shieldEnergy` máximo no Shield? **Pergunta em aberto pro
+usuário** — não assumir comportamento sem confirmar, é decisão de design, não só de
+arquitetura.
+
+* **Red Alert** — SituationPanel liga manualmente (`redAlert` hoje só muta
+`document.body.classList`) × Engine liga automaticamente ao entrar em quadrante hostil
+(mecânica do turno, seção 3.6/`ALE`). Bidirecional: os dois lados escrevem o mesmo
+campo.
+
+* **Combat Log** — sink de evento de **toda** mecânica acima (turno, combate, docking,
+Warp Core) — lido só pelo widget `CombatLog.vue` (hoje embutido no `SituationPanel`,
+seção 7.2), mas nenhum painel específico é "dono" da escrita.
+
+### 14.4. Mecânicas gerais (sem painel dono, moram no engine core)
+
+* **Motor de turno** (seção 5.1/8.2) — resolve após cada ação do jogador: turno
+inimigo, rolls do Warp Core, verificação de condições terminais. Não pertence a
+nenhum console, é o coração do engine core (TS puro, seção 8.4).
+* **Warp Core overload/breach** (seção 10) — o *input* (dial manual) mora no
+Engineering, mas a *resolução* (dano contínuo, chance de explosão, roll de breach) é
+mecânica geral do motor de turno.
+* **Condições de fim de jogo** (seção 5.3) — lidas por `GameScreen`/`ResultScreen`
+(troca de modo `briefing`/`playing`/`result`), não por nenhum console de gameplay.
+* **Rating de Comandante** (seção 5.3) — calculado pelo engine ao fim de jogo, exibido
+só no `ResultScreen`.
+
+### 14.5. Arquitetura confirmada
+
+Reafirma as decisões já tomadas (seção 8.3/8.4) e fecha o ponto de persistência que
+ainda estava em aberto:
+
+* **Engine core em TS puro** (decidido, 8.4) — toda regra (turno, combate, fórmulas do
+Warp Core, docking, condições terminais) em módulo(s) sem import de Vue/Pinia. Funções
+puras que recebem estado e retornam novo estado — reaproveitável por qualquer client
+futuro (tricorder companion app, seção 8.4).
+* **Pinia como camada fina** (decidido, 8.3) — a store chama o engine core e expõe o
+resultado como estado reativo; não implementa regra nenhuma.
+* **Persistência — `pinia-plugin-persistedstate`** (fecha o ponto em aberto): serializa
+o `GameState` inteiro pro `localStorage` sob 1 chave, sem código manual de
+serialize/deserialize (o plugin já resolve isso, maduro e amplamente usado — preferir
+lib pronta a escrever na mão).
+
+### 14.6. Viabilidade de anti-trapaça por hash + punição secreta
+
+**Análise de viabilidade (pedido do usuário):** um hash do estado usando uma chave como
+"salt", salvo junto do save no `localStorage`, pra detectar edição manual de valores.
+
+**Veredito: não existe segurança real 100% client-side.** Qualquer chave usada pro hash
+precisa estar no bundle JS que roda no navegador do próprio jogador — quem abrir o
+DevTools lê a chave e o algoritmo, e forja um hash válido pro valor que quiser. Isso não
+é uma limitação de implementação, é o limite de confiança do modelo (não há servidor
+nem segredo que o cliente não possa ler). Chamar isso de "segurança" seria enganoso.
+
+**O que É viável — um selo de integridade, não anti-cheat de verdade:** grava
+`SHA-256(JSON.stringify(GameState) + string fixa)` via `crypto.subtle.digest` (Web
+Crypto API, nativa do browser, zero dependência nova) junto do save; ao carregar,
+recalcula e compara. Detecta edição manual casual (alguém abrindo o DevTools e mudando
+um número sem saber que existe um selo) e corrupção acidental — não impede alguém
+motivado a ler o código-fonte.
+
+Como o jogo é single-player, sem leaderboard nem modo competitivo em lugar nenhum do
+dossiê, "trapacear" só afeta a própria experiência de quem edita — não é uma ameaça
+séria, é material pra uma piada com o próprio jogador.
+
+**Punição secreta (ideia do usuário, 2026-07-28) — referência à "vaca do diabo" do
+Witcher 3 (punição oculta por explorar o farm de couro), versão Trek:** selo adulterado
+não gera aviso nem bloqueio — dispara uma **infestação de Tribbles**. Ícones já existem
+no pool de assets (`tribble-1.png`/`tribble-2.png`, `src/assets/icons/objects/`),
+confirmados sem nenhum uso atual no código.
+
+Desenho proposto (mecânica geral, sem painel dono, ver 14.4):
+
+* Hash não bate no carregamento → liga uma flag **escondida** no `GameState` (nunca
+anunciada na UI — o jogador só descobre jogando, igual o segredo da vaca)
+* A cada turno, a quantidade de Tribbles **dobra** — crescimento exponencial é a própria
+piada do episódio "The Trouble with Tribbles", não um número arbitrário de
+balanceamento
+* Renderizados como ícones flutuantes por cima do `GameHud` (z-index acima de todos os
+consoles), posição aleatória a cada turno
+* Sem mecânica de remoção conhecida/anunciada — a degradação cômica e crescente da
+jogabilidade **é** a consequência, não um game over técnico separado
+
+Desenho fino (taxa exata se diferente de dobrar, limite de performance/quantidade
+máxima renderizada, se existe algum jeito secreto de reverter) fica pra quando a Fase 4
+chegar nessa mecânica especificamente — registrado aqui só como decisão de escopo e
+referência ao pool de assets já disponível.
+
+\---
+
 *Fim do dossiê. Todos os 16 itens da seção 9 revisados e decididos (2026-07-20; item 9
-revisto 2026-07-25, seção 12.6). Fase 3.5 concluída, revisão de UX pré-Fase 4 em andamento
-(seção 12) — Situation Panel, Tactical, Helm, Shield, Weapons, Nav/Sensing e Engineering
-todos revisados. Próximo passo: Fase 4 (engine core + Pinia, seção 8\.4), começando pela
-alocação real de energia por subsistema (12.8) já que várias mecânicas dependem dela.*
+revisto 2026-07-25, seção 12.6). Fase 3.5 e revisão de UX pré-Fase 4 (seção 12)
+concluídas — Situation Panel, Tactical, Helm, Shield, Weapons, Nav/Sensing e Engineering
+todos revisados. Agrupamento por painel (seção 14, 2026-07-28) mapeou os cross-panel
+(posição, energia, entidades do setor, docking) e deixou 1 pergunta em aberto (14.3:
+Subsystem Integrity afetando outros consoles). Próximo passo: Fase 4 (engine core +
+Pinia + persistência, seção 8\.4/14.5), começando pela alocação real de energia por
+subsistema (12.8/14.3) já que várias mecânicas dependem dela.*
 
