@@ -14,6 +14,9 @@ import LcarsScanner from "@/components/elements/LcarsScanner.vue";
 import LcarsToggleSwitch from "@/components/elements/LcarsToggleSwitch.vue";
 import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
 import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
+import { Sound, useSound } from "@/composables/useSound";
+
+const { playSound } = useSound();
 
 const props = withDefaults(
   defineProps<{
@@ -119,15 +122,16 @@ const scannerGrid = computed(() => {
 });
 
 const bracketColoring = {
-  elbow: "bg-green-4",
-  column1: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
-  column2: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
-  column3: ["bg-blue-1", "bg-green-2", "bg-blue-1"],
-  column4: ["bg-blue-3", "bg-green-4", "bg-blue-3"],
-  animated: "bg-red-1",
+  elbow: "primary-static",
+  column1: ["tertiary-static", "secondary-static", "tertiary-static"],
+  column2: ["tertiary-static", "primary-static", "tertiary-static"],
+  column3: ["tertiary-static", "secondary-static", "tertiary-static"],
+  column4: ["tertiary-static", "primary-static", "tertiary-static"],
+  animated: "highlight-interactive",
 };
 
 const firePhasers = () => {
+  playSound(Sound.PHASER);
   phaserTemp.value = Math.min(270, phaserTemp.value + 30);
 };
 
@@ -171,6 +175,7 @@ const toggleAutoLoad = (index: number) => {
 const fireTorpedoes = () => {
   const hasLoaded = tubes.value.some((t) => t.status === "Loaded");
   if (hasLoaded) {
+    playSound(Sound.TORPEDO);
     tubes.value.forEach((tube) => {
       if (tube.status === "Loaded") {
         tube.status = "Empty";
@@ -210,7 +215,7 @@ const fireTorpedoes = () => {
         version="centered"
         size="small"
         text="Phaser Bank Control"
-        color="text-white"
+        color="text-light"
       />
 
       <!-- Temperature -->
@@ -220,7 +225,7 @@ const fireTorpedoes = () => {
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
-        <LcarsBlock label="Temperature" :style="{ width: '8.5rem' }" />
+        <LcarsBlock label="Temperature" />
         <SolidLevelBar
           version="horizontal"
           :max="270"
@@ -239,7 +244,7 @@ const fireTorpedoes = () => {
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
-        <LcarsBlock label="Effectiveness" :style="{ width: '8.5rem' }" />
+        <LcarsBlock label="Effectiveness" />
         <SolidLevelBar
           version="horizontal"
           :max="100"
@@ -261,7 +266,7 @@ const fireTorpedoes = () => {
         <LcarsBlock label="Phaser Power" :style="{ width: '8.5rem' }" />
         <LcarsText
           :text="String(phaserPower)"
-          color="text-white"
+          color="text-light"
           :style="{ flex: '1', textAlign: 'center' }"
         />
         <LcarsCap version="round-right" />
@@ -327,7 +332,7 @@ const fireTorpedoes = () => {
           <LcarsBlock label="Targets locked" :style="{ flex: '1' }" />
           <LcarsText
             :text="String(lockedTargets)"
-            color="text-white"
+            color="text-light"
             :style="{ width: '3rem', 'text-align': 'center' }"
           />
           <LcarsCap version="round-right" />
@@ -339,7 +344,7 @@ const fireTorpedoes = () => {
         version="round dark-light"
         :color="statusColor('critical')"
         label="Fire Phasers"
-        :style="{ width: '100%' }"
+        :style="{ width: '50%' }"
         @click="firePhasers"
       />
     </LcarsColumn>
@@ -358,7 +363,7 @@ const fireTorpedoes = () => {
         version="centered"
         size="small"
         text="Torpedo Targeting"
-        color="text-white"
+        color="text-light"
       />
 
       <LcarsRow :style="{ 'justify-content': 'center' }">
@@ -383,17 +388,11 @@ const fireTorpedoes = () => {
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
-        <LcarsBlock :label="`Tube ${i + 1}`" :style="{ width: '5.5rem' }" />
-        <LcarsBlock label="X" :style="{ width: '2rem' }" />
+        <LcarsBlock :label="`Tube ${i + 1}`" />
+        <LcarsBlock label="Sector to fire" :style="{ width: '2rem' }" />
         <LcarsText
-          :text="String(targetOf(tube).x)"
-          color="text-white"
-          :style="{ width: '2.5rem', 'text-align': 'center' }"
-        />
-        <LcarsBlock label="Y" :style="{ width: '2rem' }" />
-        <LcarsText
-          :text="String(targetOf(tube).y)"
-          color="text-white"
+          :text="String(targetOf(tube).x) + ',' + String(targetOf(tube).y)"
+          color="text-light"
           :style="{ width: '2.5rem', 'text-align': 'center' }"
         />
         <LcarsBlock version="decorator" :style="{ flex: '1' }" />
@@ -421,7 +420,7 @@ const fireTorpedoes = () => {
         version="centered"
         size="small"
         text="Torpedo Control"
-        color="text-white"
+        color="text-light"
       />
 
       <!-- Stock level -->
@@ -431,10 +430,10 @@ const fireTorpedoes = () => {
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
-        <LcarsBlock label="Stock" :style="{ width: '5rem' }" />
+        <LcarsBlock label="Stock" />
         <SolidLevelBar
           version="horizontal"
-          :max="12"
+          :max="8"
           :min="0"
           :color="torpedoStockColor"
           :level="torpedoStock"
@@ -444,7 +443,7 @@ const fireTorpedoes = () => {
       </LcarsComplexButton>
 
       <!-- Header labels -->
-      <LcarsRow :style="{ width: '100%', gap: '0.5rem' }">
+      <LcarsRow :style="{ width: '100%' }">
         <LcarsBlock
           label="Tubes"
           color="highlight-dark-interactive"
@@ -466,7 +465,7 @@ const fireTorpedoes = () => {
       <LcarsRow
         v-for="(tube, i) in tubes"
         :key="i"
-        :style="{ width: '100%', gap: '0.5rem', 'align-items': 'stretch' }"
+        :style="{ width: '100%', 'align-items': 'stretch' }"
       >
         <LcarsButton
           version="round"
@@ -502,7 +501,7 @@ const fireTorpedoes = () => {
         :color="statusColor('critical')"
         label="Fire Torpedoes"
         :disabled="!tubes.some((t) => t.status === 'Loaded')"
-        :style="{ width: '100%' }"
+        :style="{ width: '50%' }"
         @click="fireTorpedoes"
       />
     </LcarsColumn>

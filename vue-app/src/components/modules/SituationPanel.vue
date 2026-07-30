@@ -15,6 +15,9 @@ import LcarsToggleSwitch from "../elements/LcarsToggleSwitch.vue";
 import CombatLog, {
   type CombatLogEntry,
 } from "@/components/widgets/CombatLog.vue";
+import { Sound, useSound } from "@/composables/useSound";
+
+const { playSound } = useSound();
 
 const props = withDefaults(
   defineProps<{
@@ -73,6 +76,7 @@ const redAlert = ref(false);
 
 watch(redAlert, (value) => {
   document.body.classList.toggle("red-alert", value);
+  if (value) playSound(Sound.RED_ALERT);
   emit("toggle-red-alert");
 });
 
@@ -230,7 +234,7 @@ const filteredLogEntries = computed(() =>
                 :style="{ flex: 'none', width: '6.5rem' }"
               />
               <LcarsText
-                color="text-white"
+                color="text-light"
                 :text="warpCoreStatus"
                 :style="{ flex: '1' }"
               />
@@ -276,7 +280,7 @@ const filteredLogEntries = computed(() =>
               <LcarsBlock version="decorator" />
               <LcarsText
                 id="stb-lft-ind"
-                color="text-white"
+                color="text-light"
                 :text="String(starbasesLeft)"
                 :style="{ flex: '1' }"
               />
@@ -297,7 +301,7 @@ const filteredLogEntries = computed(() =>
               />
               <LcarsBlock version="decorator" />
               <LcarsText
-                color="text-white"
+                color="text-light"
                 :text="shieldStatus"
                 :style="{ flex: '1' }"
               />

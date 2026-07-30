@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useLcarsRegistry } from '@/composables/useLcarsRegistry'
+import { Sound, useSound } from '@/composables/useSound'
 
 const props = withDefaults(defineProps<{
   id?: string
@@ -29,6 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const { register, unregister, generateId } = useLcarsRegistry()
+const { playSound } = useSound()
 
 const elementId = computed(() => props.id ?? generateId('complexButton'))
 
@@ -47,6 +49,7 @@ const classes = computed(() => {
 })
 
 const handleClick = (event: MouseEvent) => {
+  playSound(Sound.CONFIRM)
   emit('click', event)
 }
 

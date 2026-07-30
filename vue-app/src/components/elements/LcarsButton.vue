@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useLcarsRegistry } from '@/composables/useLcarsRegistry'
+import { Sound, useSound } from '@/composables/useSound'
 
 const props = withDefaults(defineProps<{
   id?: string
@@ -44,9 +45,18 @@ const emit = defineEmits<{
 }>()
 
 const { register, unregister, generateId, addToToggleGroup, removeFromToggleGroup, getToggleGroup, setData } = useLcarsRegistry()
+const { playSound } = useSound()
 
 const elementId = computed(() => props.id ?? generateId('button'))
 const isToggled = ref(props.toggle ?? false)
+
+// .disabled (lcars-sdk.css) seta pointer-events:none -- precisa de
+// pointer-events:auto aqui pra o clique ainda chegar no handler e tocar o som
+// de negacao, em vez de ser engolido pelo hit-test do navegador.
+const elementStyle = computed(() => ({
+  ...props.style,
+  ...(props.disabled ? { pointerEvents: 'auto' as const } : {})
+}))
 
 const classes = computed(() => {
   const cls: Record<string, boolean> = {
@@ -66,6 +76,11 @@ const classes = computed(() => {
 })
 
 const handleClick = (event: MouseEvent) => {
+  if (props.disabled) {
+    playSound(Sound.DENY)
+    return
+  }
+  playSound(Sound.CONFIRM)
   if (props.toggle !== undefined) {
     if (props.toggleGroup) {
       const group = getToggleGroup(props.toggleGroup)
@@ -108,7 +123,7 @@ onUnmounted(() => {
     :href="href"
     :data-label="label"
     :data-alt-label="altLabel"
-    :style="style"
+    :style="elementStyle"
     @click="handleClick"
   >
     <slot />
@@ -119,7 +134,7 @@ onUnmounted(() => {
     :class="classes"
     :data-label="label"
     :data-alt-label="altLabel"
-    :style="style"
+    :style="elementStyle"
     @click="handleClick"
   >
     <slot />

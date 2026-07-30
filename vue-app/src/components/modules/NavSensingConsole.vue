@@ -13,6 +13,9 @@ import LcarsCap from "@/components/elements/LcarsCap.vue";
 import LcarsBlock from "@/components/elements/LcarsBlock.vue";
 import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
+import { Sound, useSound } from "@/composables/useSound";
+
+const { playSound } = useSound();
 
 const props = withDefaults(
   defineProps<{
@@ -53,7 +56,7 @@ const lrsCodeColor = (code: string) => {
   const bases = Number(code[1] ?? 0);
   if (klingons > 0) return "alert-fg";
   if (bases > 0) return "anakiwa-fg";
-  return "text-white";
+  return "text-light";
 };
 
 // LRS classico so cobre os quadrantes VIZINHOS (bloco 3x3 ao redor da nave)
@@ -157,6 +160,7 @@ const sendToHelm = () => {
 };
 
 const hail = () => {
+  playSound(Sound.HAIL);
   console.log("Hailing target...");
 };
 
@@ -165,6 +169,7 @@ const dock = () => {
 };
 
 const sendParty = () => {
+  playSound(Sound.TRANSPORTER);
   console.log("Sending landing party...");
 };
 
@@ -185,6 +190,7 @@ const sendSystemToHelm = () => {
 
 const sendProbe = () => {
   if (remainingProbes.value > 0 && probeStatus.value === "Offline") {
+    playSound(Sound.PROBE_LAUNCH);
     probeStatus.value = "Active";
     remainingProbes.value -= 1;
     setTimeout(() => {
@@ -218,7 +224,7 @@ const sendProbe = () => {
         version="centered"
         size="small"
         text="Short-range scanner"
-        color="text-white"
+        color="text-light"
       />
       <LcarsRow :style="{ 'justify-content': 'center' }">
         <DefaultBracket
@@ -279,7 +285,7 @@ const sendProbe = () => {
       <!-- Auxiliary controls -->
       <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '24rem' }">
         <LcarsButton
-          id="hal-btn"
+          id="hail-btn"
           version="round"
           color="tertiary-interactive"
           label="Hail"
@@ -287,7 +293,7 @@ const sendProbe = () => {
           @click="hail"
         />
         <LcarsButton
-          id="dck-btn"
+          id="dock-btn"
           version="round"
           color="highlight-interactive"
           label="Dock"
@@ -295,7 +301,7 @@ const sendProbe = () => {
           @click="dock"
         />
         <LcarsButton
-          id="snd-prt-btn"
+          id="send-party-btn"
           version="round"
           color="highlight-dark-interactive"
           label="Snd Party"
@@ -318,7 +324,7 @@ const sendProbe = () => {
         version="centered"
         size="small"
         text="Long range scanner"
-        color="text-white"
+        color="text-light"
       />
       <LcarsRow :style="{ 'justify-content': 'center' }">
         <DefaultBracket
@@ -355,7 +361,7 @@ const sendProbe = () => {
       <!-- LRS code legend -->
       <LcarsText
         text="Code: KBS — K=Klingons  B=Starbases  S=Stars"
-        color="text-white"
+        color="text-light"
         :style="{
           width: '42rem',
           textAlign: 'center',
@@ -373,7 +379,7 @@ const sendProbe = () => {
       >
         <LcarsText
           :text="`Signal confidence: ${Math.round(scanConfidence * 100)}%`"
-          color="text-white"
+          color="text-light"
           :style="{ textAlign: 'center', fontSize: '1rem', opacity: '0.6' }"
         />
         <LcarsButton
@@ -424,7 +430,7 @@ const sendProbe = () => {
         version="centered"
         size="small"
         text="Probe control"
-        color="text-white"
+        color="text-light"
       />
       <LcarsRow :style="{ 'justify-content': 'center', width: '42rem' }">
         <LcarsComplexButton
