@@ -478,6 +478,26 @@ export const useGameState = defineStore('gameState', {
     setMode(mode: GameState['mode']) {
       this.$state.mode = mode
     },
+
+    // ── Identidade (Captain's Lounge) ────────────────────────────────────────
+
+    /**
+     * Escolhe o ícone da nave, e sugere o rótulo dela como nome — o jogador
+     * segue livre pra digitar por cima (ship-identity spec, "Picking a ship
+     * updates the selection").
+     */
+    setShipIcon(key: string, label: string) {
+      this.$state.shipIconKey = key
+      this.$state.shipName = label
+    },
+
+    setShipName(name: string) {
+      this.$state.shipName = name
+    },
+
+    setCaptainName(name: string) {
+      this.$state.captainName = name
+    },
   },
 
   persist: {

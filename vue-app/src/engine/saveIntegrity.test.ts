@@ -59,4 +59,14 @@ describe('engine/saveIntegrity & tribbleInfestation', () => {
     expect(renderedTribbleCount(50)).toBe(50)
     expect(renderedTribbleCount(1000)).toBe(200)
   })
+
+  it('identidade da nave/capitão sobrevive à migração de um save carregado', () => {
+    const migrated = migrateSave(
+      { shipIconKey: 'defiant', shipName: 'U.S.S. Defiant', captainName: 'Sisko' },
+      createNewGameState(0),
+    )
+    expect(migrated.shipIconKey).toBe('defiant')
+    expect(migrated.shipName).toBe('U.S.S. Defiant')
+    expect(migrated.captainName).toBe('Sisko')
+  })
 })

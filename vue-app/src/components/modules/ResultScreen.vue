@@ -13,11 +13,15 @@ withDefaults(
     outcome?: "Victory" | "Defeat";
     reason?: string;
     rating?: string;
+    shipName?: string;
+    captainName?: string;
   }>(),
   {
     outcome: "Victory",
     reason: "All Klingon forces destroyed.",
     rating: "Commander",
+    shipName: "U.S.S. Enterprise NCC-1701-D",
+    captainName: "James T. Kirk",
   }
 );
 
@@ -54,6 +58,7 @@ const emit = defineEmits<{ (e: "new-game"): void }>();
         :style="{ 'text-align': 'center' }"
       />
       <LcarsText :text="`Rating: ${rating}`" color="text-light" />
+      <LcarsText :text="`${shipName} — Captain ${captainName}`" color="text-light" />
       <LcarsButton
         label="New Game"
         color="primary-interactive"

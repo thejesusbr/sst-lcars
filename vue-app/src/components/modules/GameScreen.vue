@@ -53,13 +53,20 @@ const newGame = () => gameState.newGame()
 </script>
 
 <template>
-  <BriefingScreen v-if="mode === 'briefing'" @start="startMission" />
+  <BriefingScreen
+    v-if="mode === 'briefing'"
+    :commander-name="gameState.captainName"
+    :ship-name="gameState.shipName"
+    @start="startMission"
+  />
   <GameHud v-else-if="mode === 'playing'" />
   <ResultScreen
     v-else-if="mode === 'result'"
     :outcome="outcome"
     :reason="reason"
     :rating="rating"
+    :ship-name="gameState.shipName"
+    :captain-name="gameState.captainName"
     @new-game="newGame"
   />
 </template>

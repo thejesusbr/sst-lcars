@@ -433,6 +433,17 @@ export interface GameState {
   schemaVersion: number
   mode: GameMode
   result: EndGameResult | null
+
+  // Identidade (hail-and-identity): escolhida no Captain's Lounge, persiste
+  // com o resto do save. Uma identidade que só existisse na tela de
+  // configuração não seria identidade — o ícone escolhido é o que o scanner
+  // desenha, e os nomes são o que Briefing/Result usam pra falar com o
+  // jogador.
+  /** Chave de `playerShipOptions` (`useScannerIcons.ts`). */
+  shipIconKey: string
+  shipName: string
+  captainName: string
+
   /**
    * Semente da geração do mundo. Persistida pra que a mesma semente reproduza a
    * mesma galáxia (`Math.random` não aceita seed, daí o PRNG próprio em

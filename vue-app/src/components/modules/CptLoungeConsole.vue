@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from "vue";
 import { useTheme } from "@/composables/useTheme";
+import { useGameState } from "@/stores/useGameState";
+import { playerShipOptions } from "@/composables/useScannerIcons";
 import LcarsRow from "@/components/elements/LcarsRow.vue";
 import LcarsColumn from "@/components/elements/LcarsColumn.vue";
 import LcarsTitle from "@/components/elements/LcarsTitle.vue";
@@ -8,6 +10,17 @@ import LcarsButton from "@/components/elements/LcarsButton.vue";
 import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsCap from "@/components/elements/LcarsCap.vue";
 import LcarsBlock from "@/components/elements/LcarsBlock.vue";
+
+// ── Identidade da nave/capitão (hail-and-identity) ──────────────────────────
+//
+// Escolha persiste com o resto do save (GameState), não é config local da
+// tela — identidade que só existisse aqui não seria identidade (spec
+// ship-identity, "The chosen identity is what the game displays").
+const gameState = useGameState();
+
+const selectShip = (key: string, label: string) => {
+  gameState.setShipIcon(key, label);
+};
 
 // Stub minimo -- so o seletor de tema + catalogo de cores funcionando. O
 // painel geral de configuracoes (audio, dificuldade, etc) e trabalho
@@ -151,7 +164,63 @@ watch(activeTheme, () => {
 </script>
 
 <template>
-  <LcarsRow id="cpt-lng-dsp" flexc="h" :style="{ 'justify-content': 'center' }">
+  <LcarsRow id="cpt-lng-dsp" flexc="h" :style="{ 'justify-content': 'center', gap: '2rem' }">
+    <!-- Identidade: ícone, nome da nave, nome do capitão -->
+    <LcarsColumn
+      id="cpt-lng-identity"
+      flex="v"
+      :style="{
+        'justify-content': 'center',
+        'align-items': 'center',
+        gap: '1rem',
+        width: '20rem',
+      }"
+    >
+      <LcarsTitle
+        version="centered"
+        size="small"
+        text="Ship Identity"
+        color="text-light"
+      />
+      <div class="ship-icon-grid">
+        <button
+          v-for="ship in playerShipOptions"
+          :key="ship.key"
+          type="button"
+          class="ship-icon-option"
+          :class="{ selected: ship.key === gameState.shipIconKey }"
+          :title="ship.label"
+          @click="selectShip(ship.key, ship.label)"
+        >
+          <img :src="ship.img" :alt="ship.label" />
+        </button>
+      </div>
+      <LcarsText
+        text="Ship name"
+        color="text-light"
+        :style="{ opacity: '0.6', fontSize: '.9rem' }"
+      />
+      <input
+        id="ship-name-input"
+        class="identity-input"
+        type="text"
+        :value="gameState.shipName"
+        @input="gameState.setShipName(($event.target as HTMLInputElement).value)"
+      />
+      <LcarsText
+        text="Captain name"
+        color="text-light"
+        :style="{ opacity: '0.6', fontSize: '.9rem' }"
+      />
+      <input
+        id="captain-name-input"
+        class="identity-input"
+        type="text"
+        :value="gameState.captainName"
+        @input="gameState.setCaptainName(($event.target as HTMLInputElement).value)"
+      />
+    </LcarsColumn>
+
     <!-- Painel principal: seletor de tema -->
     <LcarsColumn
       id="cpt-lng-pnl"
@@ -299,5 +368,44 @@ watch(activeTheme, () => {
   border-radius: 0.25rem;
   border: 1px solid #999;
   flex: none;
+}
+
+.ship-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.ship-icon-option {
+  background: #000;
+  border: 2px solid #666;
+  border-radius: 0.4rem;
+  padding: 0.25rem;
+  cursor: pointer;
+  width: 3.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ship-icon-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.ship-icon-option.selected {
+  border-color: var(--role-highlight-interactive, #ff9c00);
+}
+.identity-input {
+  width: 100%;
+  background: #000;
+  color: #fff;
+  border: 2px solid #666;
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  font-family: "LCARS", sans-serif;
+}
+.identity-input:focus {
+  outline: none;
+  border-color: var(--role-highlight-interactive, #ff9c00);
 }
 </style>

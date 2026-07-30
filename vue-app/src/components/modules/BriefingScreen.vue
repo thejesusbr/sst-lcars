@@ -8,10 +8,12 @@ import LcarsButton from "@/components/elements/LcarsButton.vue";
 withDefaults(
   defineProps<{
     commanderName?: string;
+    shipName?: string;
     missionText?: string;
   }>(),
   {
     commanderName: "James T. Kirk",
+    shipName: "U.S.S. Enterprise NCC-1701-D",
     missionText: "Destroy the Klingon fleet before Stardate 3612.0 runs out.",
   }
 );
@@ -42,6 +44,7 @@ const emit = defineEmits<{ (e: "start"): void }>();
         color="text-light"
       />
       <LcarsText :text="`Commander: ${commanderName}`" color="text-light" />
+      <LcarsText :text="`Ship: ${shipName}`" color="text-light" />
       <LcarsText
         :text="missionText"
         color="text-light"

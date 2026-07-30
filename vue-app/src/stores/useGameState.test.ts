@@ -10,6 +10,19 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useGameState } from '@/stores/useGameState'
 import { WARP_CORE_OUTPUT } from '@/engine/constants'
 
+/**
+ * Chave de quadrante garantidamente FORA do bloco 3x3 do LRS ao redor da nave.
+ *
+ * Cravar `'1,1'` (ou `'8,8'`) deixava o teste flaky: `createNewGameState()`
+ * sorteia a posição inicial, e quando a nave nascia vizinha da célula cravada o
+ * scan renovava a idade que o teste esperava intacta — falhava ~1 em 5 runs.
+ */
+function farFromShip(quadrant: { row: number; col: number }): string {
+  const row = quadrant.row <= 4 ? 8 : 1
+  const col = quadrant.col <= 4 ? 8 : 1
+  return `${row},${col}`
+}
+
 describe('stores/useGameState', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -180,16 +193,46 @@ describe('stores/useGameState', () => {
 
   it('newGame SUBSTITUI o mapa explorado — nada vaza da partida anterior', async () => {
     const gs = useGameState()
-    // Simula conhecimento acumulado numa partida.
-    gs.$state.exploredQuadrants['2,7'] = { code: '105', age: 3 }
-    gs.$state.lrsScan['2,7'] = { code: '105', age: 3 }
+    // Idade-marcador: a partida nova só cria entrada com `age: 0`, então
+    // qualquer 99 sobrevivente é vazamento. Afirmar sobre uma CHAVE cravada
+    // ('2,7') deixava o teste flaky — a posição inicial é sorteada, e quando
+    // caía naquele quadrante a partida nova criava a entrada legitimamente.
+    const VELHO = 99
+    gs.$state.exploredQuadrants['2,7'] = { code: '105', age: VELHO }
+    gs.$state.lrsScan['2,7'] = { code: '105', age: VELHO }
 
     await gs.newGame()
 
-    // Com $patch (merge), estas chaves sobreviviam: o Star Chart da partida
+    // Com $patch (merge), estas entradas sobreviviam: o Star Chart da partida
     // nova nascia com quadrantes "explorados" da galáxia velha.
-    expect(gs.exploredQuadrants['2,7']).toBeUndefined()
-    expect(Object.keys(gs.lrsScan)).toHaveLength(0)
+    const idades = [
+      ...Object.values(gs.exploredQuadrants),
+      ...Object.values(gs.lrsScan),
+    ].map((e) => e.age)
+    expect(idades).not.toContain(VELHO)
+  })
+
+  // ── hail-and-identity: identidade da nave ───────────────────────────────
+
+  it('identidade sobrevive a mutação direta do estado (mesma partida)', () => {
+    const gs = useGameState()
+    gs.setShipIcon('defiant', 'U.S.S. Defiant NX-74205')
+    gs.setCaptainName('Sisko')
+
+    expect(gs.shipIconKey).toBe('defiant')
+    expect(gs.shipName).toBe('U.S.S. Defiant NX-74205')
+    expect(gs.captainName).toBe('Sisko')
+  })
+
+  it('New Game volta a identidade aos defaults', async () => {
+    const gs = useGameState()
+    gs.setShipIcon('defiant', 'U.S.S. Defiant NX-74205')
+    gs.setCaptainName('Sisko')
+
+    await gs.newGame()
+
+    expect(gs.shipIconKey).toBe('enterprise-d')
+    expect(gs.captainName).toBe('James T. Kirk')
   })
 
   it('Snd Helm só informa o destino — mover é o Engage', () => {
@@ -240,15 +283,16 @@ describe('stores/useGameState', () => {
 
   it('scan de LRS MESCLA, não apaga o que já era conhecido', () => {
     const gs = useGameState()
-    // Conhecimento antigo de um quadrante longe do bloco 3x3 atual.
-    gs.$state.lrsScan['1,1'] = { code: '105', age: 7 }
+    // Conhecimento antigo de um quadrante FORA do bloco 3x3 da nave.
+    const longe = farFromShip(gs.position.quadrant)
+    gs.$state.lrsScan[longe] = { code: '105', age: 7 }
 
     gs.scanLongRange()
 
     // Dado de LRS nunca se perde — só perde confiança. A versão anterior
     // substituía `lrsScan` inteiro pelo bloco novo, apagando o resto do mapa.
-    expect(gs.lrsScan['1,1']).toBeDefined()
-    expect(gs.lrsScan['1,1'].age).toBe(7) // idade preservada, não renovada
+    expect(gs.lrsScan[longe]).toBeDefined()
+    expect(gs.lrsScan[longe].age).toBe(7) // idade preservada, não renovada
     // E o bloco ao redor da nave entrou, com confiança cheia.
     const here = `${gs.position.quadrant.row},${gs.position.quadrant.col}`
     expect(gs.lrsScan[here]?.age).toBe(0)
@@ -259,11 +303,12 @@ describe('stores/useGameState', () => {
     gs.scanLongRange()
     const here = `${gs.position.quadrant.row},${gs.position.quadrant.col}`
 
-    gs.$state.lrsScan['8,8'] = { code: '003', age: 5 }
+    const longe = farFromShip(gs.position.quadrant)
+    gs.$state.lrsScan[longe] = { code: '003', age: 5 }
     gs.scanLongRange()
 
     expect(gs.lrsScan[here].age).toBe(0)
-    expect(gs.lrsScan['8,8'].age).toBe(5)
+    expect(gs.lrsScan[longe].age).toBe(5)
   })
 
   it('marcador de leitura do log zera o não-lido da categoria', async () => {

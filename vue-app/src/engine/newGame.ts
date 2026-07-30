@@ -62,6 +62,14 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
     schemaVersion: GAME_SCHEMA_VERSION,
     mode: 'briefing',
     result: null,
+
+    // Defaults sensatos: uma partida nova sem NENHUMA escolha do jogador tem
+    // que ser jogável (ship-identity spec, "A new game starts with a default
+    // identity"). `enterprise-d` é a 1ª opção de `playerShipOptions`.
+    shipIconKey: 'enterprise-d',
+    shipName: 'U.S.S. Enterprise NCC-1701-D',
+    captainName: 'James T. Kirk',
+
     seed,
     galaxy: world.galaxy,
 

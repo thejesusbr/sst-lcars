@@ -8,13 +8,16 @@
  * quadrante.
  */
 
+import { computed } from 'vue'
 import type { ScannerCell } from '@/components/elements/LcarsScanner.vue'
 import {
   ScannerEntity,
+  playerShipOptions,
   useScannerIcons,
   type ScannerEntityType,
 } from '@/composables/useScannerIcons'
 import { SectorEntityType, type GridCoord, type SectorEntity } from '@/types/game'
+import { useGameState } from '@/stores/useGameState'
 
 /** Moldura na célula da nave. Ela sempre sabe onde está, independe de scan. */
 export const PLAYER_MARKER_STYLE = { boxShadow: 'inset 0 0 0 3px #ffffff' }
@@ -50,7 +53,23 @@ const ENTITY_ICON: Record<string, ScannerEntityType> = {
 }
 
 export function useQuadrantCells() {
+  const gameState = useGameState()
   const { getIcon, getPlanetIconFor } = useScannerIcons()
+
+  /**
+   * Ícone do jogador, REATIVO à escolha no Captain's Lounge — que fica
+   * montado (`v-show`) o jogo inteiro, então trocar de nave em partida em
+   * andamento é possível pela própria estrutura da UI (design.md Open
+   * Question 2, decidido aqui: identidade pode mudar a qualquer momento,
+   * cosmético, sem travar por estar em `mode: 'playing'`). `getIcon` do
+   * `useScannerIcons()` resolve o `playerShip` uma vez, no call-time — não
+   * serviria pra isto.
+   */
+  const playerIcon = computed(
+    () =>
+      (playerShipOptions.find((o) => o.key === gameState.shipIconKey) ?? playerShipOptions[0])
+        .img,
+  )
 
   /**
    * Projeta `currentSector` pro grid do SRS. Indexado por **posição**, mas o
@@ -88,7 +107,7 @@ export function useQuadrantCells() {
       }
     }
 
-    grid[cellKey(shipSector)] = { img: getIcon(ScannerEntity.PLAYER) }
+    grid[cellKey(shipSector)] = { img: playerIcon.value }
     return grid
   }
 
