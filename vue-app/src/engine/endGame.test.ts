@@ -19,12 +19,22 @@ describe('engine/endGame', () => {
     expect(checkTerminalConditions(state, { warpCoreExploded: true })).toBe('warp_core_explosion')
   })
 
-  it('crew asphyxiation outranks out_of_energy', () => {
+  it('crew asphyxiation outranks no_starbases', () => {
     const state = createNewGameState(1)
     state.lifeSupportTurnsRemaining = 0
     state.subsystems.life = 30
-    state.mainEnergy = 0
+    state.starbases.forEach((b) => (b.destroyed = true))
     expect(checkTerminalConditions(state)).toBe('crew_asphyxiation')
+  })
+
+  it('energia esgotada NÃO é condição terminal (é vazão, não estoque)', () => {
+    // Sobrecarga e breach substituem o fim de energia: consumir acima do que o
+    // Warp Core gera não esvazia tanque, gera dano no core.
+    const state = createNewGameState(1)
+    state.enemiesLeft = 5
+    state.shieldEnergy = 2500
+    state.subsystemsOn = { srs: true, lrs: true, photons: true, autoNav: true }
+    expect(checkTerminalConditions(state)).toBeNull()
   })
 
   it('calculateCommanderRating weights captured klingons at 1.5x vs destroyed', () => {
@@ -43,10 +53,10 @@ describe('engine/endGame', () => {
 
   it('evaluateEndGame sets state.mode to result and populates state.result when terminal', () => {
     const state = createNewGameState(1)
-    state.mainEnergy = 0
+    state.starbases.forEach((b) => (b.destroyed = true))
     const res = evaluateEndGame(state)
     expect(res).not.toBeNull()
-    expect(res?.reason).toBe('out_of_energy')
+    expect(res?.reason).toBe('no_starbases')
     expect(state.mode).toBe('result')
   })
 })

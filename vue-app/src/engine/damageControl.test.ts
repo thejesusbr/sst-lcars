@@ -3,6 +3,7 @@ import {
   calculateRepairRate,
   dispatchTeam,
   recallTeam,
+  resolveBreachTurn,
   resolveDamageControlTurn,
   resolveLandingPartyTurn,
   sendParty,
@@ -59,17 +60,39 @@ describe('engine/damageControl', () => {
 
   it('calculateRepairRate applies diminishing returns for stacked teams', () => {
     const state = fixture()
+    // `turnsWorked: 1` = equipe já trabalhava antes deste turno. Com 0 ela não
+    // contribui: reparo começa no turno SEGUINTE ao despacho.
     state.teams[0].status = 'working'
     state.teams[0].assignedSystem = 'shields'
     state.teams[0].efficiency = 100
+    state.teams[0].turnsWorked = 1
 
     state.teams[1].status = 'working'
     state.teams[1].assignedSystem = 'shields'
     state.teams[1].efficiency = 100
+    state.teams[1].turnsWorked = 1
 
     // 2 teams at 100%: 5 * tier3 * (1 * 1 + 1 * 1) = 15 * 2 = 30
     const rate = calculateRepairRate(state, 'shields')
     expect(rate).toBe(30)
+  })
+
+  it('não repara no turno do despacho, repara no seguinte', () => {
+    const state = fixture()
+    state.subsystems.warp = 80
+    dispatchTeam(state, state.teams[0].id, 'warp')
+
+    // Turno N (o do despacho): equipe entra com turnsWorked 0, nenhum reparo.
+    const turnN = resolveDamageControlTurn(state)
+    expect(turnN.repairs['warp']).toBe(0)
+    expect(state.subsystems.warp).toBe(80)
+    expect(state.teams[0].turnsWorked).toBe(1)
+
+    // Turno N+1: agora conta. Eficiência já caiu pela fadiga do turno N
+    // (100 * 0.5^(1/3) = 79), então 5 * 3 * 0.79 = 11.85 -> 12.
+    const turnNext = resolveDamageControlTurn(state)
+    expect(turnNext.repairs['warp']).toBeGreaterThan(0)
+    expect(state.subsystems.warp).toBeGreaterThan(80)
   })
 
   it('resolveDamageControlTurn repairs damaged subsystems and updates team efficiency', () => {
@@ -78,11 +101,37 @@ describe('engine/damageControl', () => {
     state.teams[0].status = 'working'
     state.teams[0].assignedSystem = 'warp'
     state.teams[0].efficiency = 100
+    state.teams[0].turnsWorked = 1
 
     const res = resolveDamageControlTurn(state)
     expect(res.repairs['warp']).toBe(15) // 5 * 3 * 1.0 = 15
     expect(state.subsystems.warp).toBe(95)
-    expect(state.teams[0].turnsWorked).toBe(1)
+    expect(state.teams[0].turnsWorked).toBe(2)
+  })
+
+  it('breach expira sem contenção e sinaliza morte por radiação', () => {
+    const state = fixture()
+    state.breach = { active: true, containment: 0, turnsRemaining: 1 }
+
+    const res = resolveBreachTurn(state)
+    expect(res.expired).toBe(true)
+    expect(res.contained).toBe(false)
+    expect(state.breach.turnsRemaining).toBe(0)
+  })
+
+  it('breach com equipe designada progride a contenção em tier 5', () => {
+    const state = fixture()
+    state.breach = { active: true, containment: 0, turnsRemaining: 5 }
+    state.teams[0].status = 'working'
+    state.teams[0].assignedSystem = 'warpCore'
+    state.teams[0].efficiency = 100
+    state.teams[0].turnsWorked = 1
+
+    const res = resolveBreachTurn(state)
+    // tier 5 durante breach: 5 * 5 * 1.0 = 25
+    expect(res.containmentGained).toBe(25)
+    expect(state.breach.containment).toBe(25)
+    expect(state.breach.active).toBe(true)
   })
 
   /** Planta um planeta adjacente com as cargas dadas e despacha a missão. */

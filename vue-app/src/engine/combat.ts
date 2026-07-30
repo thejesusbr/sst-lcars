@@ -23,33 +23,12 @@ import {
   isCritical,
   round4,
 } from '@/engine/constants'
+import type { GameState } from '@/types/game'
 import {
-  ENEMY_TYPES,
-  STARBASE_TYPES,
-  type EnemyType,
-  type GameState,
-  type SectorEntity,
-  type StarbaseType,
-} from '@/types/game'
-
-// ── Utilitários de Alvos e Entidades ────────────────────────────────────────
-
-/** Retorna todas as entidades hostis visíveis (não cloacadas) no setor atual. */
-export function getVisibleEnemies(state: GameState): SectorEntity[] {
-  return state.currentSector.filter(
-    (e) => isEnemyType(e.type) && !e.cloaked
-  )
-}
-
-/** Verifica se um tipo de entidade é um dos tipos hostis. */
-export function isEnemyType(type: string): type is EnemyType {
-  return (ENEMY_TYPES as readonly string[]).includes(type)
-}
-
-/** Verifica se um tipo de entidade é uma base aliada. */
-export function isStarbaseType(type: string): type is StarbaseType {
-  return (STARBASE_TYPES as readonly string[]).includes(type)
-}
+  getVisibleEnemies,
+  isEnemyType,
+  isStarbaseType,
+} from '@/engine/sector'
 
 // ── Phasers (seções 2.3 e specs de Combat) ──────────────────────────────────
 
@@ -78,7 +57,10 @@ export function firePhasers(
     return { success: false, reason: 'no_lock', powerCommitted: 0, totalDamageDealt: 0, hits: [] }
   }
 
-  const availablePower = Math.min(requestedPower, state.mainEnergy)
+  // Sem gate de estoque: energia é vazão. O disparo sempre sai na potência
+  // escolhida; o preço é o consumo daquele turno entrar em `subsystemDraw` e
+  // poder estourar o que o Warp Core gera — sobrecarga, não recusa.
+  const availablePower = requestedPower
   if (availablePower <= 0) {
     return { success: false, reason: 'no_energy', powerCommitted: 0, totalDamageDealt: 0, hits: [] }
   }
@@ -89,8 +71,6 @@ export function firePhasers(
   }
 
   const d = damageFraction(phaserIntegrity)
-  // Deduz energia
-  state.mainEnergy = Math.max(0, state.mainEnergy - availablePower)
 
   // Aquecimento por disparo aumenta com dano no subsistema: 30 * (1 + d)
   const heatGain = round4(PHASER_TEMP_PER_SHOT * (1 + d))
@@ -331,6 +311,82 @@ export function acquireWeaponsLock(state: GameState): boolean {
   return true
 }
 
+// ── Reposicionamento em movimento do jogador ────────────────────────────────
+
+/**
+ * Reposiciona cada inimigo visível pra uma célula desocupada aleatória do setor.
+ *
+ * **Determinístico**, não probabilístico: só dispara quando a ação do turno é
+ * engajar movimento (impulso ou warp), e nunca em Fire/Hail/Lock/End Turn. É o
+ * gatilho exato do fonte de 1978, confirmado com o usuário (`fase-4-engine`
+ * design.md decisão #21). `Cloaked Raider` cloacado não reposiciona — ele só
+ * acumula estresse (decisão #17).
+ */
+export function repositionEnemies(state: GameState, rng = Math.random): void {
+  const taken = new Set(
+    state.currentSector.map((e) => `${e.position.row},${e.position.col}`),
+  )
+  taken.add(`${state.position.sector.row},${state.position.sector.col}`)
+
+  for (const enemy of getVisibleEnemies(state)) {
+    const from = `${enemy.position.row},${enemy.position.col}`
+
+    // A célula de origem fica em `taken`: a spec diz célula **nova**, então
+    // sortear a própria posição não conta como reposicionar.
+    let next = from
+    // 64 células; algumas tentativas bastam. Se todas caírem ocupadas, o
+    // inimigo fica onde está — não é erro, é setor cheio.
+    for (let tries = 0; tries < 24; tries++) {
+      const row = Math.floor(rng() * 8) + 1
+      const col = Math.floor(rng() * 8) + 1
+      const key = `${row},${col}`
+      if (!taken.has(key)) {
+        enemy.position = { row, col }
+        next = key
+        taken.delete(from)
+        break
+      }
+    }
+    taken.add(next)
+  }
+}
+
+// ── Tick de fim de turno ────────────────────────────────────────────────────
+
+export interface CombatTurnResult {
+  /** Trava perdida neste turno por dano no SRS. */
+  lockLost: boolean
+  events: string[]
+}
+
+/**
+ * Tick de fim de turno de combate: resfriamento passivo dos phasers (só em turno
+ * sem disparo) e o roll de perda de Weapons Lock por dano no SRS.
+ *
+ * Existe pra o `turnEngine` ter UMA chamada por turno em vez de espalhar as
+ * duas — as duas estavam implementadas e nunca invocadas (proposal, lacunas 5 e 6).
+ */
+export function resolveCombatTurn(
+  state: GameState,
+  options: { fired?: boolean } = {},
+  rng = Math.random,
+): CombatTurnResult {
+  const events: string[] = []
+
+  if (!options.fired) {
+    passivePhaserCooldown(state)
+  }
+
+  const wasLocked = state.weaponsLocked
+  checkWeaponsLock(state, rng)
+  const lockLost = wasLocked && !state.weaponsLocked
+  if (lockLost) {
+    events.push('Weapons Lock perdido — sensores de curto alcance degradados.')
+  }
+
+  return { lockLost, events }
+}
+
 // ── Hail (Rendições e Capturas) ─────────────────────────────────────────────
 
 export interface HailResult {
@@ -448,48 +504,9 @@ export function tickCloakStress(state: GameState): void {
   }
 }
 
-/**
- * Resolve os ataques de contra-ataque das naves inimigas presentes no setor.
- */
-export function resolveEnemyCounterAttacks(
-  state: GameState,
-  rng = Math.random
-): { totalDamage: number; hits: { enemyId: string; damage: number }[] } {
-  const activeEnemies = state.currentSector.filter(
-    (e) => isEnemyType(e.type) && !e.cloaked
-  )
-  let totalDamage = 0
-  const hits: { enemyId: string; damage: number }[] = []
-
-  for (const enemy of activeEnemies) {
-    const power = enemy.enemyPower ?? 0
-    if (power <= 0) continue
-
-    // Dano baseado no poder restante e distância euclidiana
-    const dist = Math.hypot(
-      state.position.sector.row - enemy.position.row,
-      state.position.sector.col - enemy.position.col
-    )
-    const hitDamage = Math.round((power / Math.max(1, dist)) * (0.8 + rng() * 0.4))
-
-    // Escudos absorvem dano
-    if (state.shieldEnergy >= hitDamage) {
-      state.shieldEnergy -= hitDamage
-      state.shieldDamageTaken += hitDamage
-    } else {
-      const remainder = hitDamage - state.shieldEnergy
-      state.shieldDamageTaken += state.shieldEnergy
-      state.shieldEnergy = 0
-      // Dano excedente vaza para energia principal e causa estrago
-      state.mainEnergy = Math.max(0, state.mainEnergy - remainder)
-    }
-
-    // Ataque inimigo gasta parte da sua força de combate
-    enemy.enemyPower = Math.max(0, power - Math.round(hitDamage * 0.15))
-
-    totalDamage += hitDamage
-    hits.push({ enemyId: enemy.id, damage: hitDamage })
-  }
-
-  return { totalDamage, hits }
-}
+// `resolveEnemyCounterAttacks` foi removida aqui: era código morto (nenhum
+// chamador) e uma SEGUNDA implementação de ataque inimigo, com fórmula divergente
+// (`0.8 + rnd*0.4`) da que a spec manda e o `turnEngine` usa
+// (`H = floor((power/dist) * (2 + rnd))`, linha 3350 do fonte de 1978). Duas
+// fórmulas pro mesmo evento é exatamente a classe de armadilha que esta mudança
+// existe pra eliminar — a versão do `turnEngine` é a correta.

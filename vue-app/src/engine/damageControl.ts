@@ -23,7 +23,7 @@ import {
   type GridCoord,
   type SubsystemKey,
 } from '@/types/game'
-import { getVisibleEnemies } from '@/engine/combat'
+import { getVisibleEnemies, isAdjacent } from '@/engine/sector'
 
 /** Multiplicadores por posição de pilha de equipes no mesmo subsistema. */
 export const STACKING_MULTIPLIERS = [1, 1, 0.5, 0.25, 0.125, 0.0625] as const
@@ -111,8 +111,16 @@ export function calculateRepairRate(
   state: GameState,
   system: SubsystemKey
 ): number {
+  // `turnsWorked >= 1` é o que faz o despacho não render reparo retroativo no
+  // próprio turno do despacho: a equipe entra com `turnsWorked: 0`, o contador
+  // sobe no FIM da resolução, e ela só passa a contribuir no turno seguinte.
+  // Sem campo extra de estado (spec `damage-control`, "Repair contribution
+  // starts the turn after dispatch").
   const assignedTeams = state.teams.filter(
-    (t) => t.status === 'working' && t.assignedSystem === system
+    (t) =>
+      t.status === 'working' &&
+      t.assignedSystem === system &&
+      t.turnsWorked >= 1
   )
   if (assignedTeams.length === 0) return 0
 
@@ -136,16 +144,57 @@ export function calculateRepairRate(
 
 // ── Resolução de Turno (Fadiga, Recuperação e Reparos) ──────────────────────
 
+export interface BreachTurnResult {
+  /** Contenção chegou a 100: breach resolvido, ninguém morre. */
+  contained: boolean
+  /** Relógio zerou sem conter: dispara `radiation_death` na etapa 4. */
+  expired: boolean
+  containmentGained: number
+}
+
+/**
+ * Tick do vazamento de radiação. **Separado** de `resolveDamageControlTurn` de
+ * propósito: a spec `turn-engine` ancora a contenção na etapa 2 (Warp Core) e as
+ * condições terminais na etapa 3/4 — o breach precisa progredir ANTES da
+ * checagem, enquanto o reparo geral roda depois, na etapa 5.
+ *
+ * Antes desta mudança um breach começava e nunca progredia: não podia ser
+ * contido nem matar (proposal, lacuna 7).
+ */
+export function resolveBreachTurn(state: GameState): BreachTurnResult {
+  if (!state.breach.active) {
+    return { contained: false, expired: false, containmentGained: 0 }
+  }
+
+  // Mesmo cálculo do reparo do Warp Core (tier 5 durante breach). `turnsWorked`
+  // ainda não subiu neste turno, então as duas leituras — aqui e na etapa 5 —
+  // dão o mesmo número.
+  const gained = Math.round(calculateRepairRate(state, 'warpCore'))
+  state.breach.containment = clamp(state.breach.containment + gained, 0, 100)
+
+  if (state.breach.containment >= 100) {
+    state.breach.active = false
+    return { contained: true, expired: false, containmentGained: gained }
+  }
+
+  state.breach.turnsRemaining = Math.max(0, state.breach.turnsRemaining - 1)
+  return {
+    contained: false,
+    expired: state.breach.turnsRemaining <= 0,
+    containmentGained: gained,
+  }
+}
+
 export interface DamageControlTurnResult {
   repairs: Record<SubsystemKey, number>
-  breachContained: boolean
 }
 
 /**
  * Resolve 1 turno de Controle de Danos:
  * - Aplica os reparos calculados a cada subsistema.
- * - Atualiza a contenção de Radiation Breach, se ativo.
  * - Atualiza a fadiga de equipes trabalhando ou a recuperação de equipes idle/cooldown.
+ *
+ * A contenção de breach saiu daqui pra `resolveBreachTurn` (etapa 2).
  */
 export function resolveDamageControlTurn(
   state: GameState
@@ -161,19 +210,6 @@ export function resolveDamageControlTurn(
     if (amount > 0) {
       const current = state.subsystems[sys]
       state.subsystems[sys] = clamp(current + amount, 0, 100)
-    }
-  }
-
-  // Se o Core Breach estiver ativo, equipes em 'warpCore' progridem na contenção
-  let breachContained = false
-  if (state.breach.active) {
-    const coreRepairs = repairs['warpCore'] ?? 0
-    state.breach.containment = clamp(state.breach.containment + coreRepairs, 0, 100)
-    if (state.breach.containment >= 100) {
-      state.breach.active = false
-      breachContained = true
-    } else {
-      state.breach.turnsRemaining = Math.max(0, state.breach.turnsRemaining - 1)
     }
   }
 
@@ -194,7 +230,7 @@ export function resolveDamageControlTurn(
     }
   }
 
-  return { repairs, breachContained }
+  return { repairs }
 }
 
 // ── Send Party (Missão de 3 Turnos em Planeta Adjacente) ────────────────────
@@ -218,20 +254,16 @@ export function sendParty(
   }
 
   // Valida se há um planeta no setor alvo e se está adjacente à nave (Chebyshev <= 1)
-  const isAdjacent =
-    Math.max(
-      Math.abs(state.position.sector.row - targetSector.row),
-      Math.abs(state.position.sector.col - targetSector.col)
-    ) <= 1
+  const adjacent = isAdjacent(state.position.sector, targetSector)
 
   const hasPlanet = state.currentSector.some(
     (e) =>
-      e.type === 'planet' &&
+      e.type === SectorEntityType.PLANET &&
       e.position.row === targetSector.row &&
       e.position.col === targetSector.col
   )
 
-  if (!isAdjacent || !hasPlanet) {
+  if (!adjacent || !hasPlanet) {
     return { success: false, reason: 'no_planet' }
   }
 

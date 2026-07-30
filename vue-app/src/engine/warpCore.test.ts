@@ -8,6 +8,14 @@ import {
   subsystemDraw,
 } from '@/engine/warpCore'
 import { createNewGameState } from '@/engine/newGame'
+import {
+  LIFE_SUPPORT_DRAW,
+  OVERLOAD_MAX,
+  WARP_CORE_DAMAGE_TABLE,
+  WARP_CORE_HOUSE_DRAW,
+  WARP_CORE_OUTPUT,
+  warpCoreOutput,
+} from '@/engine/constants'
 
 describe('engine/warpCore', () => {
   it('subsystemDraw sums active subsystem energy draws correctly', () => {
@@ -16,9 +24,65 @@ describe('engine/warpCore', () => {
     expect(draw).toBeGreaterThan(0)
   })
 
-  it('autoOverload returns overload when draw exceeds WARP_CORE_OUTPUT', () => {
-    const ol = autoOverload(5000) // 5000 is 500 over 4500 (approx 11%)
-    expect(ol).toBeGreaterThan(0)
+  it('autoOverload é linear no excesso absoluto, não percentual do output', () => {
+    // 500 de excesso -> ceil(500/150) = 4, independente do output.
+    expect(autoOverload(5000, WARP_CORE_OUTPUT)).toBe(4)
+    // Mesmo excesso, output MUITO menor: o percentual daria 111, o absoluto dá 4.
+    // É isto que impede o denominador encolhido de disparar a tabela Fibonacci.
+    expect(autoOverload(950, 450)).toBe(4)
+  })
+
+  it('autoOverload é 0 dentro do orçamento e satura em 20', () => {
+    expect(autoOverload(4000, WARP_CORE_OUTPUT)).toBe(0)
+    expect(autoOverload(WARP_CORE_OUTPUT, WARP_CORE_OUTPUT)).toBe(0)
+    // Mínimo 1 assim que estoura, mesmo por 1 unidade.
+    expect(autoOverload(WARP_CORE_OUTPUT + 1, WARP_CORE_OUTPUT)).toBe(1)
+    expect(autoOverload(20000, WARP_CORE_OUTPUT)).toBe(OVERLOAD_MAX)
+    // Core morto não gera nada: satura direto.
+    expect(autoOverload(100, 0)).toBe(OVERLOAD_MAX)
+  })
+
+  it('a degradação é GRADIENTE, não penhasco', () => {
+    // Esta é a regressão que importa. Com a fórmula percentual antiga, integridade
+    // 42 dava 0.02 de dano/turno e integridade 35 dava 85 — 7 pontos de
+    // integridade atravessavam a tabela inteira, e o core a 30% morria em 1 turno.
+    const draw = 1915 // consumo de cruzeiro
+    const damageAt = (integrity: number) => {
+      const ov = autoOverload(draw, warpCoreOutput(integrity))
+      return WARP_CORE_DAMAGE_TABLE[ov]
+    }
+
+    // Nenhum degrau de 5 pontos de integridade pode multiplicar o dano por mais
+    // de 10x — é o que caracteriza penhasco.
+    for (const integrity of [40, 35, 30, 25, 20, 15]) {
+      const here = damageAt(integrity)
+      const next = damageAt(integrity - 5)
+      if (here > 0) {
+        expect(next / here, `degrau ${integrity} -> ${integrity - 5}`).toBeLessThan(10)
+      }
+    }
+
+    // E a nave sobrevive tempo suficiente pra reagir com o core a 20%.
+    expect(damageAt(20)).toBeLessThan(2)
+  })
+
+  it('cortar consumo zera a sobrecarga em qualquer integridade', () => {
+    // A saída tática: com tudo desligado o consumo cai pro piso (Life Support 150
+    // + house load 50 = 200) e o core para de apanhar, mesmo em frangalhos.
+    const emergencyDraw = LIFE_SUPPORT_DRAW + WARP_CORE_HOUSE_DRAW
+    for (const integrity of [40, 30, 20, 10]) {
+      expect(
+        autoOverload(emergencyDraw, warpCoreOutput(integrity)),
+        `integridade ${integrity}`,
+      ).toBe(0)
+    }
+  })
+
+  it('sobrecarga deliberada segue perigosa com o core intacto', () => {
+    // O gradiente não pode ter tornado o excesso inofensivo: disparar phaser a
+    // 3000 com escudo no teto e movendo sob impulso ainda satura.
+    expect(autoOverload(6500, WARP_CORE_OUTPUT)).toBeGreaterThanOrEqual(13)
+    expect(autoOverload(7900, WARP_CORE_OUTPUT)).toBe(OVERLOAD_MAX)
   })
 
   it('effectiveOverload combines overload sources and clamps to 0-20', () => {

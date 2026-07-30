@@ -19,11 +19,13 @@ export default defineConfig({
   test: {
     projects: [{
       // Engine core: TS puro, sem Vue/browser -- roda em node.
+      // A store entra aqui tambem: Pinia funciona fora do browser com
+      // `setActivePinia`, e e onde o hook onQuadrantEnter e ligado de verdade.
       extends: true,
       test: {
         name: 'unit',
         environment: 'node',
-        include: ['src/engine/**/*.test.ts']
+        include: ['src/engine/**/*.test.ts', 'src/stores/**/*.test.ts']
       }
     }, {
       extends: true,

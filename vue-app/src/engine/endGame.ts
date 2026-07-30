@@ -11,12 +11,14 @@ import type { EndGameReason, EndGameResult, GameState } from '@/types/game'
  * Verifica condições terminais de acordo com a ordem estrita Kobayashi Maru:
  * 1. Explosão do Warp Core
  * 2. Destruição da nave junto com base atracada
- * 3. Morte por radiação (breach expirado sem contenção)
- * 4. Asfixia da tripulação (Life Support crítico por 5 turnos)
- * 5. Fim de energia (mainEnergy <= 0)
+ * 3. Casco destruído (integridade estrutural em 0)
+ * 4. Morte por radiação (breach expirado sem contenção)
+ * 5. Asfixia da tripulação (Life Support crítico por 5 turnos)
  * 6. Todas as bases destruídas
  * 7. Limite de stardate atingido
  * 8. Vitória (nenhum inimigo restante)
+ *
+ * NÃO há condição de fim de energia — ver comentário no corpo da função.
  */
 export function checkTerminalConditions(
   state: GameState,
@@ -35,16 +37,25 @@ export function checkTerminalConditions(
     return 'destroyed_with_base'
   }
 
-  // 3. Radiation Death
+  // 3. Hull destroyed — dano externo que passou dos escudos acabou com a nave.
+  if (state.hullIntegrity <= 0) {
+    return 'hull_destroyed'
+  }
+
+  // 4. Radiation Death
+  // `containment < 100`, não `=== 0`: a spec diz que zerar o relógio SEM
+  // contenção COMPLETA mata. Com `=== 0`, um breach em 50% de contenção
+  // sobrevivia ao próprio relógio pra sempre — contenção parcial valia como
+  // contenção total.
   if (
     state.breach.active &&
     state.breach.turnsRemaining <= 0 &&
-    state.breach.containment === 0
+    state.breach.containment < 100
   ) {
     return 'radiation_death'
   }
 
-  // 4. Crew Asphyxiation
+  // 5. Crew Asphyxiation
   if (
     state.lifeSupportTurnsRemaining !== null &&
     state.lifeSupportTurnsRemaining <= 0 &&
@@ -53,10 +64,14 @@ export function checkTerminalConditions(
     return 'crew_asphyxiation'
   }
 
-  // 5. Out of Energy
-  if (state.mainEnergy <= 0) {
-    return 'out_of_energy'
-  }
+  // `out_of_energy` NÃO existe nesta versão, por design.
+  //
+  // O original de 1978 tinha energia como estoque que drenava (`E=E-N-10`) e
+  // zerar era derrota. Aqui o modelo é **vazão**: o Warp Core gera uma potência
+  // e os subsistemas querem consumir. Consumir mais do que ele gera não esvazia
+  // tanque nenhum — gera SOBRECARGA, que danifica o core e pode virar breach.
+  // Sobrecarga e breach são o que substitui o fim de energia, e é o que dá
+  // sentido à mecânica de desligar subsistema pra caber no orçamento.
 
   // 6. No Starbases Left
   const aliveBases = state.starbases.filter((b) => !b.destroyed).length

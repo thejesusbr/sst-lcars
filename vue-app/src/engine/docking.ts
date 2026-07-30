@@ -12,34 +12,38 @@
  */
 
 import {
-  MAIN_ENERGY_INITIAL,
+  HULL_INTEGRITY_MAX,
   STARBASE_POOL_CAPACITY,
   STARBASE_POOL_REGEN,
   TORPEDO_STOCK_MAX,
-  WARP_CORE_OUTPUT,
   clamp,
 } from '@/engine/constants'
 import {
-  ENEMY_TYPES,
   SectorEntityType,
-  STARBASE_TYPES,
   type GameState,
   type SectorEntity,
   type Starbase,
   type StarbaseType,
 } from '@/types/game'
+import { isAdjacent, isEnemyType, isStarbaseType } from '@/engine/sector'
 
 /**
  * Conversão de "recurso genérico do pool" pro que a base entrega. Calibrado
  * pro pool cheio (500) cobrir um reabastecimento total (12 torpedos = 120 +
- * 3000 de energia = 150) e ainda sobrar pros ticks de reparo (25/subsistema,
+ * casco cheio = 150) e ainda sobrar pros ticks de reparo (25/subsistema,
  * decisão #8).
  *
  * ponytail: números de playtest, mesmo tratamento dos outros baselines desta
  * mudança — são o knob de calibração do "spam de docking rende menos".
  */
 export const POOL_COST_PER_TORPEDO = 10
-export const POOL_COST_PER_ENERGY = 0.05
+/**
+ * Custo de pool por ponto de casco reformado. Antes era `0.05` por unidade de
+ * energia (escala 0-3000); casco é 0-100, então a escala mudou: `1.5` deixa uma
+ * reforma completa de casco (100 pts) custando 150 do pool, mesma ordem de
+ * grandeza do reabastecimento total de torpedo (12 × 10 = 120).
+ */
+export const POOL_COST_PER_HULL = 1.5
 
 /** Motivo de recusa; `null` quando a atracagem aconteceu. */
 export type DockRejection = 'no-adjacent-base'
@@ -55,7 +59,8 @@ export interface DockResult {
   baseId: string | null
   baseType: StarbaseType | null
   torpedoesRestored: number
-  energyRestored: number
+  /** Pontos de integridade de CASCO reformados (só `STARBASE_DOCK`). */
+  hullRestored: number
   prisonersTransferred: number
   guardTeamsReleased: number
   poolSpent: number
@@ -72,7 +77,7 @@ export type DockState = Pick<
   | 'starbases'
   | 'docked'
   | 'dockedBaseId'
-  | 'mainEnergy'
+  | 'hullIntegrity'
   | 'shieldEnergy'
   | 'manualOverload'
   | 'torpedoStock'
@@ -80,13 +85,6 @@ export type DockState = Pick<
   | 'teams'
   | 'hostileDockWarningShown'
 >
-
-const STARBASE_TYPE_SET: ReadonlySet<string> = new Set(STARBASE_TYPES)
-const ENEMY_TYPE_SET: ReadonlySet<string> = new Set(ENEMY_TYPES)
-
-function isAdjacent(a: { row: number; col: number }, b: { row: number; col: number }): boolean {
-  return Math.abs(a.row - b.row) <= 1 && Math.abs(a.col - b.col) <= 1
-}
 
 /**
  * Entidade de starbase adjacente ao setor da nave, ou `null`. Adjacência é
@@ -96,7 +94,7 @@ export function findAdjacentStarbase(state: DockState): SectorEntity | null {
   return (
     state.currentSector.find(
       (entity) =>
-        STARBASE_TYPE_SET.has(entity.type) &&
+        isStarbaseType(entity.type) &&
         isAdjacent(entity.position, state.position.sector),
     ) ?? null
   )
@@ -109,7 +107,7 @@ export function canDock(state: DockState): boolean {
 
 /** Há inimigo no setor? Decide o aviso único de docking hostil. */
 export function hasHostiles(state: DockState): boolean {
-  return state.currentSector.some((entity) => ENEMY_TYPE_SET.has(entity.type))
+  return state.currentSector.some((entity) => isEnemyType(entity.type))
 }
 
 /**
@@ -140,7 +138,7 @@ function rejected(rejection: DockRejection): DockResult {
     baseId: null,
     baseType: null,
     torpedoesRestored: 0,
-    energyRestored: 0,
+    hullRestored: 0,
     prisonersTransferred: 0,
     guardTeamsReleased: 0,
     poolSpent: 0,
@@ -168,15 +166,15 @@ export function dock(state: DockState): DockResult {
   state.docked = true
   state.dockedBaseId = record?.id ?? entity.id
 
-  // Porto seguro: escudos descem pra `mainEnergy` e o núcleo esfria, ANTES de
-  // qualquer resupply (o retorno do escudo já conta como energia recuperada).
-  state.mainEnergy = clamp(state.mainEnergy + state.shieldEnergy, 0, WARP_CORE_OUTPUT)
+  // Porto seguro: escudos descem (deixam de taxar o orçamento) e o núcleo
+  // esfria. Não há estoque de energia pra "devolver" — baixar o escudo já
+  // libera a vazão que ele consumia.
   state.shieldEnergy = 0
   state.manualOverload = 0
 
-  const { torpedoes, energy, spent } = resupply(state, baseType, pool)
+  const { torpedoes, hull: hullRepair, spent } = resupply(state, baseType, pool)
   state.torpedoStock += torpedoes
-  state.mainEnergy += energy
+  state.hullIntegrity = clamp(state.hullIntegrity + hullRepair, 0, HULL_INTEGRITY_MAX)
   if (record) record.resourcePool = clamp(pool - spent, 0, STARBASE_POOL_CAPACITY)
 
   // Entrega de prisioneiros: qualquer tipo de base, de graça, e a equipe de
@@ -203,7 +201,7 @@ export function dock(state: DockState): DockResult {
     baseId: state.dockedBaseId,
     baseType,
     torpedoesRestored: torpedoes,
-    energyRestored: energy,
+    hullRestored: hullRepair,
     prisonersTransferred,
     guardTeamsReleased,
     poolSpent: spent,
@@ -214,34 +212,35 @@ export function dock(state: DockState): DockResult {
 
 /**
  * Resupply instantâneo por tipo de base, limitado pelo pool: `DOCK` repõe
- * torpedos E energia, `SUPPLY` só torpedos, `SCIENCE` nada (só confirmação de
+ * torpedos E casco, `SUPPLY` só torpedos, `SCIENCE` nada (só confirmação de
  * suporte vital). Pool insuficiente entrega proporcionalmente menos.
  */
 function resupply(
   state: DockState,
   baseType: StarbaseType,
   pool: number,
-): { torpedoes: number; energy: number; spent: number } {
-  const none = { torpedoes: 0, energy: 0, spent: 0 }
+): { torpedoes: number; hull: number; spent: number } {
+  const none = { torpedoes: 0, hull: 0, spent: 0 }
   if (baseType === SectorEntityType.STARBASE_SCIENCE) return none
 
   const wantedTorpedoes = Math.max(0, TORPEDO_STOCK_MAX - state.torpedoStock)
-  const wantedEnergy =
+  // Só a doca reforma casco; depósito de suprimentos só repõe torpedo.
+  const wantedHull =
     baseType === SectorEntityType.STARBASE_DOCK
-      ? Math.max(0, MAIN_ENERGY_INITIAL - state.mainEnergy)
+      ? Math.max(0, HULL_INTEGRITY_MAX - state.hullIntegrity)
       : 0
 
   const fullCost =
-    wantedTorpedoes * POOL_COST_PER_TORPEDO + wantedEnergy * POOL_COST_PER_ENERGY
+    wantedTorpedoes * POOL_COST_PER_TORPEDO + wantedHull * POOL_COST_PER_HULL
   if (fullCost === 0) return none
 
   const factor = fullCost > pool ? pool / fullCost : 1
   const torpedoes = Math.floor(wantedTorpedoes * factor)
-  const energy = Math.floor(wantedEnergy * factor)
+  const hull = Math.floor(wantedHull * factor)
   return {
     torpedoes,
-    energy,
-    spent: torpedoes * POOL_COST_PER_TORPEDO + energy * POOL_COST_PER_ENERGY,
+    hull,
+    spent: torpedoes * POOL_COST_PER_TORPEDO + hull * POOL_COST_PER_HULL,
   }
 }
 

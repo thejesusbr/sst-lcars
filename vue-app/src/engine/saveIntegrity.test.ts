@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  commitTurnChecksum,
   computeChecksum,
   verifySaveIntegrity,
   migrateSave,
@@ -19,15 +20,31 @@ describe('engine/saveIntegrity & tribbleInfestation', () => {
   })
 
   it('migrateSave ensures GAME_SCHEMA_VERSION is set on loaded state', () => {
-    const migrated = migrateSave({ mainEnergy: 2500 })
-    expect(migrated.mainEnergy).toBe(2500)
+    const migrated = migrateSave({ shieldEnergy: 2500 }, createNewGameState(0))
+    expect(migrated.shieldEnergy).toBe(2500)
     expect(migrated.schemaVersion).toBe(1)
   })
 
   it('verifySaveIntegrity detects altered save when checksum record mismatches', async () => {
     const state = createNewGameState(1)
-    const validState = await verifySaveIntegrity(state, undefined)
+    const validState = await verifySaveIntegrity(state, state, undefined)
     expect(validState.tribbleInfestationActive).toBe(false)
+  })
+
+  it('verifySaveIntegrity flags tampering when the stored digest does not match', async () => {
+    const state = createNewGameState(1)
+    const store = new Map<string, string>()
+    const storage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    }
+    await commitTurnChecksum(state, storage)
+
+    // Editar o save à mão sem regravar o selo é exatamente o caso que o
+    // marcador existe pra pegar.
+    const tampered = { ...state, torpedoStock: 999999 }
+    const result = await verifySaveIntegrity(tampered, state, storage)
+    expect(result.tribbleInfestationActive).toBe(true)
   })
 
   it('advanceTribbleInfestation doubles tribble population when active', () => {

@@ -3,10 +3,10 @@ import {
   checkWeaponsLock,
   firePhasers,
   fireTorpedoes,
-  getVisibleEnemies,
   hailTarget,
   tickCloakStress,
 } from '@/engine/combat'
+import { getVisibleEnemies } from '@/engine/sector'
 import { createNewGameState } from '@/engine/newGame'
 import { SectorEntityType } from '@/types/game'
 
@@ -32,7 +32,10 @@ describe('engine/combat', () => {
     const res = firePhasers(state, 1000, () => 0.5)
     expect(res.success).toBe(true)
     expect(res.hits.length).toBe(2)
-    expect(state.mainEnergy).toBe(2000)
+    // Não há estoque de energia pra debitar: a potência comprometida vira
+    // CONSUMO do turno (`subsystemDraw`), e é isso que pode estourar o
+    // orçamento do Warp Core e gerar sobrecarga.
+    expect(res.powerCommitted).toBe(1000)
     expect(state.phaserTemp).toBeGreaterThan(50)
   })
 

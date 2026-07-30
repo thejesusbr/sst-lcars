@@ -13,11 +13,50 @@
 
 // ── Energia (seção 2.3) ─────────────────────────────────────────────────────
 
-/** Output nominal do Warp Core; teto antes de `autoOverload` disparar. */
+/**
+ * Output NOMINAL do Warp Core, com o core intacto. Teto antes de `autoOverload`
+ * disparar.
+ *
+ * ⚠️ Energia aqui é **vazão, não estoque**. O core gera potência por turno e os
+ * subsistemas querem consumir; consumir acima disso não esvazia tanque nenhum,
+ * gera sobrecarga → dano no core → breach. Não existe condição de "fim de
+ * energia" (o `E=E-N-10` do original de 1978 foi descartado de propósito) — ver
+ * `engine/endGame.ts`.
+ *
+ * O output EFETIVO cai com o dano no core: use `warpCoreOutput()`, não esta
+ * constante, em qualquer cálculo de orçamento.
+ */
 export const WARP_CORE_OUTPUT = 4500
-export const MAIN_ENERGY_INITIAL = 3000
+
+/**
+ * Output efetivo: `4500 × (1 - d)`. Core danificado entrega menos, então o mesmo
+ * consumo que cabia passa a estourar o orçamento — e a sobrecarga resultante
+ * danifica mais o core. É a espiral que dá peso real a desligar subsistema:
+ * deixa de ser economia e passa a ser sobrevivência.
+ *
+ * Sem piso, por decisão: um core em frangalhos pode ficar incapaz de sustentar a
+ * nave, e a saída é desligar tudo que der e correr pra uma base.
+ */
+export function warpCoreOutput(warpCoreIntegrity: number): number {
+  return WARP_CORE_OUTPUT * (1 - damageFraction(warpCoreIntegrity))
+}
+
 export const SHIELD_ENERGY_MAX = 2500
 export const SHIELD_ENERGY_INITIAL = 1500
+
+// ── Casco (integridade estrutural) ──────────────────────────────────────────
+
+export const HULL_INTEGRITY_MAX = 100
+
+/**
+ * Divisor do dano que passa dos escudos antes de virar perda de casco.
+ *
+ * Dano inimigo bruto (`H`) vem em centenas; casco é 0-100 como os subsistemas.
+ * Com 20, um acerto de 200 sem escudo tira 10 pontos — cerca de 5 turnos
+ * totalmente desprotegido até a destruição. Valor de partida pra playtest, mesmo
+ * tratamento dos outros números (decisão #25).
+ */
+export const HULL_DAMAGE_DIVISOR = 20
 
 // ── Armas (seção 2.3) ───────────────────────────────────────────────────────
 
@@ -112,6 +151,30 @@ export const BRIG_CAPACITY = 4
 
 export const OVERLOAD_MIN = 0
 export const OVERLOAD_MAX = 20
+
+/**
+ * Unidades de energia de excesso por ponto de sobrecarga automática.
+ *
+ * A sobrecarga automática é **linear no excesso absoluto**
+ * (`ceil(excesso / 150)`), não percentual sobre o output. A versão percentual
+ * empilhava duas exponenciais e produzia um penhasco em vez de curva:
+ *
+ * - `%` do excesso é **hiperbólico** — quando o core se danifica o output cai,
+ *   então o denominador cai junto e a razão dispara;
+ * - `WARP_CORE_DAMAGE_TABLE` é **Fibonacci**, super-exponencial no índice.
+ *
+ * Resultado medido: 7 pontos de integridade atravessavam a tabela inteira
+ * (integridade 42 → 0.02 de dano/turno; integridade 35 → 85/turno + 55% de
+ * explosão). Core a 30% morria em 1 turno, sem decisão possível.
+ *
+ * Com 150, partindo de cruzeiro (~1915) e sem reparo: integridade 30 sustenta
+ * 60+ turnos, 25 dá ~49, **20 dá ~23 turnos com 8% de risco acumulado**, 15 dá
+ * ~11. Terror com saída — e cortar consumo zera a sobrecarga em qualquer
+ * integridade, que é a resposta tática pretendida.
+ *
+ * Menor = mais punitivo (125 deixa integridade 20 em ~12 turnos).
+ */
+export const OVERLOAD_PER_EXCESS = 150
 
 /**
  * Dano/turno ao WC por ponto de overload efetivo. Curva Fibonacci

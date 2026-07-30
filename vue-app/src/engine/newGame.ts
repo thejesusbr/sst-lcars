@@ -17,7 +17,7 @@ import {
 import {
   BRIG_CAPACITY,
   DAMAGE_CONTROL_TEAM_COUNT,
-  MAIN_ENERGY_INITIAL,
+  HULL_INTEGRITY_MAX,
   PHASER_POWER_MAX,
   PHASER_TEMP_INITIAL,
   PROBES_INITIAL,
@@ -72,12 +72,13 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
 
     position: world.position,
     destination: null,
+    destinationSector: null,
 
-    mainEnergy: MAIN_ENERGY_INITIAL,
     shieldEnergy: SHIELD_ENERGY_INITIAL,
     shieldDamageTaken: 0,
     impulsePower: 50,
     phaserPower: PHASER_POWER_MAX / 2,
+    hullIntegrity: HULL_INTEGRITY_MAX,
 
     // Setor inicial já materializado: o jogo começa jogável, não num vazio.
     currentSector: materializeSector(
@@ -129,7 +130,7 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
     probe: null,
     landingParty: null,
 
-    redAlert: false,
+    alertLevel: 'green',
     combatLog: [],
     logReadMarkers: { captain: 0, general: 0, engineering: 0 },
 

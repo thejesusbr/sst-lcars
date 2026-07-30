@@ -19,7 +19,6 @@
  */
 
 import { GAME_SCHEMA_VERSION, type GameState } from '@/types/game'
-import { createNewGameState } from '@/engine/newGame'
 
 /** Constante fixa misturada no digest. NÃO é secreta (vai no bundle). */
 const INTEGRITY_SALT = 'sst-lcars/save-integrity/v1'
@@ -32,14 +31,22 @@ const INTEGRITY_SALT = 'sst-lcars/save-integrity/v1'
 export const SAVE_CHECKSUM_KEY = 'sst-lcars:save-checksum'
 
 /**
- * Campos hasheados = os da versão ATUAL do schema, derivados do factory de
- * estado inicial (uma definição só de "o que é um GameState"), ordenados pra
- * não depender da ordem de inserção. `schemaVersion` fica de fora: subir a
- * versão não pode, sozinho, mudar o digest.
+ * Campos hasheados = os do próprio estado sendo selado, ordenados pra não
+ * depender da ordem de inserção. `schemaVersion` fica de fora: subir a versão
+ * não pode, sozinho, mudar o digest.
+ *
+ * Derivar do estado recebido (e não de uma fábrica importada) é o que mantém
+ * este módulo **folha** — importa só de `types/game.ts`. Antes ele chamava
+ * `createNewGameState(0)` no topo do módulo, o que gerava uma galáxia inteira só
+ * pra listar chaves E fazia um irmão importar outro irmão, violando o
+ * invariante da decisão #36. Efeito colateral bem-vindo: campo estranho enfiado
+ * no save entra no digest e o marcador detecta.
  */
-const HASHED_FIELDS = (Object.keys(createNewGameState(0)) as (keyof GameState)[])
-  .filter((key) => key !== 'schemaVersion')
-  .sort()
+function hashedFields(state: GameState): (keyof GameState)[] {
+  return (Object.keys(state) as (keyof GameState)[])
+    .filter((key) => key !== 'schemaVersion')
+    .sort()
+}
 
 /** Registro persistido: hash + a versão de schema em que ele foi calculado. */
 interface ChecksumRecord {
@@ -58,11 +65,15 @@ function defaultStorage(): IntegrityStorage | undefined {
  * Migra um save carregado pro schema atual. v1 é no-op de fato (só preenche
  * campos ausentes com o default e carimba a versão); a costura existe pra que
  * um patch futuro tenha onde converter antes do hash ser recalculado.
+ *
+ * `defaults` é **injetado** pelo chamador (a store passa `createNewGameState()`)
+ * em vez de importado: é o que evita este módulo depender de `newGame.ts`, e de
+ * quebra deixa o teste passar um estado fixo sem gerar mundo.
  */
-export function migrateSave(raw: unknown): GameState {
+export function migrateSave(raw: unknown, defaults: GameState): GameState {
   const loaded = (raw ?? {}) as Partial<GameState>
   return {
-    ...createNewGameState(0),
+    ...defaults,
     ...loaded,
     schemaVersion: GAME_SCHEMA_VERSION,
   }
@@ -70,7 +81,7 @@ export function migrateSave(raw: unknown): GameState {
 
 /** Payload canônico: só os campos da versão atual, em ordem estável. */
 function canonicalPayload(state: GameState): string {
-  return JSON.stringify(HASHED_FIELDS.map((key) => state[key]))
+  return JSON.stringify(hashedFields(state).map((key) => state[key]))
 }
 
 /** SHA-256 hex de `INTEGRITY_SALT + payload canônico`. */
@@ -126,9 +137,10 @@ function readRecord(storage: IntegrityStorage): ChecksumRecord | null {
  */
 export async function verifySaveIntegrity(
   raw: unknown,
+  defaults: GameState,
   storage: IntegrityStorage | undefined = defaultStorage(),
 ): Promise<GameState> {
-  const state = migrateSave(raw)
+  const state = migrateSave(raw, defaults)
   const record = storage ? readRecord(storage) : null
   if (record && record.v === GAME_SCHEMA_VERSION && record.hash !== (await computeChecksum(state))) {
     state.tribbleInfestationActive = true

@@ -12,7 +12,6 @@ import type {
   GameState,
   GridCoord,
   QuadrantMap,
-  SectorEntity,
   Starbase,
   WarpTrip,
 } from '@/types/game'
@@ -68,13 +67,10 @@ export function chebyshev(a: GridCoord, b: GridCoord): number {
   return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col))
 }
 
-/** Predicado de ocupação a partir das entidades do setor. */
-export function occupancyOf(
-  entities: SectorEntity[],
-): (c: GridCoord) => boolean {
-  const taken = new Set(entities.map((e) => coordKey(e.position)))
-  return (c) => taken.has(coordKey(c))
-}
+// `occupancyOf` mora em `engine/sector.ts` (folha) e é reexportada aqui pra não
+// quebrar quem já importava daqui: ocupação de célula é consulta de setor, e
+// `worldGen` precisa da mesma resposta sem importar navegação.
+export { occupancyOf } from '@/engine/sector'
 
 // ── Warp: duração e estresse ────────────────────────────────────────────────
 
@@ -162,21 +158,43 @@ export interface MoveResult {
  * Movimento manual: segue o caminho reto e para na última célula livre antes de
  * um obstáculo (não colide, não toma dano, não é recusado). Destino fora do
  * grid, esse sim, é recusado.
+ *
+ * `maxSteps` limita quantas células o turno cobre — é como a potência do
+ * Impulso vira tempo de viagem (`impulseCellsPerTurn`). Parar por limite de
+ * velocidade não é `interrupted`: é trânsito, o jogador engaja de novo.
  */
 export function manualMove(
   from: GridCoord,
   to: GridCoord,
   isOccupied: (c: GridCoord) => boolean,
+  maxSteps = Infinity,
 ): MoveResult {
   if (!inGrid(to)) return { position: from, rejected: true, interrupted: false }
   let position = from
+  let steps = 0
   for (const step of directPath(from, to)) {
+    if (steps >= maxSteps) break
     if (isOccupied(step)) {
       return { position, rejected: false, interrupted: true }
     }
     position = step
+    steps++
   }
   return { position, rejected: false, interrupted: false }
+}
+
+/**
+ * Células cobertas por turno sob impulso: `max(1, round(8 × dial/100))`.
+ *
+ * Reusa a régua do fonte de 1978 (`N=INT(W1*8+.5)`: fração da velocidade × 8
+ * setores por comando) — dial a 100% cruza o setor inteiro em 1 turno, a 50%
+ * são 4 células/turno, a 25% são 2. Boost força 100%. É o que faz a potência
+ * do Impulso influenciar a DURAÇÃO do movimento, não só o consumo — distâncias
+ * em Star Trek são grandes, andar devagar custa turnos.
+ */
+export function impulseCellsPerTurn(dial: number, boostActive = false): number {
+  const effective = boostActive ? 100 : clamp(dial, 0, 100)
+  return Math.max(1, Math.round((GRID_MAX * effective) / 100))
 }
 
 // ── Auto-Nav Computer ───────────────────────────────────────────────────────
@@ -405,16 +423,21 @@ export function resolveProbeScan(
     stars: q.stars,
   })
   state.exploredQuadrants[key] = { code, age: 0 }
+  // Datalink: a sonda alimenta o LRS também, não só o Star Chart — o código
+  // aparece no display de longo alcance como se tivesse sido escaneado agora.
+  state.lrsScan[key] = { code, age: 0 }
 
-  const log = [`Sonda reporta quadrante ${key}: KBS ${code}.`]
+  // Coordenadas SEMPRE X,Y (col,row) em texto de UI — a chave interna é row,col.
+  const xy = `${target.col},${target.row}`
+  const log = [`Sonda reporta quadrante ${xy}: KBS ${code}.`]
 
   if (q.planet) {
     // Revelar não gasta carga — a sonda só observa.
     q.surveyed = true
     log.push(
       q.dilithiumCharges > 0
-        ? `Planeta detectado com ${q.dilithiumCharges} carga(s) de dilítium.`
-        : 'Planeta detectado, sem dilítium aproveitável.',
+        ? `Planeta detectado em ${xy} com ${q.dilithiumCharges} carga(s) de dilítium.`
+        : `Planeta detectado em ${xy}, sem dilítium aproveitável.`,
     )
   }
 
@@ -424,6 +447,34 @@ export function resolveProbeScan(
     dilithiumCharges: q.planet ? q.dilithiumCharges : 0,
     log,
   }
+}
+
+export interface ProbeLaunchResult {
+  success: boolean
+  reason?: 'no_probes' | 'out_of_grid' | 'probe_in_flight'
+  /** Turnos até a resolução, quando lançou. */
+  turns?: number
+}
+
+/**
+ * Lança a sonda: consome estoque e agenda a resolução em `distância + 1` turnos.
+ *
+ * O `turnEngine` antes cravava `turnsRemaining: 2` e nunca decrementava
+ * `remainingProbes` — sondas eram infinitas e a distância era ignorada.
+ * Rejeição NÃO consome turno; é o chamador que decide não resolver o turno.
+ */
+export function launchProbe(
+  state: GameState,
+  target: GridCoord,
+): ProbeLaunchResult {
+  if (!inGrid(target)) return { success: false, reason: 'out_of_grid' }
+  if (state.probe) return { success: false, reason: 'probe_in_flight' }
+  if (state.remainingProbes <= 0) return { success: false, reason: 'no_probes' }
+
+  const turns = probeTurns(chebyshev(state.position.quadrant, target))
+  state.remainingProbes -= 1
+  state.probe = { target: { ...target }, turnsRemaining: turns }
+  return { success: true, turns }
 }
 
 // ── LRS ─────────────────────────────────────────────────────────────────────
@@ -479,6 +530,141 @@ export function markManyExplored(
     (acc, e) => markExplored(acc, e.quadrant, e.code),
     map,
   )
+}
+
+// ── Tick por turno ──────────────────────────────────────────────────────────
+
+export interface NavigationTurnOptions {
+  /** Só turno de movimento real sob impulso gasta duração de boost. */
+  movedUnderImpulse?: boolean
+  /**
+   * Ocupação no grid de **quadrantes**, pro fallback de rota do Auto-Nav.
+   * Injetada porque depende do que o jogador **conhece** (código KBS em
+   * `exploredQuadrants`), e essa política é do `turnEngine`, não daqui.
+   */
+  quadrantOccupied?: (c: GridCoord) => boolean
+}
+
+export interface NavigationTurnResult {
+  /** Quadrante em que a nave chegou neste turno, ou `null`. */
+  arrivedQuadrant: GridCoord | null
+  /** Viagem abortada curto (estagnação de motor ou rota degradada). */
+  interrupted: boolean
+  probeResolved: boolean
+  probeScan: ProbeScanResult | null
+  events: string[]
+}
+
+/**
+ * Um turno de navegação: progressão de viagem de warp, sonda, boost e
+ * envelhecimento de sensores.
+ *
+ * Diferente do resto deste módulo (funções puras que devolvem valor novo), o
+ * tick **muta** `state` — mesmo padrão de `resolveDamageControlTurn` e
+ * `passivePhaserCooldown`. É o preço de ter um lugar só onde o turno acontece;
+ * as regras continuam nos helpers puros acima, testáveis isoladamente.
+ */
+export function resolveNavigationTurn(
+  state: GameState,
+  options: NavigationTurnOptions = {},
+  rng: () => number = Math.random,
+): NavigationTurnResult {
+  const events: string[] = []
+  let arrivedQuadrant: GridCoord | null = null
+  let interrupted = false
+
+  // ── Boost: duração só em turno de movimento, cooldown sempre ──────────────
+  const boost = tickBoost(
+    {
+      active: state.boostActive,
+      turnsUsed: state.boostTurnsUsed,
+      cooldown: state.boostCooldown,
+    },
+    options.movedUnderImpulse ?? false,
+  )
+  if (state.boostActive && !boost.active) {
+    events.push('Impulse Boost esgotado — motores em cooldown.')
+  }
+  state.boostActive = boost.active
+  state.boostTurnsUsed = boost.turnsUsed
+  state.boostCooldown = boost.cooldown
+
+  // ── Viagem de warp em curso ───────────────────────────────────────────────
+  if (state.warpTrip) {
+    const trip = state.warpTrip
+    const warpIntegrity = state.subsystems.warp
+    const autoNavIntegrity = state.subsystems.autoNav
+
+    if (propulsionBlocked(warpIntegrity)) {
+      // Dano cruzou pro crítico no meio da viagem: motores não seguram.
+      state.warpTrip = null
+      interrupted = true
+      events.push('Warp Engines em estado crítico — viagem abortada.')
+    } else if (rollStall(warpIntegrity, rng)) {
+      // Turno consumido sem avançar: a viagem fica 1 turno mais longa.
+      events.push('Motores estagnaram — nenhum avanço neste turno.')
+    } else {
+      // Auto-Nav degradado ou crítico cai pra regra manual: para na última
+      // célula livre do caminho reto e ABANDONA o resto da viagem.
+      const autoNavLost =
+        trip.autoNav &&
+        (!autoNavAvailable(autoNavIntegrity) ||
+          rollRouteDegraded(autoNavIntegrity, rng))
+
+      if (autoNavLost) {
+        const isOccupied = options.quadrantOccupied ?? (() => false)
+        const halt = manualMove(state.position.quadrant, trip.destination, isOccupied)
+        state.position.quadrant = halt.position
+        state.warpTrip = null
+        interrupted = true
+        events.push('Auto-Nav perdeu a rota — nave parou curto do destino.')
+        if (!sameCoord(halt.position, trip.destination)) {
+          arrivedQuadrant = halt.position
+        }
+      } else {
+        trip.turnsRemaining -= 1
+        if (trip.turnsRemaining <= 0) {
+          state.position.quadrant = { ...trip.destination }
+          state.warpTrip = null
+          arrivedQuadrant = { ...trip.destination }
+          events.push(
+            `Chegada ao quadrante ${trip.destination.col},${trip.destination.row}.`,
+          )
+        }
+      }
+    }
+  }
+
+  // ── Sonda ─────────────────────────────────────────────────────────────────
+  let probeResolved = false
+  let probeScan: ProbeScanResult | null = null
+  if (state.probe) {
+    state.probe.turnsRemaining -= 1
+    if (state.probe.turnsRemaining <= 0) {
+      const target = state.probe.target
+      state.probe = null
+      probeResolved = true
+
+      // Inimigos do quadrante ALVO (não do atual): o risco é de onde a sonda
+      // chegou. Sem galáxia gerada, `klingons` cai pra 0 e nada é arriscado.
+      const enemies =
+        state.galaxy?.[`${target.row},${target.col}`]?.klingons ?? 0
+      const destroyed = rollProbeDestroyed(enemies, rng)
+      probeScan = resolveProbeScan(state, target, destroyed)
+      events.push(...probeScan.log)
+    }
+  }
+
+  // ── Envelhecimento de sensores ────────────────────────────────────────────
+  state.lrsScanAge += 1
+  for (const entry of Object.values(state.exploredQuadrants)) {
+    entry.age += 1
+  }
+  for (const entry of Object.values(state.lrsScan)) {
+    entry.age += 1
+  }
+
+  return { arrivedQuadrant, interrupted, probeResolved, probeScan, events }
 }
 
 // ── Destino: base mais próxima / undock ─────────────────────────────────────

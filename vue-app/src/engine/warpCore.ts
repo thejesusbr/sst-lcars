@@ -15,6 +15,7 @@ import {
   LRS_PASSIVE_DRAW,
   OVERLOAD_MAX,
   OVERLOAD_MIN,
+  OVERLOAD_PER_EXCESS,
   PHOTON_TUBE_IDLE_DRAW,
   PHOTON_TUBE_LOADED_DRAW,
   SRS_PASSIVE_DRAW,
@@ -22,7 +23,6 @@ import {
   WARP_CORE_DAMAGE_TABLE,
   WARP_CORE_EXPLOSION_CHANCE_TABLE,
   WARP_CORE_HOUSE_DRAW,
-  WARP_CORE_OUTPUT,
   clamp,
   damageFraction,
   isCritical,
@@ -113,13 +113,24 @@ export function subsystemDraw(
   )
 }
 
-/** Sobrecarga automática por consumir acima do output nominal (mín. 1 quando estoura). */
-export function autoOverload(draw: number): number {
-  if (draw <= WARP_CORE_OUTPUT) return 0
-  return Math.max(
-    1,
-    Math.round(((draw - WARP_CORE_OUTPUT) / WARP_CORE_OUTPUT) * 100),
-  )
+/**
+ * Sobrecarga automática por consumir acima do que o core CONSEGUE gerar
+ * (mín. 1 quando estoura).
+ *
+ * `output` é obrigatório e vem de `warpCoreOutput(integridade)` — não da
+ * constante nominal. Core danificado gera menos, então o mesmo consumo passa a
+ * estourar: é a espiral dano → menos output → mais sobrecarga → mais dano.
+ *
+ * **Linear no excesso ABSOLUTO**, `ceil(excesso / OVERLOAD_PER_EXCESS)`. A
+ * versão anterior usava porcentagem do output, o que empilhava duas
+ * exponenciais (razão hiperbólica × tabela Fibonacci) e transformava a espiral
+ * num penhasco de 7 pontos de integridade — ver `OVERLOAD_PER_EXCESS`.
+ */
+export function autoOverload(draw: number, output: number): number {
+  if (output <= 0) return OVERLOAD_MAX
+  if (draw <= output) return 0
+  const excess = draw - output
+  return clamp(Math.ceil(excess / OVERLOAD_PER_EXCESS), 1, OVERLOAD_MAX)
 }
 
 /**

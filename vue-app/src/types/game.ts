@@ -196,6 +196,23 @@ export interface RadiationBreach {
   turnsRemaining: number
 }
 
+// ── Nível de alerta ────────────────────────────────────────────────────────
+
+/**
+ * Condição de alerta. Enumerado, não booleano: o usuário confirmou a intenção
+ * de implementar outros níveis, e migrar o campo depois de 7 consoles passarem a
+ * lê-lo custaria 7× mais (design.md decisão 7).
+ *
+ * `yellow` é estado **válido, persistível e legível desde já**, mas renderiza
+ * sem tema próprio: a camada de tema é binária por construção (cada um dos 7
+ * temas define 1 variante `-alert` por papel, e `theme.css` tem 29 regras
+ * `.red-alert`). Um terceiro visual exigiria ~49 vars novas — trabalho de
+ * sistema de cor (seção 13), não de integração de engine.
+ */
+export const ALERT_LEVELS = ['green', 'yellow', 'red'] as const
+
+export type AlertLevel = (typeof ALERT_LEVELS)[number]
+
 // ── Combat log ──────────────────────────────────────────────────────────────
 
 export type LogCategory = 'captain' | 'general' | 'engineering'
@@ -293,14 +310,18 @@ export type GameMode = 'briefing' | 'playing' | 'result'
 /**
  * Motivo terminal. Ordem de prioridade (Kobayashi Maru) vive em
  * `engine/endGame.ts`, não aqui — derrota sempre supera vitória.
+ *
+ * Sem `out_of_energy` de propósito: energia é vazão, não estoque. Consumo acima
+ * do que o Warp Core gera vira sobrecarga → dano → breach, e é o breach que
+ * mata. Ver `engine/endGame.ts`.
  */
 export type EndGameReason =
   | 'victory'
   | 'warp_core_explosion'
   | 'destroyed_with_base'
+  | 'hull_destroyed'
   | 'radiation_death'
   | 'crew_asphyxiation'
-  | 'out_of_energy'
   | 'no_starbases'
   | 'out_of_time'
 
@@ -333,11 +354,12 @@ export interface GameState {
 
   // Posição
   position: ShipPosition
-  /** Destino escolhido no Helm (preenchido por Star Chart/LRS/Auto-Nav). */
+  /** Destino de QUADRANTE (warp), preenchido por Star Chart/LRS/"Snd to Helm". */
   destination: GridCoord | null
+  /** Destino de SETOR (impulso), preenchido pelo SRS/"Snd Helm" do NavSensing. */
+  destinationSector: GridCoord | null
 
-  // Energia
-  mainEnergy: number
+  // Energia (VAZÃO — não há estoque; ver `engine/constants.ts`)
   shieldEnergy: number
   /**
    * Dano acumulado no defletor. `shieldIntegrity` é DERIVADA disto + de
@@ -347,7 +369,18 @@ export interface GameState {
   shieldDamageTaken: number
   /** Dial 0-100% do Impulse; convertido via `IMPULSE_POWER_MAX` pro draw. */
   impulsePower: number
+  /** UNIDADES DE ENERGIA (0-`PHASER_POWER_MAX`), não porcentagem. */
   phaserPower: number
+
+  /**
+   * Integridade estrutural 0-100. É o que o dano inimigo consome DEPOIS que os
+   * escudos saturam — sem estoque de energia, o excedente tinha que ir pra
+   * algum lugar. Zerar é destruição da nave (`hull_destroyed`).
+   *
+   * Distinto de `breach`: casco é dano externo acumulado, breach é o Warp Core
+   * vazando radiação por dentro.
+   */
+  hullIntegrity: number
 
   // Combate
   currentSector: SectorEntity[]
@@ -408,7 +441,7 @@ export interface GameState {
   landingParty: LandingPartyMission | null
 
   // Alerta / log
-  redAlert: boolean
+  alertLevel: AlertLevel
   combatLog: CombatLogEntry[]
   logReadMarkers: LogReadMarkers
 
