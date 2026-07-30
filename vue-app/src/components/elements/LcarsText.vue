@@ -34,7 +34,7 @@ const classes = computed(() => {
   const cls: Record<string, boolean> = {
     text: true
   }
-  if (props.color) cls[props.color] = true
+  cls[props.color ?? 'text-light'] = true
   if (props.size) cls[props.size] = true
   if (props.version) cls[props.version] = true
   if (props.flex) cls[`flex-${props.flex}`] = true

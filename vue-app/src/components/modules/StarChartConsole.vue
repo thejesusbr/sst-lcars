@@ -101,7 +101,7 @@ const sendSystemToHelm = () => {
         version="centered"
         size="small"
         text="Star Chart"
-        color="text-white"
+        color="text-light"
       />
 
       <!-- Mapa da galáxia (grid 8x8 de quadrantes) -->
@@ -161,9 +161,9 @@ const sendSystemToHelm = () => {
 
       <!-- Legenda -->
       <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '42rem' }">
-        <LcarsText text="K = Klingon" color="text-white" />
-        <LcarsText text="B = Base" color="text-white" />
-        <LcarsText text="S = Star" color="text-white" />
+        <LcarsText text="K = Klingon" color="text-light" />
+        <LcarsText text="B = Base" color="text-light" />
+        <LcarsText text="S = Star" color="text-light" />
         <LcarsText text="??? = Unexplored" color="text-light" />
       </LcarsRow>
     </LcarsColumn>

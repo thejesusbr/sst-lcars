@@ -275,7 +275,7 @@ const simulateDamage = () => {
         <LcarsBlock label="Main Energy" :style="{ width: '8.5rem' }" />
         <LcarsText
           :text="String(WARP_CORE_OUTPUT)"
-          color="text-white"
+          color="text-light"
           :style="{ flex: '1', textAlign: 'center' }"
         />
         <LcarsBlock label="Subsystem Load" :style="{ width: '8.5rem' }" />
@@ -284,7 +284,7 @@ const simulateDamage = () => {
           :color="
             subsystemDraw > WARP_CORE_OUTPUT
               ? statusColor('critical')
-              : 'text-white'
+              : 'text-light'
           "
           :style="{ flex: '1', textAlign: 'center' }"
         />
@@ -391,7 +391,7 @@ const simulateDamage = () => {
             />
             <LcarsText
               :text="team.efficiency + '%'"
-              color="text-white"
+              color="text-light"
               :style="{
                 minWidth: '7.5rem',
                 'text-align': 'center',
@@ -462,7 +462,7 @@ const simulateDamage = () => {
             <!-- Integrity level (percentage) -->
             <LcarsText
               :text="sys.integrity + '%'"
-              color="text-white"
+              color="text-light"
               :style="{
                 minWidth: '7.5rem',
                 'text-align': 'right',

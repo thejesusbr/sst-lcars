@@ -7,6 +7,10 @@ body {
   padding: 0.25rem;
 }
 
+h1 {
+  color: var(--text-light)
+}
+
 .hide {
   display: none;
 }
