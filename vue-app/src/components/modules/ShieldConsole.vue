@@ -33,6 +33,33 @@ const subsystems = computed(() => gameState.subsystems);
 const shieldStatus = computed(() =>
   shieldEnergy.value > 0 && shieldIntegrity.value > 0 ? "UP" : "DOWN"
 );
+
+// ── Casco ────────────────────────────────────────────────────────────────────
+
+// Estrutural, distinto de `shieldIntegrity`: e o que o dano inimigo consome
+// DEPOIS que os escudos saturam, e nao regenera sozinho -- so em drydock.
+// Zerar destroi a nave (`hull_destroyed`).
+const hullIntegrity = computed(() => Math.round(gameState.hullIntegrity));
+const hullCritical = computed(() => hullIntegrity.value <= 25);
+const hullColor = computed(() =>
+  semanticStatusColor(
+    hullIntegrity.value > 60
+      ? "nominal"
+      : hullIntegrity.value > 25
+      ? "damaged"
+      : "critical"
+  )
+);
+const hullTextColor = computed(() =>
+  semanticStatusColor(
+    hullIntegrity.value > 60
+      ? "nominal"
+      : hullIntegrity.value > 25
+      ? "damaged"
+      : "critical",
+    "fg"
+  )
+);
 const statusColor = computed(() =>
   semanticStatusColor(shieldEnergy.value > 0 ? "nominal" : "critical", "fg")
 );
@@ -127,6 +154,43 @@ const raiseShields = () => {
           :system-integrity="subsystems"
         />
       </DefaultBracket>
+
+      <!-- Casco: o que sobra quando o escudo satura. Fica logo abaixo do
+           diagrama porque a leitura util e a PAR -- escudo alto com casco
+           baixo e uma situacao completamente diferente de escudo baixo com
+           casco intacto, e separar os dois esconde isso. -->
+      <LcarsComplexButton
+        color="primary-interactive"
+        :style="{ width: '100%', marginTop: '0.5rem' }"
+      >
+        <LcarsCap version="round-left" />
+        <LcarsBlock
+          label="Hull Integrity"
+          :style="{ flex: 'none', width: '9rem' }"
+          :color="hullCritical ? 'alert-bg' : 'primary-static'"
+          :class="{ blink: hullCritical }"
+        />
+        <SolidLevelBar
+          version="horizontal"
+          :max="100"
+          :min="0"
+          :level="hullIntegrity"
+          :color="hullColor"
+          :style="{ flex: '1' }"
+        />
+        <LcarsText
+          :text="`${hullIntegrity}%`"
+          :color="hullTextColor"
+          :class="{ blink: hullCritical }"
+          :style="{
+            flex: 'none',
+            minWidth: '4.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold',
+          }"
+        />
+        <LcarsCap version="round-right" />
+      </LcarsComplexButton>
     </LcarsColumn>
 
     <!-- Column 2: Shield Control -->

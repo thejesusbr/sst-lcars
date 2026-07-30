@@ -138,6 +138,37 @@ const warpEngaged = computed(() => gameState.warpTrip !== null);
 const busy = ref(false);
 let warpEffect: WarpSpeed | undefined;
 
+/**
+ * Duração MÍNIMA da animação de warp, independente do relógio de turnos.
+ *
+ * Viagem de 1 turno resolve dentro da própria chamada de `resolvePlayerTurn`:
+ * `warpTrip` é definido na etapa 1 e zerado na etapa 5, então `warpEngaged` ia
+ * de `null` a `null` antes do watcher rodar — a animação simplesmente não
+ * acontecia. O efeito visual precisa do seu próprio relógio, em tempo real.
+ */
+const WARP_MIN_VISUAL_MS = 5000;
+
+const warpVisual = ref(false);
+let warpHoldUntil = 0;
+let warpVisualTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Liga o efeito e garante o piso de duração a partir de agora. */
+const startWarpVisual = () => {
+  clearTimeout(warpVisualTimer);
+  warpHoldUntil = Date.now() + WARP_MIN_VISUAL_MS;
+  warpVisual.value = true;
+};
+
+/** Desliga só quando a viagem acabou E o piso de tempo já passou. */
+const releaseWarpVisual = () => {
+  clearTimeout(warpVisualTimer);
+  const remaining = Math.max(0, warpHoldUntil - Date.now());
+  warpVisualTimer = setTimeout(() => {
+    // Viagem nova durante a cauda: não desliga, quem mandou parar é a atual.
+    if (!warpEngaged.value) warpVisual.value = false;
+  }, remaining);
+};
+
 // A lib nao trava TARGET_SPEED (so floor em 0) -- default da lib e SPEED=0.7,
 // pensado pra um fundo sutil parado. O rastro de cada estrela usa
 // WARP_EFFECT_LENGTH * SPEED, entao com warpFactor (1-8) mapeado 1:1 pra
@@ -155,14 +186,22 @@ const WARP_DECEL_FACTOR = 0.2;
  * Engage Warp: despacha o movimento DE VERDADE (antes só ligava o efeito
  * visual — a nave nunca saía do lugar). O destino vem do Set Destination; a
  * duração é `ceil(distância / warpFactor)`, então o fator escolhido aqui
- * decide quantos turnos a viagem leva. O efeito visual segue `warpTrip` via
- * watch — inclusive o desengate automático na chegada.
+ * decide quantos turnos a viagem leva.
+ *
+ * O efeito visual liga AQUI, no despacho aceito — não no watch de `warpTrip`.
+ * Viagem de 1 turno nasce e morre dentro da mesma resolução, então esperar o
+ * watch significava nunca animar.
  */
 const engageWarp = async () => {
   if (busy.value || warpEngaged.value) return;
   busy.value = true;
   try {
-    await gameState.moveWarp();
+    const res = await gameState.moveWarp();
+    if (res.rejected) return;
+    startWarpVisual();
+    // Viagem que já resolveu no próprio turno: agenda o desligamento pro fim
+    // do piso de tempo. Multi-turno cai no watch abaixo.
+    if (!warpEngaged.value) releaseWarpVisual();
   } finally {
     busy.value = false;
   }
@@ -179,12 +218,19 @@ const engageImpulse = async () => {
   }
 };
 
-// Efeito visual e sons dirigidos pelo ESTADO da viagem: engajar (aqui ou por
-// qualquer caminho futuro) acelera, resolver desengaja e desacelera sozinho.
+// Viagem multi-turno terminando: solta o efeito respeitando o piso de tempo.
+// Viagem que começa por outro caminho que não o botão daqui também liga.
 watch(warpEngaged, (engaged) => {
-  playSound(engaged ? Sound.WARP_ENTER : Sound.WARP_EXIT);
+  if (engaged) startWarpVisual();
+  else releaseWarpVisual();
+});
+
+// Som e animação seguem o VISUAL, não o estado da viagem — é o que garante o
+// par entrada/saída completo mesmo num salto de 1 turno.
+watch(warpVisual, (on) => {
+  playSound(on ? Sound.WARP_ENTER : Sound.WARP_EXIT);
   if (!warpEffect) return;
-  if (engaged) {
+  if (on) {
     warpEffect.SPEED_ADJ_FACTOR = WARP_ACCEL_FACTOR;
     warpEffect.TARGET_SPEED = warpFactor.value * WARP_SPEED_SCALE;
   } else {
@@ -213,13 +259,17 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearTimeout(warpVisualTimer);
   if (warpEffect && typeof warpEffect.destroy === 'function') {
     warpEffect.destroy();
   }
 });
 
+// Mudar o fator no meio da animação ajusta a velocidade do efeito. Segue
+// `warpVisual`, não `warpEngaged` — durante a cauda de 5s a viagem já resolveu,
+// mas o efeito ainda está na tela e tem que reagir.
 watch(warpFactor, (value) => {
-  if (warpEngaged.value && warpEffect)
+  if (warpVisual.value && warpEffect)
     warpEffect.TARGET_SPEED = value * WARP_SPEED_SCALE;
 });
 </script>
@@ -399,7 +449,7 @@ watch(warpFactor, (value) => {
         class="dark-light"
         color="highlight-interactive"
         version="round"
-        :disabled="busy || warpEngaged"
+        :disabled="busy || warpVisual"
         :style="{ alignSelf: 'center', width: '50%' }"
         @click="engageImpulse"
       />
@@ -460,10 +510,10 @@ watch(warpFactor, (value) => {
       <LcarsButton
         id="wrpEng"
         version="round"
-        :label="warpEngaged ? 'Warp Engaged' : 'Engage Warp'"
+        :label="warpVisual ? 'Warp Engaged' : 'Engage Warp'"
         color="highlight-interactive"
-        :class="{ 'white-flash': warpEngaged, 'dark-lite': !warpEngaged }"
-        :disabled="busy || warpEngaged"
+        :class="{ 'white-flash': warpVisual, 'dark-lite': !warpVisual }"
+        :disabled="busy || warpVisual"
         :style="{
           width: '15rem',
           flex: 'none',
