@@ -9,9 +9,11 @@
 import {
   BREACH_REPAIR_PENALTY,
   DILITHIUM_WC_BOOST,
+  DOCKED_TEAM_RECOVERY_PER_TURN,
   HOSTILE_RISK_BASE,
   HOSTILE_RISK_PER_EXTRA_ENEMY,
   LANDING_PARTY_TURNS,
+  STARBASE_SCIENCE_RECOVERY_MULTIPLIER,
   TEAM_EFFICIENCY_FLOOR,
   TEAM_RECOVERY_PER_TURN,
   clamp,
@@ -142,6 +144,33 @@ export function calculateRepairRate(
   return rawRate
 }
 
+/**
+ * Taxa de recuperação de fadiga por turno pra equipes idle/cooldown.
+ *
+ * `DOCKED_TEAM_RECOVERY_PER_TURN` existia como constante desde a
+ * `engine-integration`, mas nenhum chamador a lia — mesma classe de bug já
+ * vista aqui (função/constante certa, nunca ligada): o dobro de recuperação em
+ * qualquer atracagem nunca aconteceu de fato. `STARBASE_SCIENCE` aplica um
+ * multiplicador ADICIONAL sobre o dobro — sem a base, não há o que multiplicar.
+ *
+ * **Fora de escopo aqui**: a spec de docking também pede que equipes
+ * `working` sejam tratadas como idle enquanto atracadas (toda a tripulação de
+ * folga), o que exigiria reformular `calculateRepairRate` pro reparo tier-5
+ * parar de depender de equipe designada (spec `docking`, "Station-assisted
+ * repair rate" — a mesma dívida do item 9.3, ainda não verificado, do
+ * `PLAYTHROUGH.md` da `engine-integration`). Esta função cobre só o que
+ * `hail-and-identity` pediu: o multiplicador da base científica sobre a
+ * recuperação de quem já está idle/cooldown.
+ */
+function teamRecoveryRate(state: GameState): number {
+  if (!state.docked) return TEAM_RECOVERY_PER_TURN
+  const dockedBase = state.starbases.find((b) => b.id === state.dockedBaseId)
+  const rate = DOCKED_TEAM_RECOVERY_PER_TURN
+  return dockedBase?.type === SectorEntityType.STARBASE_SCIENCE
+    ? rate * STARBASE_SCIENCE_RECOVERY_MULTIPLIER
+    : rate
+}
+
 // ── Resolução de Turno (Fadiga, Recuperação e Reparos) ──────────────────────
 
 export interface BreachTurnResult {
@@ -231,6 +260,7 @@ export function resolveDamageControlTurn(
   }
 
   // Atualização de fadiga e recuperação das equipes
+  const recoveryRate = teamRecoveryRate(state)
   for (const team of state.teams) {
     if (team.status === 'working') {
       team.turnsWorked++
@@ -240,7 +270,7 @@ export function resolveDamageControlTurn(
       if (team.turnsWorked > 0) {
         team.turnsWorked = Math.max(0, team.turnsWorked - 1)
       }
-      team.efficiency = Math.min(100, team.efficiency + TEAM_RECOVERY_PER_TURN)
+      team.efficiency = Math.min(100, team.efficiency + recoveryRate)
       if (team.status === 'cooldown' && team.efficiency >= 50) {
         team.status = 'idle'
       }

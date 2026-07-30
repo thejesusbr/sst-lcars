@@ -24,7 +24,8 @@ import {
   corruptKbsCode,
 } from "@/composables/sensorDisplay";
 import { scanConfidence as scanConfidenceOf } from "@/engine/navigation";
-import { isEnemyType, isStarbaseType } from "@/engine/sector";
+import { isAdjacent, isEnemyType, isStarbaseType } from "@/engine/sector";
+import { STARBASE_TYPE_LABELS, type StarbaseType } from "@/types/game";
 
 const { playSound } = useSound();
 
@@ -259,6 +260,22 @@ const hail = () =>
     await gameState.hail(hailTargetId.value);
   });
 
+/**
+ * Base adjacente ANTES de atracar — o mesmo critério de `canDock`, mas
+ * expondo o tipo. Sem isso o jogador só descobria o bônus (ou a ausência
+ * dele, na científica) depois de já ter atracado — tarde demais pra decidir
+ * entre duas bases adjacentes de tipos diferentes.
+ */
+const adjacentBaseLabel = computed(() => {
+  if (gameState.docked) return null;
+  const base = gameState.currentSector.find(
+    (e) => isStarbaseType(e.type) && isAdjacent(e.position, gameState.position.sector)
+  );
+  // O `&&` no predicate acima perde a narrow do type guard; `isStarbaseType`
+  // já garantiu que `base.type` é `StarbaseType` em runtime.
+  return base ? STARBASE_TYPE_LABELS[base.type as StarbaseType] : null;
+});
+
 // Atracagem é LIVRE (não resolve turno): é o loop de docking que consome.
 const dock = () => {
   if (gameState.docked) {
@@ -434,6 +451,16 @@ const toggleLrs = () => {
           @click="sendParty"
         />
       </LcarsRow>
+
+      <!-- O que a base adjacente oferece — visível ANTES de atracar, pra a
+           escolha entre bases de tipos diferentes ser informada. -->
+      <LcarsText
+        v-if="adjacentBaseLabel"
+        id="adjacent-base-hint"
+        :text="`Adjacent: ${adjacentBaseLabel}`"
+        class="text-light"
+        :style="{ 'font-size': '0.85rem', 'text-align': 'center', width: '24rem' }"
+      />
     </LcarsColumn>
 
     <!-- Long-range scanner column -->

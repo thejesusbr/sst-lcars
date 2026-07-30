@@ -211,4 +211,99 @@ describe('engine/damageControl', () => {
     resolveLandingPartyTurn(state, () => 0.9)
     expect(resolveLandingPartyTurn(state, () => 0.9).boost).toBe(0)
   })
+
+  // ── hail-and-identity: base científica acelera o descanso ──────────────────
+
+  it('atracado recupera fadiga no DOBRO do idle normal', () => {
+    const state = fixture()
+    state.teams[0].status = 'idle'
+    state.teams[0].efficiency = 50
+    state.docked = false
+    state.dockedBaseId = null
+
+    resolveDamageControlTurn(state)
+    expect(state.teams[0].efficiency).toBe(58) // +8, taxa normal
+
+    state.teams[0].efficiency = 50
+    state.docked = true
+    state.dockedBaseId = 'base-dock'
+    state.starbases = [
+      {
+        id: 'base-dock',
+        type: SectorEntityType.STARBASE_DOCK,
+        quadrant: { row: 4, col: 4 },
+        sector: { row: 4, col: 4 },
+        resourcePool: 500,
+        destroyed: false,
+      },
+    ]
+
+    resolveDamageControlTurn(state)
+    expect(state.teams[0].efficiency).toBe(66) // +16, dobro do idle
+  })
+
+  it('base científica recupera mais rápido que uma doca', () => {
+    const mesmasEquipes = () => {
+      const state = fixture()
+      state.teams[0].status = 'cooldown'
+      state.teams[0].efficiency = 20
+      state.docked = true
+      return state
+    }
+
+    const doca = mesmasEquipes()
+    doca.dockedBaseId = 'b-dock'
+    doca.starbases = [
+      {
+        id: 'b-dock',
+        type: SectorEntityType.STARBASE_DOCK,
+        quadrant: { row: 4, col: 4 },
+        sector: { row: 4, col: 4 },
+        resourcePool: 500,
+        destroyed: false,
+      },
+    ]
+
+    const cientifica = mesmasEquipes()
+    cientifica.dockedBaseId = 'b-sci'
+    cientifica.starbases = [
+      {
+        id: 'b-sci',
+        type: SectorEntityType.STARBASE_SCIENCE,
+        quadrant: { row: 4, col: 4 },
+        sector: { row: 4, col: 4 },
+        resourcePool: 500,
+        destroyed: false,
+      },
+    ]
+
+    resolveDamageControlTurn(doca)
+    resolveDamageControlTurn(cientifica)
+
+    expect(cientifica.teams[0].efficiency).toBeGreaterThan(doca.teams[0].efficiency)
+  })
+
+  it('base científica segue sem repor torpedo nem casco (docking já cobre isto, confirma aqui o eixo de recuperação)', () => {
+    // A ausência de resupply é comportamento de `docking.ts`; este teste só
+    // confirma que o ganho de EFICIÊNCIA das equipes não é acompanhado de
+    // nenhum reparo de subsistema fora do que `calculateRepairRate` já dava.
+    const state = fixture()
+    state.docked = true
+    state.dockedBaseId = 'b-sci'
+    state.starbases = [
+      {
+        id: 'b-sci',
+        type: SectorEntityType.STARBASE_SCIENCE,
+        quadrant: { row: 4, col: 4 },
+        sector: { row: 4, col: 4 },
+        resourcePool: 500,
+        destroyed: false,
+      },
+    ]
+    state.teams[0].status = 'idle'
+    const before = { ...state.subsystems }
+    resolveDamageControlTurn(state)
+    // Nenhuma equipe estava 'working': nenhum subsistema deveria ganhar reparo.
+    expect(state.subsystems).toEqual(before)
+  })
 })

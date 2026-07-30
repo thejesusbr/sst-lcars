@@ -261,6 +261,14 @@ export const STARBASE_POOL_REGEN = 10
 export const DOCKED_REPAIR_PER_TICK = 25
 /** Equipes descansam em dobro enquanto docadas. */
 export const DOCKED_TEAM_RECOVERY_PER_TURN = 16
+/**
+ * Multiplicador de `DOCKED_TEAM_RECOVERY_PER_TURN` numa `STARBASE_SCIENCE`.
+ *
+ * Sem âncora existente — valor inicial de playtest (hail-and-identity
+ * design.md Open Question 3). Começa conservador: o risco anotado é a base
+ * científica virar parada obrigatória se o bônus for alto demais.
+ */
+export const STARBASE_SCIENCE_RECOVERY_MULTIPLIER = 1.5
 
 // ── Rating / easter egg ─────────────────────────────────────────────────────
 
