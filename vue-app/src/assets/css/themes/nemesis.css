@@ -9,8 +9,8 @@
 [data-theme="nemesis"] {
   --role-primary: var(--anakiwa);
   --role-secondary: var(--dodger-pale);
-  --role-tertiary: var(--husk);
-  --role-highlight: var(--dodger-soft);
+  --role-tertiary: var(--dodger-soft);
+  --role-highlight: var(--husk);
   --role-highlight-dark: var(--rust); /* 5o papel (secao 13) */
 }
 [data-theme="nemesis"].red-alert {

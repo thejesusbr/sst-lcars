@@ -33,20 +33,74 @@ const categories = ref<{ title: string; items: Swatch[] }[]>([
   {
     title: "Frames & Buttons",
     items: [
-      { label: "Primary", varName: "--role-primary", hex: "", alertVarName: "--role-primary-alert", alertHex: "" },
-      { label: "Secondary", varName: "--role-secondary", hex: "", alertVarName: "--role-secondary-alert", alertHex: "" },
-      { label: "Tertiary", varName: "--role-tertiary", hex: "", alertVarName: "--role-tertiary-alert", alertHex: "" },
-      { label: "Highlight", varName: "--role-highlight", hex: "", alertVarName: "--role-highlight-alert", alertHex: "" },
-      { label: "Highlight Dark", varName: "--role-highlight-dark", hex: "", alertVarName: "--role-tertiary-alert", alertHex: "" },
+      {
+        label: "Primary",
+        varName: "--role-primary",
+        hex: "",
+        alertVarName: "--role-primary-alert",
+        alertHex: "",
+      },
+      {
+        label: "Secondary",
+        varName: "--role-secondary",
+        hex: "",
+        alertVarName: "--role-secondary-alert",
+        alertHex: "",
+      },
+      {
+        label: "Tertiary",
+        varName: "--role-tertiary",
+        hex: "",
+        alertVarName: "--role-tertiary-alert",
+        alertHex: "",
+      },
+      {
+        label: "Highlight",
+        varName: "--role-highlight",
+        hex: "",
+        alertVarName: "--role-highlight-alert",
+        alertHex: "",
+      },
+      {
+        label: "Highlight Dark",
+        varName: "--role-highlight-dark",
+        hex: "",
+        alertVarName: "--role-tertiary-alert",
+        alertHex: "",
+      },
     ],
   },
   {
     title: "Status",
     items: [
-      { label: "Nominal", varName: "--status-nominal", hex: "", alertVarName: "--status-nominal-alert", alertHex: "" },
-      { label: "Damaged", varName: "--status-damaged", hex: "", alertVarName: "--status-damaged-alert", alertHex: "" },
-      { label: "Critical", varName: "--status-critical", hex: "", alertVarName: "--status-critical", alertHex: "" },
-      { label: "Disabled", varName: "--status-disabled", hex: "", alertVarName: null, alertHex: "" },
+      {
+        label: "Nominal",
+        varName: "--status-nominal",
+        hex: "",
+        alertVarName: "--status-nominal-alert",
+        alertHex: "",
+      },
+      {
+        label: "Damaged",
+        varName: "--status-damaged",
+        hex: "",
+        alertVarName: "--status-damaged-alert",
+        alertHex: "",
+      },
+      {
+        label: "Critical",
+        varName: "--status-critical",
+        hex: "",
+        alertVarName: "--status-critical",
+        alertHex: "",
+      },
+      {
+        label: "Disabled",
+        varName: "--status-disabled",
+        hex: "",
+        alertVarName: null,
+        alertHex: "",
+      },
     ],
   },
 ]);
@@ -102,12 +156,21 @@ watch(activeTheme, () => {
     <LcarsColumn
       id="cpt-lng-pnl"
       flex="v"
-      :style="{ 'justify-content': 'center', 'align-items': 'center', gap: '1.5rem' }"
+      :style="{
+        'justify-content': 'center',
+        'align-items': 'center',
+        gap: '1.5rem',
+      }"
     >
-      <LcarsTitle version="centered" size="small" text="Captain's Lounge" color="text-white" />
+      <LcarsTitle
+        version="centered"
+        size="small"
+        text="Captain's Lounge"
+        color="text-light"
+      />
       <LcarsText
         text="Color theme"
-        color="text-white"
+        color="text-light"
         :style="{ opacity: '0.75' }"
       />
       <!-- Botões de tema, um por entrada de THEMES (useTheme.ts) -->
@@ -116,14 +179,16 @@ watch(activeTheme, () => {
           v-for="t in themes"
           :key="t.id"
           :label="t.label"
-          :color="t.id === activeTheme ? 'primary-interactive' : 'tertiary-static'"
+          :color="
+            t.id === activeTheme ? 'primary-interactive' : 'tertiary-static'
+          "
           :style="{ width: '12rem' }"
           @click="setTheme(t.id)"
         />
       </LcarsRow>
       <LcarsText
         :text="themes.find((t) => t.id === activeTheme)?.description ?? ''"
-        color="text-white"
+        color="text-light"
         :style="{ opacity: '0.6', fontSize: '1.1rem' }"
       />
       <LcarsButton
@@ -136,12 +201,18 @@ watch(activeTheme, () => {
     </LcarsColumn>
 
     <!-- Modal do catálogo de cores: papéis de tema x variante de red-alert -->
-    <div v-if="showCatalog" class="catalog-backdrop" @click.self="showCatalog = false">
+    <div
+      v-if="showCatalog"
+      class="catalog-backdrop"
+      @click.self="showCatalog = false"
+    >
       <LcarsColumn flex="v" class="catalog-panel" :style="{ gap: '1rem' }">
         <LcarsRow :style="{ 'align-items': 'center' }">
           <LcarsCap version="round-left" color="highlight-interactive" />
           <LcarsBlock
-            :label="`Color Catalog — ${themes.find((t) => t.id === activeTheme)?.label}`"
+            :label="`Color Catalog — ${
+              themes.find((t) => t.id === activeTheme)?.label
+            }`"
             color="highlight-interactive"
             :style="{ flex: '1', 'text-align': 'left' }"
           />
@@ -160,19 +231,42 @@ watch(activeTheme, () => {
           flex="v"
           :style="{ gap: '.5rem' }"
         >
-          <LcarsText :text="category.title" color="text-white" :style="{ opacity: '0.75' }" />
+          <LcarsText
+            :text="category.title"
+            color="text-light"
+            :style="{ opacity: '0.75' }"
+          />
           <!-- Linha por swatch: cor normal + par red-alert -->
           <LcarsRow
             v-for="item in category.items"
             :key="item.varName"
             :style="{ 'align-items': 'center', gap: '.75rem' }"
           >
-            <div class="swatch" :style="{ backgroundColor: `var(${item.varName})` }" />
-            <LcarsText :text="item.label" color="text-white" :style="{ width: '7rem' }" />
-            <LcarsText :text="item.hex" color="text-white" :style="{ opacity: '0.6', width: '4.5rem' }" />
-            <LcarsText text="Alert:" color="text-white" :style="{ opacity: '0.5', fontSize: '.9rem' }" />
+            <div
+              class="swatch"
+              :style="{ backgroundColor: `var(${item.varName})` }"
+            />
+            <LcarsText
+              :text="item.label"
+              color="text-light"
+              :style="{ width: '7rem' }"
+            />
+            <LcarsText
+              :text="item.hex"
+              color="text-light"
+              :style="{ opacity: '0.6', width: '4.5rem' }"
+            />
+            <LcarsText
+              text="Alert:"
+              color="text-light"
+              :style="{ opacity: '0.5', fontSize: '.9rem' }"
+            />
             <div class="swatch" :style="{ backgroundColor: item.alertHex }" />
-            <LcarsText :text="item.alertHex" color="text-white" :style="{ opacity: '0.6' }" />
+            <LcarsText
+              :text="item.alertHex"
+              color="text-light"
+              :style="{ opacity: '0.6' }"
+            />
           </LcarsRow>
         </LcarsColumn>
       </LcarsColumn>
