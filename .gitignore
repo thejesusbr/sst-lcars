@@ -6,3 +6,12 @@ prettierrc
 *storybook.log
 storybook-static
 *:Zone.Identifier
+
+# Build output do vue-app
+vue-app/dist/
+
+# Artefato incremental do tsc
+*.tsbuildinfo
+
+# Lock de runtime do Claude Code
+.claude/scheduled_tasks.lock
