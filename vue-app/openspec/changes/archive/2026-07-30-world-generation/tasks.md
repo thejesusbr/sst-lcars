@@ -82,7 +82,23 @@
       integridade de WC na galáxia inteira). Se divergir muito, é sinal de bug nas
       odds, não de balanceamento
 - [x] 4.5 Confirmar que a semente sobrevive a reload e regenera a mesma galáxia
-- [ ] 4.6 **Coordenar com `engine-integration`:** assim que o hook
+- [x] 4.6 **Coordenar com `engine-integration`:** assim que o hook
       `onQuadrantEnter` estiver implementado lá, ligar a materialização de setor
       nele e rodar o playthrough manual (task 5.5 daquela mudança, que depende
       desta)
+
+      **Hook ligado e verificado (2026-07-30).** A implementação real vive em
+      `stores/useGameState.ts` como `quadrantEnterHook` — a store é o único lugar
+      que pode costurar as duas pontas sem o `turnEngine` importar `worldGen`
+      (design.md decisão 3). Dois testes de store cobrem: trocar de quadrante
+      povoa `currentSector` (setor vazio = hook desligado, já que toda célula da
+      galáxia tem ≥1 estrela) e a nave nunca fica em cima de entidade depois da
+      materialização.
+
+      **A metade manual migrou pra `engine-integration`.** O playthrough é o
+      mesmo roteiro (`PLAYTHROUGH.md`, itens 2.2/2.3/2.5/5.5), e não faz sentido
+      manter esta mudança aberta esperando por ele. Achados de mundo da 1ª rodada
+      já voltaram e foram corrigidos: planeta trocando de arte a cada render
+      (`getRandomPlanet` sorteava por console — agora hash do `id` estável) e
+      quadrantes aparecendo explorados desde o início (`newGame()` usava `$patch`,
+      que faz merge, e o mapa da partida anterior sobrevivia).
