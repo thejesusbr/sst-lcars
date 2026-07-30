@@ -231,6 +231,90 @@ export interface CombatLogEntry {
  */
 export type LogReadMarkers = Record<LogCategory, number>
 
+// ── Eventos de turno ────────────────────────────────────────────────────────
+
+/** Etapa da resolução de turno que produziu o evento (`turn-engine`, 5 etapas). */
+export type TurnStep = 1 | 2 | 3 | 4 | 5
+
+/**
+ * Tipo do efeito. É o que a camada de apresentação lê pra decidir **como**
+ * encenar (linha de phaser, asterisco de torpedo, feedback de absorção) e o que
+ * define a categoria de log — nunca o texto da mensagem.
+ */
+export type TurnEventType =
+  | 'player_phasers'
+  | 'player_torpedo'
+  /** Carregar/descarregar tubo: consome turno, mas não é efeito a encenar. */
+  | 'tube_ops'
+  | 'enemy_attack'
+  | 'shield_absorb'
+  | 'hull_damage'
+  | 'subsystem_hit'
+  | 'weapons_lock'
+  | 'movement'
+  | 'warp_core'
+  | 'breach'
+  | 'repair'
+  | 'hail'
+  | 'probe'
+  | 'landing_party'
+  | 'rejection'
+
+/**
+ * Categoria de log por TIPO de evento.
+ *
+ * Substitui o `categoryOf` da store, que casava substring (`/reparo|radiação|…/`)
+ * no texto — frágil por construção: reescrever uma mensagem mudava a aba em que
+ * ela caía.
+ */
+export const TURN_EVENT_CATEGORY: Record<TurnEventType, LogCategory> = {
+  player_phasers: 'general',
+  player_torpedo: 'general',
+  tube_ops: 'general',
+  enemy_attack: 'general',
+  shield_absorb: 'general',
+  hull_damage: 'general',
+  subsystem_hit: 'general',
+  weapons_lock: 'general',
+  movement: 'general',
+  rejection: 'general',
+  warp_core: 'engineering',
+  breach: 'engineering',
+  repair: 'engineering',
+  hail: 'captain',
+  probe: 'captain',
+  landing_party: 'captain',
+}
+
+/**
+ * Evento estruturado de um turno resolvido.
+ *
+ * O engine produz a lista inteira e retorna, síncrono — quem distribui no tempo
+ * é a camada de apresentação (`turn-presentation`). `entityId` referencia a
+ * entidade por **id estável**, nunca por índice de array: a lista do setor muda
+ * de tamanho no meio do próprio turno quando um inimigo é destruído.
+ */
+export interface TurnEvent {
+  step: TurnStep
+  type: TurnEventType
+  text: string
+  /** Entidade envolvida — alvo em ataque do jogador, atacante em ataque inimigo. */
+  entityId?: string
+  /**
+   * Célula do setor onde o efeito ocorreu, capturada **no momento da emissão**.
+   *
+   * `entityId` sozinho não basta pra desenhar: um inimigo destruído já saiu de
+   * `currentSector` quando a apresentação roda, e um que reposicionou está em
+   * outra célula. A posição no instante do evento é a que a animação precisa.
+   */
+  at?: GridCoord
+  /** Payload numérico do efeito: dano, absorção, reparo. */
+  amount?: number
+}
+
+/** Evento antes de a etapa ser carimbada. Módulos folha não sabem em que etapa rodam. */
+export type TurnEventDraft = Omit<TurnEvent, 'step'>
+
 // ── Missões em andamento ────────────────────────────────────────────────────
 
 /** Sonda lançada: viaja `distância` turnos + 1 turno de scan. */

@@ -447,7 +447,7 @@ describe('resolveProbeScan', () => {
     const r = resolveProbeScan(s, { row: 3, col: 3 }, false)
     expect(r.planet).toBe(true)
     expect(r.dilithiumCharges).toBe(2)
-    expect(r.log.join(' ')).toMatch(/2 carga/)
+    expect(r.log.map((e) => e.text).join(' ')).toMatch(/2 carga/)
     expect(s.galaxy['3,3'].surveyed).toBe(true)
   })
 
@@ -455,7 +455,7 @@ describe('resolveProbeScan', () => {
     const s = stateWith({ planet: true, dilithiumCharges: 0 })
     const r = resolveProbeScan(s, { row: 3, col: 3 }, false)
     expect(r.dilithiumCharges).toBe(0)
-    expect(r.log.join(' ')).toMatch(/sem dilítium/)
+    expect(r.log.map((e) => e.text).join(' ')).toMatch(/sem dilítium/)
     expect(s.galaxy['3,3'].surveyed).toBe(true)
   })
 
@@ -477,6 +477,6 @@ describe('resolveProbeScan', () => {
   it('quadrante sem planeta não reporta planeta', () => {
     const r = resolveProbeScan(stateWith({}), { row: 3, col: 3 }, false)
     expect(r.planet).toBe(false)
-    expect(r.log.join(' ')).not.toMatch(/[Pp]laneta/)
+    expect(r.log.map((e) => e.text).join(' ')).not.toMatch(/[Pp]laneta/)
   })
 })

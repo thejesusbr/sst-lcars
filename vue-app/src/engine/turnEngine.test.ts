@@ -91,7 +91,23 @@ describe('engine/turnEngine', () => {
       cloaked: false,
     }
     state.currentSector = [enemy]
+    // Sem isto `firePhasers` devolve `no_lock` e o turno é RECUSADO. A versão
+    // anterior deste teste afirmava `events.some(e => e.includes('Phasers'))` e
+    // passava justamente por casar com a string de recusa `"Phasers: no_lock"` —
+    // nunca chegou a exercitar a ordem que o nome do teste promete.
+    state.weaponsLocked = true
     const res = resolvePlayerTurn(state, { type: 'fire_phasers' }, () => 0.5)
-    expect(res.events.some((e) => e.includes('Phasers'))).toBe(true)
+    expect(res.rejected).toBe(false)
+
+    // Afirma sobre o TIPO e a etapa, não sobre o texto.
+    const shot = res.events.find((e) => e.type === 'player_phasers')
+    expect(shot).toBeDefined()
+    expect(shot?.step).toBe(1)
+    expect(shot?.entityId).toBe('k1')
+
+    // A ordem que o teste existe pra provar: ação do jogador (etapa 1) resolve
+    // antes de qualquer evento de etapa posterior.
+    const steps = res.events.map((e) => e.step)
+    expect(steps).toEqual([...steps].sort((a, b) => a - b))
   })
 })

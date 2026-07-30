@@ -23,7 +23,7 @@ import {
   isCritical,
   round4,
 } from '@/engine/constants'
-import type { GameState } from '@/types/game'
+import type { GameState, GridCoord, TurnEventDraft } from '@/types/game'
 import {
   cellKey,
   getVisibleEnemies,
@@ -38,7 +38,8 @@ export interface PhaserFireResult {
   reason?: 'no_lock' | 'critical_damage' | 'no_energy' | 'no_targets'
   powerCommitted: number
   totalDamageDealt: number
-  hits: { enemyId: string; damage: number; destroyed: boolean }[]
+  /** `position` é a célula do alvo NO DISPARO — depois do abate ele some do setor. */
+  hits: { enemyId: string; position: GridCoord; damage: number; destroyed: boolean }[]
 }
 
 /**
@@ -83,7 +84,7 @@ export function firePhasers(
 
   const share = availablePower / visibleEnemies.length
   let totalDamageDealt = 0
-  const hits: { enemyId: string; damage: number; destroyed: boolean }[] = []
+  const hits: PhaserFireResult['hits'] = []
 
   for (const enemy of visibleEnemies) {
     // Fórmula clássica de dano com roll randômico proporcional a share
@@ -100,7 +101,12 @@ export function firePhasers(
     }
 
     totalDamageDealt += finalDamage
-    hits.push({ enemyId: enemy.id, damage: finalDamage, destroyed })
+    hits.push({
+      enemyId: enemy.id,
+      position: { ...enemy.position },
+      damage: finalDamage,
+      destroyed,
+    })
   }
 
   return {
@@ -124,7 +130,13 @@ export interface TorpedoFireResult {
   success: boolean
   reason?: 'critical_damage' | 'subsystem_off' | 'no_loaded_tubes'
   shotsFired: number
-  hits: { tubeId: number; enemyId: string; damage: number; destroyed: boolean }[]
+  hits: {
+    tubeId: number
+    enemyId: string
+    position: GridCoord
+    damage: number
+    destroyed: boolean
+  }[]
 }
 
 /**
@@ -149,7 +161,7 @@ export function fireTorpedoes(
   const d = damageFraction(state.subsystems.photons)
   const damageMultiplier = 1 - d
   let shotsFired = 0
-  const hits: { tubeId: number; enemyId: string; damage: number; destroyed: boolean }[] = []
+  const hits: TorpedoFireResult['hits'] = []
 
   for (const tube of loadedTubes) {
     if (!tube.targetId) continue
@@ -182,6 +194,7 @@ export function fireTorpedoes(
     hits.push({
       tubeId: tube.id,
       enemyId: target.id,
+      position: { ...target.position },
       damage: finalDamage,
       destroyed,
     })
@@ -357,7 +370,7 @@ export function repositionEnemies(state: GameState, rng = Math.random): void {
 export interface CombatTurnResult {
   /** Trava perdida neste turno por dano no SRS. */
   lockLost: boolean
-  events: string[]
+  events: TurnEventDraft[]
 }
 
 /**
@@ -372,7 +385,7 @@ export function resolveCombatTurn(
   options: { fired?: boolean } = {},
   rng = Math.random,
 ): CombatTurnResult {
-  const events: string[] = []
+  const events: TurnEventDraft[] = []
 
   if (!options.fired) {
     passivePhaserCooldown(state)
@@ -382,7 +395,10 @@ export function resolveCombatTurn(
   checkWeaponsLock(state, rng)
   const lockLost = wasLocked && !state.weaponsLocked
   if (lockLost) {
-    events.push('Weapons Lock perdido — sensores de curto alcance degradados.')
+    events.push({
+      type: 'weapons_lock',
+      text: 'Weapons Lock perdido — sensores de curto alcance degradados.',
+    })
   }
 
   return { lockLost, events }

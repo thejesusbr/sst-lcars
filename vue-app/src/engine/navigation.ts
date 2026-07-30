@@ -13,6 +13,7 @@ import type {
   GridCoord,
   QuadrantMap,
   Starbase,
+  TurnEventDraft,
   WarpTrip,
 } from '@/types/game'
 import {
@@ -385,8 +386,8 @@ export interface ProbeScanResult {
   planet: boolean
   /** Cargas de dilítium reveladas (0 se estéril ou sem planeta). */
   dilithiumCharges: number
-  /** Linhas pro combat log. */
-  log: string[]
+  /** Eventos pro combat log. A etapa é carimbada pelo `turnEngine`. */
+  log: TurnEventDraft[]
 }
 
 /**
@@ -413,7 +414,12 @@ export function resolveProbeScan(
       code: null,
       planet: false,
       dilithiumCharges: 0,
-      log: ['Contato perdido com a sonda — nenhum dado recebido.'],
+      log: [
+        {
+          type: 'probe',
+          text: 'Contato perdido com a sonda — nenhum dado recebido.',
+        },
+      ],
     }
   }
 
@@ -429,16 +435,21 @@ export function resolveProbeScan(
 
   // Coordenadas SEMPRE X,Y (col,row) em texto de UI — a chave interna é row,col.
   const xy = `${target.col},${target.row}`
-  const log = [`Sonda reporta quadrante ${xy}: KBS ${code}.`]
+  const log: TurnEventDraft[] = [
+    { type: 'probe', text: `Sonda reporta quadrante ${xy}: KBS ${code}.` },
+  ]
 
   if (q.planet) {
     // Revelar não gasta carga — a sonda só observa.
     q.surveyed = true
-    log.push(
-      q.dilithiumCharges > 0
-        ? `Planeta detectado em ${xy} com ${q.dilithiumCharges} carga(s) de dilítium.`
-        : `Planeta detectado em ${xy}, sem dilítium aproveitável.`,
-    )
+    log.push({
+      type: 'probe',
+      amount: q.dilithiumCharges,
+      text:
+        q.dilithiumCharges > 0
+          ? `Planeta detectado em ${xy} com ${q.dilithiumCharges} carga(s) de dilítium.`
+          : `Planeta detectado em ${xy}, sem dilítium aproveitável.`,
+    })
   }
 
   return {
@@ -552,7 +563,7 @@ export interface NavigationTurnResult {
   interrupted: boolean
   probeResolved: boolean
   probeScan: ProbeScanResult | null
-  events: string[]
+  events: TurnEventDraft[]
 }
 
 /**
@@ -569,7 +580,7 @@ export function resolveNavigationTurn(
   options: NavigationTurnOptions = {},
   rng: () => number = Math.random,
 ): NavigationTurnResult {
-  const events: string[] = []
+  const events: TurnEventDraft[] = []
   let arrivedQuadrant: GridCoord | null = null
   let interrupted = false
 
@@ -583,7 +594,10 @@ export function resolveNavigationTurn(
     options.movedUnderImpulse ?? false,
   )
   if (state.boostActive && !boost.active) {
-    events.push('Impulse Boost esgotado — motores em cooldown.')
+    events.push({
+      type: 'movement',
+      text: 'Impulse Boost esgotado — motores em cooldown.',
+    })
   }
   state.boostActive = boost.active
   state.boostTurnsUsed = boost.turnsUsed
@@ -599,10 +613,16 @@ export function resolveNavigationTurn(
       // Dano cruzou pro crítico no meio da viagem: motores não seguram.
       state.warpTrip = null
       interrupted = true
-      events.push('Warp Engines em estado crítico — viagem abortada.')
+      events.push({
+        type: 'movement',
+        text: 'Warp Engines em estado crítico — viagem abortada.',
+      })
     } else if (rollStall(warpIntegrity, rng)) {
       // Turno consumido sem avançar: a viagem fica 1 turno mais longa.
-      events.push('Motores estagnaram — nenhum avanço neste turno.')
+      events.push({
+        type: 'movement',
+        text: 'Motores estagnaram — nenhum avanço neste turno.',
+      })
     } else {
       // Auto-Nav degradado ou crítico cai pra regra manual: para na última
       // célula livre do caminho reto e ABANDONA o resto da viagem.
@@ -617,7 +637,10 @@ export function resolveNavigationTurn(
         state.position.quadrant = halt.position
         state.warpTrip = null
         interrupted = true
-        events.push('Auto-Nav perdeu a rota — nave parou curto do destino.')
+        events.push({
+          type: 'movement',
+          text: 'Auto-Nav perdeu a rota — nave parou curto do destino.',
+        })
         if (!sameCoord(halt.position, trip.destination)) {
           arrivedQuadrant = halt.position
         }
@@ -627,9 +650,10 @@ export function resolveNavigationTurn(
           state.position.quadrant = { ...trip.destination }
           state.warpTrip = null
           arrivedQuadrant = { ...trip.destination }
-          events.push(
-            `Chegada ao quadrante ${trip.destination.col},${trip.destination.row}.`,
-          )
+          events.push({
+            type: 'movement',
+            text: `Chegada ao quadrante ${trip.destination.col},${trip.destination.row}.`,
+          })
         }
       }
     }

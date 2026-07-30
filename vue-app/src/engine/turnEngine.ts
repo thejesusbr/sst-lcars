@@ -6,7 +6,14 @@
  * TS puro, sem import de Vue/Pinia.
  */
 
-import type { EndGameReason, GameState, GridCoord } from '@/types/game'
+import type {
+  EndGameReason,
+  GameState,
+  GridCoord,
+  TurnEvent,
+  TurnEventDraft,
+  TurnStep,
+} from '@/types/game'
 import { SUBSYSTEM_KEYS } from '@/types/game'
 import {
   HULL_DAMAGE_DIVISOR,
@@ -72,7 +79,12 @@ export interface PlayerAction {
 
 export interface TurnResult {
   stardate: number
-  events: string[]
+  /**
+   * Eventos **tipados e ordenados**, cada um carimbado com a etapa que o
+   * produziu. Era `string[]`, o que obrigava a store a adivinhar a categoria de
+   * log por substring e não deixava a UI encenar nada (`turn-presentation`).
+   */
+  events: TurnEvent[]
   damageTaken: number
   subsystemDamageTaken: boolean
   breachStarted: boolean
@@ -80,6 +92,17 @@ export interface TurnResult {
   missionCompleted: boolean
   terminalReason: EndGameReason | null
   warpCoreExploded: boolean
+  /**
+   * Viagem de warp engajada NESTE turno, com a duração planejada.
+   *
+   * Existe porque `state.warpTrip` não serve pra isso: numa viagem de 1 turno
+   * ele é criado na etapa 1 e zerado na etapa 5 da mesma resolução, então quem
+   * olha o estado depois do despacho vê `null` e conclui que não houve viagem —
+   * foi exatamente assim que a animação de warp curto deixou de acontecer. A
+   * duração da apresentação (`turns × WARP_ANIMATION_MS[fator]`) precisa deste
+   * dado no momento do engage.
+   */
+  warpTripStarted: { warpFactor: number; turns: number } | null
   /**
    * Ação recusada: **nenhum turno foi consumido**, nada no estado mudou. Existe
    * porque 3 ações estavam declaradas em `PlayerActionType` sem ramo de
@@ -116,7 +139,9 @@ interface ActionOutcome {
   movedUnderImpulse: boolean
   /** Torpedos efetivamente disparados: entra no consumo do turno. */
   torpedoesFired: number
-  events: string[]
+  /** Viagem engajada nesta ação, pra apresentação medir a duração. */
+  warpTripStarted: { warpFactor: number; turns: number } | null
+  events: TurnEventDraft[]
 }
 
 const HAIL_MESSAGES: Record<string, string> = {
@@ -125,6 +150,11 @@ const HAIL_MESSAGES: Record<string, string> = {
   rejected: 'Hail ignorado — o inimigo não responde.',
   full_brig: 'Rendição recusada: a cela está lotada.',
   not_found: 'Alvo não encontrado.',
+}
+
+/** Carimba a etapa nos eventos que um módulo folha produziu sem saber dela. */
+function stamp(step: TurnStep, drafts: TurnEventDraft[]): TurnEvent[] {
+  return drafts.map((d) => ({ ...d, step }))
 }
 
 /** Ocupação no grid de QUADRANTES, a partir do que o jogador **conhece**. */
@@ -148,13 +178,14 @@ function applyPlayerAction(
   action: PlayerAction,
   rng: () => number,
 ): ActionOutcome {
-  const events: string[] = []
+  const events: TurnEventDraft[] = []
   const ok = (extra: Partial<ActionOutcome> = {}): ActionOutcome => ({
     rejected: false,
     reason: null,
     fired: false,
     movedUnderImpulse: false,
     torpedoesFired: 0,
+    warpTripStarted: null,
     events,
     ...extra,
   })
@@ -164,21 +195,58 @@ function applyPlayerAction(
     fired: false,
     movedUnderImpulse: false,
     torpedoesFired: 0,
+    warpTripStarted: null,
     events: [],
   })
 
+  // Em trânsito de warp NENHUMA ação de comando é aceita — não só as de
+  // navegação. Disparar phaser, carregar tubo ou mandar equipe de desembarque
+  // de dentro de uma bolha de warp não faz sentido.
+  //
+  // `end_turn` passa porque é o que o modo de viagem usa pra avançar os turnos
+  // restantes sozinho; o botão manual de End Turn é desabilitado pela UI, que lê
+  // a mesma flag (task 4.6). Ajustes livres (dials, escudo, despacho de CdD)
+  // nunca chegam aqui: não passam pelo `turnEngine`.
+  if (state.warpTrip && action.type !== 'end_turn') {
+    return reject('Nave em warp — nenhuma ação disponível até a chegada.')
+  }
+
   switch (action.type) {
+    // Um evento POR ALVO, não um agregado: a linha de phaser é desenhada entre
+    // quem atira e cada alvo, então a apresentação precisa saber contra quem
+    // (`entityId`) e com quanto (`amount`). O agregado
+    // "Phasers disparados (N de dano)" não expressava nem um nem outro.
     case 'fire_phasers': {
       const res = firePhasers(state, state.phaserPower, rng)
       if (!res.success) return reject(`Phasers: ${res.reason}`)
-      events.push(`Phasers disparados (${res.totalDamageDealt} de dano).`)
+      for (const hit of res.hits) {
+        events.push({
+          type: 'player_phasers',
+          entityId: hit.enemyId,
+          at: hit.position,
+          amount: hit.damage,
+          text: hit.destroyed
+            ? `Phasers: alvo atingido com ${hit.damage} de dano — destruído.`
+            : `Phasers: alvo atingido com ${hit.damage} de dano.`,
+        })
+      }
       return ok({ fired: true })
     }
 
     case 'fire_torpedoes': {
       const res = fireTorpedoes(state, rng)
       if (!res.success) return reject(`Torpedos: ${res.reason}`)
-      events.push(`Torpedos disparados (${res.shotsFired} tubo(s)).`)
+      for (const hit of res.hits) {
+        events.push({
+          type: 'player_torpedo',
+          entityId: hit.enemyId,
+          at: hit.position,
+          amount: hit.damage,
+          text: hit.destroyed
+            ? `Torpedo do tubo ${hit.tubeId} atingiu com ${hit.damage} de dano — alvo destruído.`
+            : `Torpedo do tubo ${hit.tubeId} atingiu com ${hit.damage} de dano.`,
+        })
+      }
       return ok({ fired: true, torpedoesFired: res.shotsFired })
     }
 
@@ -189,11 +257,12 @@ function applyPlayerAction(
       if (action.tubeId === undefined) return reject('Tubo não informado.')
       const res = loadTube(state, action.tubeId, rng)
       if (!res.turnSpent) return reject(`Carregamento: ${res.reason}`)
-      events.push(
-        res.success
+      events.push({
+        type: 'tube_ops',
+        text: res.success
           ? `Tubo ${action.tubeId} carregado.`
           : `Falha no carregamento do tubo ${action.tubeId} — turno perdido.`,
-      )
+      })
       return ok()
     }
 
@@ -201,11 +270,12 @@ function applyPlayerAction(
       if (action.tubeId === undefined) return reject('Tubo não informado.')
       const res = unloadTube(state, action.tubeId, rng)
       if (!res.turnSpent) return reject(`Descarregamento: ${res.reason}`)
-      events.push(
-        res.success
+      events.push({
+        type: 'tube_ops',
+        text: res.success
           ? `Tubo ${action.tubeId} descarregado.`
           : `Falha no descarregamento do tubo ${action.tubeId} — turno perdido.`,
-      )
+      })
       return ok()
     }
 
@@ -213,7 +283,11 @@ function applyPlayerAction(
       if (!action.targetId) return reject('Nenhum alvo para hail.')
       const res = hailTarget(state, action.targetId, rng)
       if (res.status === 'not_found') return reject('Alvo não encontrado.')
-      events.push(HAIL_MESSAGES[res.status])
+      events.push({
+        type: 'hail',
+        entityId: action.targetId,
+        text: HAIL_MESSAGES[res.status],
+      })
       return ok()
     }
 
@@ -224,7 +298,7 @@ function applyPlayerAction(
           'Não foi possível travar: SRS desligado, em crítico, ou sem alvo visível.',
         )
       }
-      events.push('Weapons Lock adquirido.')
+      events.push({ type: 'weapons_lock', text: 'Weapons Lock adquirido.' })
       return ok()
     }
 
@@ -240,7 +314,10 @@ function applyPlayerAction(
               : 'Alvo fora da galáxia.',
         )
       }
-      events.push(`Sonda lançada — resolve em ${res.turns} turno(s).`)
+      events.push({
+        type: 'probe',
+        text: `Sonda lançada — resolve em ${res.turns} turno(s).`,
+      })
       return ok()
     }
 
@@ -260,7 +337,10 @@ function applyPlayerAction(
       repositionEnemies(state, rng)
 
       if (rollStall(state.subsystems.warp, rng)) {
-        events.push('Motores estagnaram — a nave não avançou.')
+        events.push({
+          type: 'movement',
+          text: 'Motores estagnaram — a nave não avançou.',
+        })
         return ok()
       }
 
@@ -273,13 +353,14 @@ function applyPlayerAction(
       state.position.sector = move.position
       const arrived =
         move.position.row === target.row && move.position.col === target.col
-      events.push(
-        move.interrupted
+      events.push({
+        type: 'movement',
+        text: move.interrupted
           ? 'Obstáculo no caminho — nave parou curto do destino.'
           : arrived
             ? `Impulso: nave em ${move.position.col},${move.position.row}.`
             : `Impulso: em trânsito, nave em ${move.position.col},${move.position.row}.`,
-      )
+      })
       return ok({ movedUnderImpulse: true })
     }
 
@@ -287,8 +368,8 @@ function applyPlayerAction(
       // Warp é INTER-quadrante: o destino é uma célula da galáxia, e a
       // ocupação usada pela rota do Auto-Nav é quadrante hostil CONHECIDO.
       const target = action.targetCoord ?? state.destination
+      // Viagem já em curso é barrada pelo guard geral de warp, acima.
       if (!target) return reject('Nenhum destino selecionado.')
-      if (state.warpTrip) return reject('Viagem de warp já em curso.')
 
       repositionEnemies(state, rng)
 
@@ -309,10 +390,24 @@ function applyPlayerAction(
         )
       }
       state.warpTrip = plan.trip
-      events.push(
-        `Warp ${plan.trip.warpFactor} engajado — ${plan.trip.turnsRemaining} turno(s) até o destino.`,
-      )
-      return ok()
+
+      // A nave sai de alcance NO ATO. Antes ela ficava no quadrante de origem
+      // levando fogo a viagem inteira sem poder responder — dano sem decisão,
+      // que é o oposto do que esta mudança busca. O reposicionamento acima é a
+      // última reação do inimigo; a partir daqui o setor está vazio e a etapa 3
+      // não acha ninguém pra atacar.
+      state.currentSector = []
+
+      events.push({
+        type: 'movement',
+        text: `Warp ${plan.trip.warpFactor} engajado — ${plan.trip.turnsRemaining} turno(s) até o destino.`,
+      })
+      return ok({
+        warpTripStarted: {
+          warpFactor: plan.trip.warpFactor,
+          turns: plan.trip.turnsRemaining,
+        },
+      })
     }
 
     case 'send_party': {
@@ -328,7 +423,10 @@ function applyPlayerAction(
               : 'Nenhum planeta adjacente no setor alvo.',
         )
       }
-      events.push('Equipe de desembarque enviada ao planeta.')
+      events.push({
+        type: 'landing_party',
+        text: 'Equipe de desembarque enviada ao planeta.',
+      })
       return ok()
     }
 
@@ -364,12 +462,12 @@ function resolveEnemyTurn(
 ): {
   damageTaken: number
   subsystemDamageTaken: boolean
-  events: string[]
+  events: TurnEventDraft[]
   dockedBaseDestroyed: boolean
 } {
   let damageTaken = 0
   let subsystemDamageTaken = false
-  const events: string[] = []
+  const events: TurnEventDraft[] = []
   let dockedBaseDestroyed = false
 
   // O tick de estresse de cloak NÃO mora aqui: `tickCloakStress` já percorre
@@ -392,15 +490,36 @@ function resolveEnemyTurn(
     const H = Math.floor((power / euclideanDist) * (2 + rng()))
     if (H <= 0) continue
 
+    // Evento do DISPARO, antes do efeito. É o que a apresentação usa pra
+    // desenhar a linha saindo do inimigo — sem ele, o jogador só via o
+    // resultado ("escudos absorveram X") e nunca quem agiu, que é justamente a
+    // queixa que originou esta mudança.
+    events.push({
+      type: 'enemy_attack',
+      entityId: enemy.id,
+      at: { ...enemy.position },
+      amount: H,
+      text: `Inimigo atacou com ${H} de dano.`,
+    })
+
     if (options.redirectDamageToDockedBase && state.dockedBaseId) {
       const base = state.starbases.find((b) => b.id === state.dockedBaseId)
       if (base && !base.destroyed) {
         base.resourcePool = Math.max(0, base.resourcePool - H)
-        events.push(`Base atracada absorveu ${H} de dano inimigo.`)
+        events.push({
+          type: 'shield_absorb',
+          entityId: base.id,
+          amount: H,
+          text: `Base atracada absorveu ${H} de dano inimigo.`,
+        })
         if (base.resourcePool === 0) {
           base.destroyed = true
           dockedBaseDestroyed = true
-          events.push(`A base atracada foi destruída pelos ataques inimigos!`)
+          events.push({
+            type: 'hull_damage',
+            entityId: base.id,
+            text: `A base atracada foi destruída pelos ataques inimigos!`,
+          })
         }
       }
     } else {
@@ -411,16 +530,26 @@ function resolveEnemyTurn(
       if (state.shieldEnergy >= H) {
         state.shieldEnergy -= H
         state.shieldDamageTaken += H
-        events.push(`Escudos absorveram ${H} de dano.`)
+        events.push({
+          type: 'shield_absorb',
+          entityId: enemy.id,
+          at: { ...state.position.sector },
+          amount: H,
+          text: `Escudos absorveram ${H} de dano.`,
+        })
       } else {
         const remainder = H - state.shieldEnergy
         state.shieldDamageTaken += state.shieldEnergy
         state.shieldEnergy = 0
         const hullLoss = remainder / HULL_DAMAGE_DIVISOR
         state.hullIntegrity = Math.max(0, state.hullIntegrity - hullLoss)
-        events.push(
-          `Escudos saturados — casco perdeu ${hullLoss.toFixed(1)} de integridade.`,
-        )
+        events.push({
+          type: 'hull_damage',
+          entityId: enemy.id,
+          at: { ...state.position.sector },
+          amount: hullLoss,
+          text: `Escudos saturados — casco perdeu ${hullLoss.toFixed(1)} de integridade.`,
+        })
       }
 
       // Dano aleatório a subsistema se hit forte (H >= 20)
@@ -430,7 +559,12 @@ function resolveEnemyTurn(
         const dmg = H / Math.max(1, state.shieldEnergy) + 0.5 * rng()
         state.subsystems[subKey] = Math.max(0, state.subsystems[subKey] - dmg)
         subsystemDamageTaken = true
-        events.push(`Subsistema atingido: ${subKey} sofreu dano de combate.`)
+        events.push({
+          type: 'subsystem_hit',
+          at: { ...state.position.sector },
+          amount: dmg,
+          text: `Subsistema atingido: ${subKey} sofreu dano de combate.`,
+        })
       }
     }
 
@@ -461,7 +595,7 @@ export function resolvePlayerTurn(
     return rejectedTurn(state, outcome.reason)
   }
 
-  const events = [...outcome.events]
+  const events: TurnEvent[] = stamp(1, outcome.events)
   let damageTaken = 0
   let subsystemDamageTaken = false
 
@@ -499,13 +633,22 @@ export function resolvePlayerTurn(
   state.subsystems.warpCore = Math.max(0, state.subsystems.warpCore - wcRes.damage)
   if (wcRes.breachStarted) {
     state.breach = startBreach()
-    events.push('ALERTA: Vazamento de radiação no Warp Core iniciado!')
+    events.push({
+      step: 2,
+      type: 'breach',
+      text: 'ALERTA: Vazamento de radiação no Warp Core iniciado!',
+    })
   }
 
   const breachRes = resolveBreachTurn(state)
-  if (breachRes.contained) events.push('Vazamento de radiação contido.')
-  else if (breachRes.expired) {
-    events.push('CRÍTICO: contenção falhou — exposição letal à radiação.')
+  if (breachRes.contained) {
+    events.push({ step: 2, type: 'breach', text: 'Vazamento de radiação contido.' })
+  } else if (breachRes.expired) {
+    events.push({
+      step: 2,
+      type: 'breach',
+      text: 'CRÍTICO: contenção falhou — exposição letal à radiação.',
+    })
   }
 
   // ── ETAPA 3: Turno inimigo (+ estresse/cooldown de cloak) ────────────────
@@ -520,7 +663,7 @@ export function resolvePlayerTurn(
   )
   damageTaken += enemyRes.damageTaken
   subsystemDamageTaken = enemyRes.subsystemDamageTaken
-  events.push(...enemyRes.events)
+  events.push(...stamp(3, enemyRes.events))
 
   // ── ETAPA 4: Condições terminais ─────────────────────────────────────────
   updateLifeSupportCountdown(state)
@@ -534,7 +677,14 @@ export function resolvePlayerTurn(
 
   const dcRes = resolveDamageControlTurn(state)
   for (const [sys, amount] of Object.entries(dcRes.repairs)) {
-    if (amount > 0) events.push(`Reparo em ${sys}: +${amount}.`)
+    if (amount > 0) {
+      events.push({
+        step: 5,
+        type: 'repair',
+        amount,
+        text: `Reparo em ${sys}: +${amount}.`,
+      })
+    }
   }
 
   const navRes = resolveNavigationTurn(
@@ -545,20 +695,23 @@ export function resolvePlayerTurn(
     },
     rng
   )
-  events.push(...navRes.events)
+  events.push(...stamp(5, navRes.events))
 
   const combatRes = resolveCombatTurn(state, { fired: outcome.fired }, rng)
-  events.push(...combatRes.events)
+  events.push(...stamp(5, combatRes.events))
 
   const partyRes = resolveLandingPartyTurn(state, rng)
   if (partyRes.completed) {
-    events.push(
-      partyRes.destroyed
+    events.push({
+      step: 5,
+      type: 'landing_party',
+      amount: partyRes.boost,
+      text: partyRes.destroyed
         ? 'Equipe de desembarque perdida em setor hostil.'
         : partyRes.boost > 0
           ? `Dilítium recuperado: +${partyRes.boost} de integridade no Warp Core.`
           : 'Equipe retornou — planeta estéril, nenhum dilítium.',
-    )
+    })
   }
 
   regenStarbasePools(state.starbases, state.docked ? state.dockedBaseId : null)
@@ -579,6 +732,7 @@ export function resolvePlayerTurn(
     missionCompleted: partyRes.completed || navRes.probeResolved,
     terminalReason: endRes?.reason ?? null,
     warpCoreExploded: wcRes.exploded,
+    warpTripStarted: outcome.warpTripStarted,
     rejected: false,
     rejectionReason: null,
   }
@@ -615,7 +769,7 @@ function settleShipCell(state: GameState): void {
 function rejectedTurn(state: GameState, reason: string | null): TurnResult {
   return {
     stardate: state.stardate,
-    events: reason ? [reason] : [],
+    events: reason ? [{ step: 1, type: 'rejection', text: reason }] : [],
     damageTaken: 0,
     subsystemDamageTaken: false,
     breachStarted: false,
@@ -623,6 +777,7 @@ function rejectedTurn(state: GameState, reason: string | null): TurnResult {
     missionCompleted: false,
     terminalReason: null,
     warpCoreExploded: false,
+    warpTripStarted: null,
     rejected: true,
     rejectionReason: reason,
   }

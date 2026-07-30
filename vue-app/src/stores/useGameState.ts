@@ -18,6 +18,7 @@ import {
 } from '@/engine/constants'
 import { createNewGameState } from '@/engine/newGame'
 import {
+  TURN_EVENT_CATEGORY,
   type AlertLevel,
   type GameState,
   type GridCoord,
@@ -62,24 +63,6 @@ const quadrantEnterHook: TurnOptions['onQuadrantEnter'] = (state, quadrant) => {
     state.seed,
     state.starbases,
   )
-}
-
-/**
- * Categoria do evento pelo texto. Heurística de palavra-chave em vez de o engine
- * carregar categoria em cada string: o engine não deve saber que existe um widget
- * de log com 3 abas.
- *
- * ponytail: classificação por substring. Se as categorias virarem regra de
- * negócio, o `TurnResult` passa a devolver `{category, text}` por evento.
- */
-function categoryOf(text: string): LogCategory {
-  if (/reparo|Reparo|radiação|Warp Core|contido|equipe|Equipe/i.test(text)) {
-    return 'engineering'
-  }
-  if (/rendeu|cela|Hail|prisioneiro|missão|Sonda|sonda/i.test(text)) {
-    return 'captain'
-  }
-  return 'general'
 }
 
 export const useGameState = defineStore('gameState', {
@@ -214,11 +197,14 @@ export const useGameState = defineStore('gameState', {
      * produzindo eventos.
      */
     recordTurn(res: TurnResult) {
-      for (const text of res.events) {
+      for (const evt of res.events) {
         this.$state.combatLog.push({
           stardate: res.stardate,
-          category: categoryOf(text),
-          text,
+          // Categoria vem do TIPO do evento. Antes era regex no texto
+          // (`categoryOf`), então reescrever uma mensagem mudava a aba em que
+          // ela caía — e traduzir uma quebrava a classificação inteira.
+          category: TURN_EVENT_CATEGORY[evt.type],
+          text: evt.text,
         })
       }
       if (this.$state.tribbleInfestationActive && !res.rejected) {
