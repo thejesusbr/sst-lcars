@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
   // Erguido/baixado (SHE UP/DOWN) -- independente de integridade. Escudo
   // baixado mas 100% integro ainda deve sumir do visor, so nao ha dano.
   shieldActive?: boolean
-  systemIntegrity?: Partial<Record<ShieldZoneKey, number>>
+  systemIntegrity?: Partial<Record<string, number>>
   hitZone?: ShieldZoneKey | null
 }>(), {
   shieldIntegrity: 100,
@@ -24,7 +24,12 @@ const props = withDefaults(defineProps<{
   hitZone: null,
 })
 
-const integrityOf = (key: ShieldZoneKey) => props.systemIntegrity?.[key] ?? 100
+const integrityOf = (key: ShieldZoneKey) => {
+  if (key === 'damage') {
+    return props.systemIntegrity?.autoNav ?? props.systemIntegrity?.damage ?? 100
+  }
+  return props.systemIntegrity?.[key] ?? 100
+}
 const isHit = (key: ShieldZoneKey) => props.hitZone === key
 
 // Mesmo idioma de 3 niveis do EngineeringConsole/getSystemStatus: nominal -> danificado -> offline

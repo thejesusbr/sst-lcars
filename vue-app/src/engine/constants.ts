@@ -1,0 +1,275 @@
+/**
+ * Constantes do jogo + helpers puros de dano.
+ *
+ * Não monta `GameState` — a fábrica de estado inicial vive em `newGame.ts`,
+ * porque ela precisa de `worldGen`, que importa daqui (evita ciclo).
+ *
+ * **Folha da árvore de dependências**: este arquivo NÃO importa de nenhum outro
+ * `engine/*.ts` — só de `types/game.ts`. Todos os outros módulos do engine
+ * importam daqui. É o que permite `combat.ts`, `warpCore.ts` e `navigation.ts`
+ * serem escritos em paralelo sem depender uns dos outros
+ * (design.md decisão #36).
+ */
+
+// ── Energia (seção 2.3) ─────────────────────────────────────────────────────
+
+/** Output nominal do Warp Core; teto antes de `autoOverload` disparar. */
+export const WARP_CORE_OUTPUT = 4500
+export const MAIN_ENERGY_INITIAL = 3000
+export const SHIELD_ENERGY_MAX = 2500
+export const SHIELD_ENERGY_INITIAL = 1500
+
+// ── Armas (seção 2.3) ───────────────────────────────────────────────────────
+
+export const PHASER_POWER_MAX = 3000
+export const PHASER_TEMP_MAX = 270
+export const PHASER_TEMP_INITIAL = 50
+/** Aquecimento por disparo E resfriamento passivo por turno sem atirar. */
+export const PHASER_TEMP_PER_SHOT = 30
+export const TORPEDO_STOCK_MAX = 12
+export const TORPEDO_STOCK_INITIAL = 8
+export const TORPEDO_TUBE_COUNT = 3
+/** Dano de torpedo: `200 + random*100`, sem redução por calor (decisão #31). */
+export const TORPEDO_DAMAGE_MIN = 200
+export const TORPEDO_DAMAGE_SPREAD = 100
+
+// ── Inimigos ────────────────────────────────────────────────────────────────
+
+/**
+ * Base do stat único vida/ataque: `enemyPower = 200 * (0.5 + random)` →
+ * faixa 100-300. Reusa o `S9=200` do fonte de 1978 (decisão #22).
+ */
+export const ENEMY_BASE_POWER = 200
+/** Chance de rendição ao dar Hail num inimigo (decisão #23). */
+export const HAIL_SURRENDER_CHANCE = 0.3
+/** Chance de um prisioneiro revelar posição de frota, 1x por captura. */
+export const INTERROGATION_CHANCE = 0.5
+/** Estresse de cloak por turno, na mesma escala 0-20 do overload. */
+export const CLOAK_STRESS_PER_TURN = 4
+export const CLOAK_STRESS_CAP = 20
+/** Turnos antes de poder cloacar de novo após decloak forçado. */
+export const CLOAK_COOLDOWN_TURNS = 8
+
+// ── Consumo de energia por subsistema (decisões #25/#28/#31/#32) ────────────
+
+/** Impulso a 100% do dial. Boost força 100% independente do dial. */
+export const IMPULSE_POWER_MAX = 2000
+/** Passivo por turno de cada sensor, enquanto ligado. */
+export const SRS_PASSIVE_DRAW = 100
+export const LRS_PASSIVE_DRAW = 100
+/** Tubo vazio em standby: mecanismo de carregamento fica ativo (decisão #32). */
+export const PHOTON_TUBE_IDLE_DRAW = 5
+/** Tubo carregado: substitui o standby, não soma (decisão #31). */
+export const PHOTON_TUBE_LOADED_DRAW = 20
+/** Custo ativo por torpedo disparado (reusa `E=E-2` do original). */
+export const TORPEDO_FIRE_COST = 2
+/** Sempre ligados, sem toggle. */
+export const LIFE_SUPPORT_DRAW = 150
+export const WARP_CORE_HOUSE_DRAW = 50
+/** Auto-Nav só consome enquanto engajado numa viagem (decisão #28). */
+export const AUTO_NAV_DRAW = 100
+
+// ── Navegação (seção 2.3) ───────────────────────────────────────────────────
+
+export const WARP_FACTOR_MIN = 1
+export const WARP_FACTOR_MAX = 8
+/** Acima disso, viagem estressa o Warp Core (decisão #23). */
+export const WARP_SAFE_FACTOR = 4
+/** Pontos de overload efetivo por ponto de warp acima do seguro. */
+export const WARP_STRESS_PER_POINT = 2
+export const PROBES_INITIAL = 3
+export const BOOST_MAX_TURNS = 5
+/** Cooldown = turnos usados × isto, arredondado pra cima (decisão #23). */
+export const BOOST_COOLDOWN_FACTOR = 1.5
+
+// ── Missão (seção 2.3, corrigido por decisão #22) ───────────────────────────
+
+export const STARDATE_INITIAL = 3600.0
+/**
+ * Duração da missão em stardates. O original sorteia `T9=25+INT(RND(1)*10)`
+ * (25-34); usamos o meio da faixa. Stardate avança exatamente 1 por turno
+ * resolvido (`T=T+1`, linha 3870 do fonte de 1978).
+ */
+export const MISSION_DURATION = 30
+export const STARDATE_PER_TURN = 1
+
+/**
+ * ⚠️ Totais de inimigo e base **não são mais constantes de estado inicial** —
+ * viraram resultado da geração de mundo (`world-generation` design.md decisão 1),
+ * como no original, onde `K9`/`B9` acumulam das rolagens por quadrante.
+ *
+ * Ficam aqui só como valor de referência esperado, pra teste e documentação:
+ * ~17.3 inimigos e ~4.6 bases. Não usar pra inicializar `GameState`.
+ */
+export const ENEMIES_EXPECTED = 17
+export const STARBASES_EXPECTED = 5
+
+// ── Cela de prisioneiros (decisão #23) ──────────────────────────────────────
+
+export const BRIG_CAPACITY = 4
+
+// ── Warp Core: sobrecarga e breach (seção 10.2) ─────────────────────────────
+
+export const OVERLOAD_MIN = 0
+export const OVERLOAD_MAX = 20
+
+/**
+ * Dano/turno ao WC por ponto de overload efetivo. Curva Fibonacci
+ * (`min(85, fib(n)/50)`), pré-calculada pra não recomputar em runtime.
+ * Índice = overload efetivo, já travado em 0-20.
+ */
+export const WARP_CORE_DAMAGE_TABLE = [
+  0, 0.02, 0.02, 0.04, 0.06, 0.1, 0.16, 0.26, 0.42, 0.68, 1.1, 1.78, 2.88,
+  4.66, 7.54, 12.2, 19.74, 31.94, 51.68, 83.62, 85,
+] as const
+
+/** Chance de explosão/turno, `min(0.55, fib(n)/12300)`. Mesmo índice. */
+export const WARP_CORE_EXPLOSION_CHANCE_TABLE = [
+  0, 0.00008, 0.00008, 0.00016, 0.00024, 0.00041, 0.00065, 0.00106, 0.00171,
+  0.00276, 0.00447, 0.00724, 0.01171, 0.01894, 0.03065, 0.04959, 0.08024,
+  0.12984, 0.21008, 0.33992, 0.55,
+] as const
+
+/** Turnos pra conter um breach antes de virar morte por radiação. */
+export const BREACH_TURNS = 5
+/** Reparo fora do breach roda a metade enquanto ele estiver ativo. */
+export const BREACH_REPAIR_PENALTY = 0.5
+
+// ── Sonda / landing party (decisão #23) ─────────────────────────────────────
+
+/** Chance base de destruição em setor hostil... */
+export const HOSTILE_RISK_BASE = 0.4
+/** ...mais isto por inimigo ADICIONAL além do primeiro. */
+export const HOSTILE_RISK_PER_EXTRA_ENEMY = 0.05
+/** Duração fixa da missão de mineração (ida, pesquisa, volta). */
+export const LANDING_PARTY_TURNS = 3
+/** Integridade de WC ganha numa mineração bem-sucedida. */
+export const DILITHIUM_WC_BOOST = 30
+
+// ── Docking (decisões #8/#23) ───────────────────────────────────────────────
+
+export const STARBASE_POOL_CAPACITY = 500
+/** Regen/turno enquanto o pool não está sendo sacado por um loop de docking. */
+export const STARBASE_POOL_REGEN = 10
+/** Reparo por subsistema por tick docado: `5 (base) * 5 (tier) * 1.0`. */
+export const DOCKED_REPAIR_PER_TICK = 25
+/** Equipes descansam em dobro enquanto docadas. */
+export const DOCKED_TEAM_RECOVERY_PER_TURN = 16
+
+// ── Rating / easter egg ─────────────────────────────────────────────────────
+
+/** Capturar pesa mais que destruir — captura também rende inteligência. */
+export const CAPTURED_RATING_WEIGHT = 1.5
+export const DESTROYED_RATING_WEIGHT = 1
+/** Teto de ícones renderizados; a população interna cresce sem limite. */
+export const TRIBBLE_RENDER_CAP = 200
+
+// ── Sensores ────────────────────────────────────────────────────────────────
+
+/** Confiança do LRS decai isto por turno desde o último scan... */
+export const SCAN_DECAY_PER_TURN = 0.05
+/** ...com piso aqui (estrelas não se movem, nunca some de vez). */
+export const SCAN_CONFIDENCE_FLOOR = 0.3
+
+// ── Dano em subsistema: fração compartilhada e bandas (decisões #35/#37) ─────
+
+/** Fronteira leve→moderado. Abaixo disso, só efeito contínuo. */
+export const DAMAGE_BAND_MODERATE = 0.3
+/** Fronteira moderado→crítico. Acima disso, subsistema paralisado. */
+export const DAMAGE_BAND_CRITICAL = 0.6
+/** Integridade abaixo da qual o subsistema está em crítico (= `d > 0.60`). */
+export const CRITICAL_INTEGRITY = 40
+
+export type DamageBand = 'leve' | 'moderado' | 'critico'
+
+/**
+ * Fração de dano `d`: 0 com integridade cheia, 1 com integridade zero.
+ * Base compartilhada de TODO efeito de dano→efetividade desta mudança —
+ * `combat.ts` (Phaser Banks/Photon Tubes), `warpCore.ts` (draw do Shield
+ * Control) e `navigation.ts` (LRS/Auto-Nav/Warp Engines) importam daqui em vez
+ * de um do outro, o que mantém os 3 paralelizáveis (decisão #36).
+ *
+ * Efeitos contínuos escalam com `d` desde o primeiro ponto de dano (integridade
+ * 99 já dá `d = 0.01`); efeitos probabilísticos só a partir de moderado, ver
+ * `degradedChance`.
+ */
+export function damageFraction(integrity: number): number {
+  // Arredonda pra 4 casas: sem isso, `0.45 - 0.3` vira 0.15000000000000002 e a
+  // fronteira exata das bandas (integridade 55 -> 15%) falha por ponto
+  // flutuante, fazendo o roll disparar num limite onde a spec diz que não.
+  return round4(clamp((100 - integrity) / 100, 0, 1))
+}
+
+/** Banda em que a integridade cai. */
+export function damageBand(integrity: number): DamageBand {
+  const d = damageFraction(integrity)
+  if (d > DAMAGE_BAND_CRITICAL) return 'critico'
+  if (d > DAMAGE_BAND_MODERATE) return 'moderado'
+  return 'leve'
+}
+
+/** `true` quando o subsistema está paralisado/forçado a estado seguro. */
+export function isCritical(integrity: number): boolean {
+  return damageFraction(integrity) > DAMAGE_BAND_CRITICAL
+}
+
+/**
+ * Chance (0-1) de falha probabilística: 0 até a fronteira do moderado,
+ * subindo linear até 0.30 na borda do crítico. Usado pela falha de
+ * carregar/descarregar tubo, flickering de escudo, estagnação de motor e
+ * degradação de rota do Auto-Nav — todos com a mesma curva.
+ */
+export function degradedChance(integrity: number): number {
+  return round4(Math.max(0, damageFraction(integrity) - DAMAGE_BAND_MODERATE))
+}
+
+// ── Utilitários ─────────────────────────────────────────────────────────────
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+/** Corta lixo de ponto flutuante mantendo 4 casas — ver `damageFraction`. */
+export function round4(value: number): number {
+  return Math.round(value * 10000) / 10000
+}
+
+// ── Equipes de Controle de Danos (seção 10.3) ───────────────────────────────
+
+export const DAMAGE_CONTROL_TEAM_COUNT = 6
+export const TEAM_EFFICIENCY_FLOOR = 20
+export const TEAM_RECOVERY_PER_TURN = 8
+
+/**
+ * Calcula a integridade percentual do escudo (0-100) derivada da energia atual
+ * e do dano acumulado em `shieldDamageTaken`.
+ */
+export function computeShieldIntegrity(
+  shieldEnergy: number,
+  shieldDamageTaken: number
+): number {
+  if (shieldEnergy <= 0 && shieldDamageTaken > 0) return 0
+  const effectiveDamage = Math.max(0, shieldDamageTaken - Math.floor(shieldEnergy * 0.2))
+  const loss = (effectiveDamage / 1500) * 100
+  return clamp(Math.round(100 - loss), 0, 100)
+}
+
+// ── Código KBS ──────────────────────────────────────────────────────────────
+
+/**
+ * Código KBS de 3 dígitos (**K**lingons, **B**ases, **S**tars) que Star Chart e
+ * LRS leem. Mora nesta folha, e não em `worldGen.ts`, pra que `navigation.ts`
+ * (resolução de sonda) também possa usá-lo sem importar um módulo irmão
+ * (invariante da decisão #36).
+ *
+ * Planeta NÃO entra no código de propósito: é o que torna planeta invisível a
+ * longa distância (world-generation design.md decisão 8).
+ */
+export function kbsCode(parts: {
+  klingons: number
+  bases: number
+  stars: number
+}): string {
+  const d = (n: number) => Math.min(9, Math.max(0, Math.floor(n)))
+  return `${d(parts.klingons)}${d(parts.bases)}${d(parts.stars)}`
+}

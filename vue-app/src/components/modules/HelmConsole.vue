@@ -13,22 +13,42 @@ import LcarsButton from "@/components/elements/LcarsButton.vue";
 import SolidLevelBar from "@/components/widgets/SolidLevelBar.vue";
 import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
 import LcarsHtmlTag from "@/components/elements/LcarsHtmlTag.vue";
+import { Sound, useSound } from "@/composables/useSound";
+import { useGameState } from "@/stores/useGameState";
 
-const activeDstToggle = ref<"sec" | "sys">("sec");
+const { playSound } = useSound();
+const gameState = useGameState();
 
-const toggleSysSec = (opt: "sec" | "sys") => {
+const activeDstToggle = ref<"sec" | "quad">("sec");
+
+const toggleSysSec = (opt: "sec" | "quad") => {
   activeDstToggle.value = opt;
 };
 
-const destination = ref({
-  sys: { x: 2, y: 5 },
-  sec: { x: 4, y: 3 },
+// Destino do setor (local para movimentação de impulso ou dentro do setor)
+const sectorTarget = ref({
+  row: gameState.position.sector.row,
+  col: gameState.position.sector.col,
 });
 
-const adjustDestination = (dx: number, dy: number) => {
-  const target = destination.value[activeDstToggle.value];
-  target.x = Math.min(8, Math.max(1, target.x + dx));
-  target.y = Math.min(8, Math.max(1, target.y + dy));
+const destination = computed(() => ({
+  quadrant: gameState.destination ?? { ...gameState.position.quadrant },
+  sector: sectorTarget.value,
+}));
+
+const adjustDestination = (dCol: number, dRow: number) => {
+  if (activeDstToggle.value === "sec") {
+    const target = sectorTarget.value;
+    target.col = Math.min(8, Math.max(1, target.col + dCol));
+    target.row = Math.min(8, Math.max(1, target.row + dRow));
+  } else {
+    const current = gameState.destination ?? { ...gameState.position.quadrant };
+    const next = {
+      col: Math.min(8, Math.max(1, current.col + dCol)),
+      row: Math.min(8, Math.max(1, current.row + dRow)),
+    };
+    gameState.setDestination(next);
+  }
 };
 
 const dirPadSvg = `<svg width="70mm" height="70mm" 
@@ -69,8 +89,6 @@ const bindPadButtons = () => {
   const bind = (id: string, handler: () => void) => {
     document.getElementById(id)?.addEventListener("click", handler);
   };
-  // Botoes horizontais alteram X, verticais alteram Y, diagonais alteram
-  // ambas -- tudo no eixo (sys/sec) escolhido pelo toggle System/Sector.
   bind("xy_ctl_left", () => adjustDestination(-1, 0));
   bind("xy_ctl_right", () => adjustDestination(1, 0));
   bind("xy_ctl_up", () => adjustDestination(0, -1));
@@ -81,7 +99,10 @@ const bindPadButtons = () => {
   bind("xy_ctl_NW", () => adjustDestination(-1, -1));
 };
 
-const impulsePower = ref(50);
+const impulsePower = computed({
+  get: () => gameState.impulsePower,
+  set: (val) => gameState.setImpulsePower(val),
+});
 const impulsePresets = [
   { label: "Off", value: 0 },
   { label: "25%", value: 25 },
@@ -89,59 +110,22 @@ const impulsePresets = [
   { label: "75%", value: 75 },
   { label: "100%", value: 100 },
 ];
-const impulseBoost = ref(false);
+const impulseBoost = computed(() => gameState.boostActive);
 const boostedImpulsePower = computed(() =>
   impulseBoost.value ? 100 : impulsePower.value
 );
 
-const BOOST_MAX_DURATION = 60; // segundos
-const BOOST_COOLDOWN_BASE = 30; // segundos, minimo
-
-const boostCooldownTotal = ref(0);
-const boostCooldownRemaining = ref(0);
-const canActivateBoost = computed(
-  () => !impulseBoost.value && boostCooldownRemaining.value === 0
-);
-
-let boostActivatedAt = 0;
-let boostTimer: ReturnType<typeof setTimeout> | undefined;
-let cooldownInterval: ReturnType<typeof setInterval> | undefined;
-
-const startCooldown = (seconds: number) => {
-  clearInterval(cooldownInterval);
-  boostCooldownTotal.value = seconds;
-  boostCooldownRemaining.value = seconds;
-  cooldownInterval = setInterval(() => {
-    boostCooldownRemaining.value = Math.max(
-      0,
-      boostCooldownRemaining.value - 0.1
-    );
-    if (boostCooldownRemaining.value === 0) clearInterval(cooldownInterval);
-  }, 100);
-};
-
-const deactivateBoost = () => {
-  if (!impulseBoost.value) return;
-  impulseBoost.value = false;
-  clearTimeout(boostTimer);
-  const activeSeconds = (Date.now() - boostActivatedAt) / 1000;
-  startCooldown(
-    BOOST_COOLDOWN_BASE + Math.max(0, activeSeconds - BOOST_COOLDOWN_BASE)
-  );
-};
+const boostCooldownRemaining = computed(() => gameState.boostCooldown);
+const boostCooldownTotal = 8; // Máximo de turnos de cooldown (ceil(1.5 * 5))
 
 const toggleBoost = () => {
-  if (impulseBoost.value) {
-    deactivateBoost();
-    return;
-  }
-  if (!canActivateBoost.value) return;
-  impulseBoost.value = true;
-  boostActivatedAt = Date.now();
-  boostTimer = setTimeout(deactivateBoost, BOOST_MAX_DURATION * 1000);
+  gameState.toggleBoost();
 };
 
-const warpFactor = ref(2);
+const warpFactor = computed({
+  get: () => gameState.warpFactor,
+  set: (val) => gameState.setWarpFactor(val),
+});
 const warpEngaged = ref(false);
 let warpEffect: WarpSpeed | undefined;
 
@@ -160,6 +144,7 @@ const WARP_DECEL_FACTOR = 0.2;
 
 const engageWarp = () => {
   warpEngaged.value = !warpEngaged.value;
+  playSound(warpEngaged.value ? Sound.WARP_ENTER : Sound.WARP_EXIT);
   if (!warpEffect) return;
   if (warpEngaged.value) {
     warpEffect.SPEED_ADJ_FACTOR = WARP_ACCEL_FACTOR;
@@ -176,17 +161,23 @@ onMounted(() => {
   // ja suaviza a transicao sozinha (SPEED_ADJ_FACTOR faz lerp exponencial de
   // SPEED em direcao a TARGET_SPEED a cada frame em WarpSpeed.move()), entao
   // e um ease-out "de fabrica".
-  warpEffect = new WarpSpeed("vwrScrDsp", {
-    warpEffectLength: 8,
-    speedAdjFactor: WARP_ACCEL_FACTOR,
-  });
-  warpEffect.TARGET_SPEED = 0;
+  if (typeof window !== 'undefined' && 'WarpSpeed' in window) {
+    type WarpSpeedConstructor = new (id: string, opts: Record<string, unknown>) => WarpSpeed;
+    const WarpSpeedCls = (window as unknown as { WarpSpeed: WarpSpeedConstructor }).WarpSpeed;
+    warpEffect = new WarpSpeedCls("vwrScrDsp", {
+      warpEffectLength: 8,
+      speedAdjFactor: WARP_ACCEL_FACTOR,
+    });
+    if (warpEffect) {
+      warpEffect.TARGET_SPEED = 0;
+    }
+  }
 });
 
 onUnmounted(() => {
-  warpEffect?.destroy();
-  clearTimeout(boostTimer);
-  clearInterval(cooldownInterval);
+  if (warpEffect && typeof warpEffect.destroy === 'function') {
+    warpEffect.destroy();
+  }
 });
 
 watch(warpFactor, (value) => {
@@ -222,9 +213,9 @@ watch(warpFactor, (value) => {
           color="highlight-dark-interactive"
           :style="{ width: '3.75rem' }"
         />
-        <LcarsText id="cur-loc-sec" color="text-white" text="3, 4" />
+        <LcarsText id="cur-loc-sec" color="text-light" text="3, 4" />
         <LcarsBlock label="System" :style="{ width: '3.75rem' }" />
-        <LcarsText id="cur-loc-sys" color="text-white" text="3, 4" />
+        <LcarsText id="cur-loc-sys" color="text-light" text="3, 4" />
         <LcarsCap version="round-right" color="tertiary-static" />
       </LcarsComplexButton>
 
@@ -256,27 +247,28 @@ watch(warpFactor, (value) => {
         />
         <LcarsText
           id="dst-sec-ind"
-          color="text-white"
-          :text="`${destination.sec.x}, ${destination.sec.y}`"
+          color="text-light"
+          :text="`${destination.sector.col}, ${destination.sector.row}`"
           :style="{
             filter: activeDstToggle === 'sec' ? '' : 'brightness(0.6)',
           }"
         />
         <LcarsButton
-          label="System"
+          id="dst-quad"
+          label="Quadrant"
           :style="{
             width: '3.75rem',
             flex: 'none',
-            filter: activeDstToggle === 'sys' ? '' : 'brightness(0.6)',
+            filter: activeDstToggle === 'quad' ? '' : 'brightness(0.6)',
           }"
-          @click="toggleSysSec('sys')"
+          @click="toggleSysSec('quad')"
         />
         <LcarsText
-          id="dst-sys-ind"
-          color="text-white"
-          :text="`${destination.sys.x}, ${destination.sys.y}`"
+          id="dst-quad-ind"
+          color="text-light"
+          :text="`${destination.quadrant.col}, ${destination.quadrant.row}`"
           :style="{
-            filter: activeDstToggle === 'sys' ? '' : 'brightness(0.6)',
+            filter: activeDstToggle === 'quad' ? '' : 'brightness(0.6)',
           }"
         />
         <LcarsCap version="round-right" />

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 import ShieldConsole from '@/components/modules/ShieldConsole.vue'
+import { useGameState } from '@/stores/useGameState'
 
 const meta: Meta<typeof ShieldConsole> = {
   title: 'Modules/ShieldConsole',
@@ -7,10 +8,6 @@ const meta: Meta<typeof ShieldConsole> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
-  },
-  argTypes: {
-    initialShieldEnergy: { control: { type: 'number', min: 0, max: 2500 } },
-    initialMainEnergy: { control: { type: 'number', min: 0, max: 4500 } },
   },
 }
 
@@ -21,26 +18,26 @@ const decorator = () => ({
   template: '<div style="width: 100%; min-height: 600px; background: #000; padding: 2rem; box-sizing: border-box;"><story /></div>',
 })
 
-export const Default: Story = {
-  args: {
-    initialShieldEnergy: 1500,
-    initialMainEnergy: 3000,
+const makeStateDecorator = (shield: number, main: number) => () => ({
+  setup() {
+    const gs = useGameState()
+    gs.shieldEnergy = shield
+    gs.mainEnergy = main
   },
-  decorators: [decorator],
+  template: '<story />',
+})
+
+export const Default: Story = {
+  args: {},
+  decorators: [makeStateDecorator(1500, 3000), decorator],
 }
 
 export const ShieldsDown: Story = {
-  args: {
-    initialShieldEnergy: 0,
-    initialMainEnergy: 4500,
-  },
-  decorators: [decorator],
+  args: {},
+  decorators: [makeStateDecorator(0, 4500), decorator],
 }
 
 export const MaxShields: Story = {
-  args: {
-    initialShieldEnergy: 2500,
-    initialMainEnergy: 2000,
-  },
-  decorators: [decorator],
+  args: {},
+  decorators: [makeStateDecorator(2500, 2000), decorator],
 }

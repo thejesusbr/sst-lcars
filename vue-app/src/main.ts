@@ -1,4 +1,6 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import App from './App.vue'
 import './assets/css/colors.css'
 import './assets/css/lcars-sdk.css'
@@ -13,4 +15,7 @@ import './assets/css/themes/29th-century.css'
 import './assets/css/themes/23rd-century.css'
 import './assets/css/themes/picard.css'
 
-createApp(App).mount('#app')
+const pinia = createPinia()
+pinia.use(piniaPluginPersistedstate)
+
+createApp(App).use(pinia).mount('#app')

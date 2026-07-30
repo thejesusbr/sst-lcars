@@ -18,6 +18,14 @@ export default defineConfig({
   },
   test: {
     projects: [{
+      // Engine core: TS puro, sem Vue/browser -- roda em node.
+      extends: true,
+      test: {
+        name: 'unit',
+        environment: 'node',
+        include: ['src/engine/**/*.test.ts']
+      }
+    }, {
       extends: true,
       plugins: [
       // The plugin will run tests for the stories defined in your Storybook config
