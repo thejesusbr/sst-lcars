@@ -45,8 +45,27 @@ import { dock as engineDock, undock as engineUndock, canDock } from '@/engine/do
 import { cycleTorpedoTarget } from '@/engine/combat'
 import { materializeSector } from '@/engine/worldGen'
 import { lrsNeighborhood, scanConfidence } from '@/engine/navigation'
+import { usePresentation } from '@/stores/usePresentation'
 
 export const GAME_STATE_STORAGE_KEY = 'sst-lcars-game-state'
+
+/** Recusa da própria store (apresentação em curso), no formato de `TurnResult`. */
+function refusedTurn(stardate: number, reason: string): TurnResult {
+  return {
+    stardate,
+    events: [],
+    damageTaken: 0,
+    subsystemDamageTaken: false,
+    breachStarted: false,
+    newEnemiesEncountered: false,
+    missionCompleted: false,
+    terminalReason: null,
+    warpCoreExploded: false,
+    warpTripStarted: null,
+    rejected: true,
+    rejectionReason: reason,
+  }
+}
 
 /**
  * Povoa `currentSector` ao entrar num quadrante. É a implementação real do hook
@@ -145,11 +164,20 @@ export const useGameState = defineStore('gameState', {
       // quadrantes "explorados" da galáxia velha. Assign substitui cada campo
       // por inteiro.
       Object.assign(this.$state, createNewGameState())
+      usePresentation().cancel()
       await commitTurnChecksum(this.$state)
     },
 
     /** Dispara ação que consome 1 turno no motor principal e atualiza o checksum. */
     async dispatchPlayerAction(action: PlayerAction): Promise<TurnResult> {
+      // Turno novo não começa por cima de uma apresentação em curso: a fila
+      // seria sobrescrita no meio e o jogador perderia a metade que ainda não
+      // viu — o oposto do que esta mudança existe pra resolver.
+      const presentation = usePresentation()
+      if (presentation.presenting) {
+        return refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
+      }
+
       const res = resolvePlayerTurn(this.$state, action, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })
@@ -161,6 +189,9 @@ export const useGameState = defineStore('gameState', {
 
     /** End Turn: avanço de 1 turno sem ação de jogador. */
     async executeEndTurn(): Promise<TurnResult> {
+      if (usePresentation().presenting) {
+        return refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
+      }
       const res = endTurn(this.$state, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })
@@ -171,6 +202,10 @@ export const useGameState = defineStore('gameState', {
 
     /** Skip N Turns: avança em lote até count turnos ou condição de interrupção. */
     async executeSkipTurns(count: number) {
+      if (usePresentation().busy) {
+        const refused = refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
+        return { completedTurns: 0, stoppedEarly: true, lastResult: refused }
+      }
       const res = skipTurns(this.$state, count, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })
@@ -181,6 +216,9 @@ export const useGameState = defineStore('gameState', {
 
     /** Turno de reparo em modo Docking (STARBASE_DOCK). */
     async executeDockingRepairTurn(): Promise<TurnResult> {
+      if (usePresentation().presenting) {
+        return refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
+      }
       const res = dockAndRepairTurn(this.$state, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })
@@ -210,6 +248,9 @@ export const useGameState = defineStore('gameState', {
       if (this.$state.tribbleInfestationActive && !res.rejected) {
         advanceTribbleInfestation(this.$state)
       }
+      // A store de apresentação filtra o que é encenável; recusa não encena
+      // nada porque não produziu evento de combate.
+      usePresentation().enqueue(res.events)
     },
 
     // ── Ações que consomem turno (atalhos legíveis pros consoles) ───────────
@@ -251,12 +292,20 @@ export const useGameState = defineStore('gameState', {
       })
     },
 
-    /** Movimento inter-quadrante. Sem alvo, usa `destination`. */
-    moveWarp(targetCoord?: GridCoord) {
-      return this.dispatchPlayerAction({
+    /**
+     * Movimento inter-quadrante. Sem alvo, usa `destination`.
+     *
+     * Engajar entra em **modo de viagem**: os turnos restantes avançam sozinhos
+     * até a chegada. Não há ação possível em warp, então pedir cliques por eles
+     * seria pedir cliques sem decisão.
+     */
+    async moveWarp(targetCoord?: GridCoord) {
+      const res = await this.dispatchPlayerAction({
         type: 'move_warp',
         targetCoord: targetCoord ?? this.$state.destination ?? undefined,
       })
+      if (res.warpTripStarted) usePresentation().beginTravel(res.warpTripStarted)
+      return res
     },
 
     sendPartyTo(teamId: string, targetCoord: GridCoord) {

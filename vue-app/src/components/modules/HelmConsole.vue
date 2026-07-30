@@ -15,9 +15,11 @@ import DefaultBracket from "@/components/widgets/DefaultBracket.vue";
 import LcarsHtmlTag from "@/components/elements/LcarsHtmlTag.vue";
 import { Sound, useSound } from "@/composables/useSound";
 import { useGameState } from "@/stores/useGameState";
+import { usePresentation } from "@/stores/usePresentation";
 
 const { playSound } = useSound();
 const gameState = useGameState();
+const presentation = usePresentation();
 
 const activeDstToggle = ref<"sec" | "quad">("sec");
 
@@ -132,42 +134,19 @@ const warpFactor = computed({
   get: () => gameState.warpFactor,
   set: (val) => gameState.setWarpFactor(val),
 });
-// Engajado = viagem REAL em curso no estado, não um toggle visual local. O
-// warp desengaja sozinho quando `warpTrip` resolve (chegada, aborto por dano).
-const warpEngaged = computed(() => gameState.warpTrip !== null);
 const busy = ref(false);
 let warpEffect: WarpSpeed | undefined;
 
 /**
- * Duração MÍNIMA da animação de warp, independente do relógio de turnos.
+ * O efeito visual segue o modo de viagem da store, que dura
+ * `turnos × WARP_ANIMATION_MS[fator]` — não mais um piso fixo de 5s local.
  *
- * Viagem de 1 turno resolve dentro da própria chamada de `resolvePlayerTurn`:
- * `warpTrip` é definido na etapa 1 e zerado na etapa 5, então `warpEngaged` ia
- * de `null` a `null` antes do watcher rodar — a animação simplesmente não
- * acontecia. O efeito visual precisa do seu próprio relógio, em tempo real.
+ * O piso existia porque viagem de 1 turno nasce e morre dentro da mesma
+ * resolução, então não havia janela pra animar. Ele resolvia isso apagando a
+ * informação: warp 1 e warp 8 ficavam idênticos na tela. Agora a duração vem da
+ * LUT, e o dono do relógio é a store (um timer só, limpo num lugar só).
  */
-const WARP_MIN_VISUAL_MS = 5000;
-
-const warpVisual = ref(false);
-let warpHoldUntil = 0;
-let warpVisualTimer: ReturnType<typeof setTimeout> | undefined;
-
-/** Liga o efeito e garante o piso de duração a partir de agora. */
-const startWarpVisual = () => {
-  clearTimeout(warpVisualTimer);
-  warpHoldUntil = Date.now() + WARP_MIN_VISUAL_MS;
-  warpVisual.value = true;
-};
-
-/** Desliga só quando a viagem acabou E o piso de tempo já passou. */
-const releaseWarpVisual = () => {
-  clearTimeout(warpVisualTimer);
-  const remaining = Math.max(0, warpHoldUntil - Date.now());
-  warpVisualTimer = setTimeout(() => {
-    // Viagem nova durante a cauda: não desliga, quem mandou parar é a atual.
-    if (!warpEngaged.value) warpVisual.value = false;
-  }, remaining);
-};
+const warpVisual = computed(() => presentation.travelling);
 
 // A lib nao trava TARGET_SPEED (so floor em 0) -- default da lib e SPEED=0.7,
 // pensado pra um fundo sutil parado. O rastro de cada estrela usa
@@ -193,15 +172,12 @@ const WARP_DECEL_FACTOR = 0.2;
  * watch significava nunca animar.
  */
 const engageWarp = async () => {
-  if (busy.value || warpEngaged.value) return;
+  if (busy.value || presentation.busy) return;
   busy.value = true;
   try {
-    const res = await gameState.moveWarp();
-    if (res.rejected) return;
-    startWarpVisual();
-    // Viagem que já resolveu no próprio turno: agenda o desligamento pro fim
-    // do piso de tempo. Multi-turno cai no watch abaixo.
-    if (!warpEngaged.value) releaseWarpVisual();
+    // `moveWarp` já entra em modo de viagem quando o engage é aceito — o efeito
+    // visual só precisa seguir `presentation.travelling`.
+    await gameState.moveWarp();
   } finally {
     busy.value = false;
   }
@@ -209,7 +185,7 @@ const engageWarp = async () => {
 
 /** Engage Impulse: movimento intra-setor até o Set Destination de setor. */
 const engageImpulse = async () => {
-  if (busy.value) return;
+  if (busy.value || presentation.busy) return;
   busy.value = true;
   try {
     await gameState.moveImpulse();
@@ -217,13 +193,6 @@ const engageImpulse = async () => {
     busy.value = false;
   }
 };
-
-// Viagem multi-turno terminando: solta o efeito respeitando o piso de tempo.
-// Viagem que começa por outro caminho que não o botão daqui também liga.
-watch(warpEngaged, (engaged) => {
-  if (engaged) startWarpVisual();
-  else releaseWarpVisual();
-});
 
 // Som e animação seguem o VISUAL, não o estado da viagem — é o que garante o
 // par entrada/saída completo mesmo num salto de 1 turno.
@@ -259,15 +228,15 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  clearTimeout(warpVisualTimer);
+  // O timer da viagem não mora mais aqui — quem limpa é a store, um dono só.
   if (warpEffect && typeof warpEffect.destroy === 'function') {
     warpEffect.destroy();
   }
 });
 
 // Mudar o fator no meio da animação ajusta a velocidade do efeito. Segue
-// `warpVisual`, não `warpEngaged` — durante a cauda de 5s a viagem já resolveu,
-// mas o efeito ainda está na tela e tem que reagir.
+// `warpVisual`, não o estado da viagem — no intervalo final da LUT a viagem já
+// resolveu, mas o efeito ainda está na tela e tem que reagir.
 watch(warpFactor, (value) => {
   if (warpVisual.value && warpEffect)
     warpEffect.TARGET_SPEED = value * WARP_SPEED_SCALE;
@@ -449,7 +418,7 @@ watch(warpFactor, (value) => {
         class="dark-light"
         color="highlight-interactive"
         version="round"
-        :disabled="busy || warpVisual"
+        :disabled="busy || presentation.busy"
         :style="{ alignSelf: 'center', width: '50%' }"
         @click="engageImpulse"
       />
@@ -513,7 +482,7 @@ watch(warpFactor, (value) => {
         :label="warpVisual ? 'Warp Engaged' : 'Engage Warp'"
         color="highlight-interactive"
         :class="{ 'white-flash': warpVisual, 'dark-lite': !warpVisual }"
-        :disabled="busy || warpVisual"
+        :disabled="busy || presentation.busy"
         :style="{
           width: '15rem',
           flex: 'none',

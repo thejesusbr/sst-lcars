@@ -116,6 +116,42 @@ export const WARP_FACTOR_MAX = 8
 export const WARP_SAFE_FACTOR = 4
 /** Pontos de overload efetivo por ponto de warp acima do seguro. */
 export const WARP_STRESS_PER_POINT = 2
+/**
+ * Duração da APRESENTAÇÃO de um turno de viagem, em ms, indexada pelo fator de
+ * warp (índice 0 = warp 1). Duração total = `turnos × LUT[fator]`, com
+ * `turnos = ceil(distância / fator)`.
+ *
+ * Na diagonal completa da galáxia (distância 7): **~30 s** em warp 1 (7 turnos ×
+ * 4300) e **~3 s** em warp 8 (1 turno × 3000).
+ *
+ * **Decrescente, NÃO inversamente proporcional ao fator.** A contagem de turnos
+ * já carrega um `1/w`; somar outro na duração do turno compõe pra `1/w²` e
+ * colapsa a escala — ancorando warp 1 em 4300 ms, warp 8 animaria 0,56 s;
+ * ancorando warp 8 em 5 s, warp 1 levaria 280 s. O declive suave adiciona a
+ * percepção de agilidade sem destruir a proporção.
+ *
+ * **Não-crescente por obrigação.** Uma rampa crescente era o único jeito de
+ * bater exatamente as âncoras iniciais de 30 s / 5 s, mas tornava o total
+ * NÃO-monotônico: warps 4, 5 e 6 custam os mesmos 2 turnos na diagonal, então
+ * subir a velocidade deixava a viagem mais longa.
+ *
+ * Sem piso nem teto: toda entrada já cai entre 3000 e 4300 ms, então um clamp
+ * seria código inalcançável (design.md decisão 7).
+ */
+export const WARP_ANIMATION_MS = [4300, 4100, 3900, 3700, 3600, 3400, 3200, 3000]
+
+/** Duração de apresentação de um turno de viagem no fator dado (1-8). */
+export function warpAnimationMs(warpFactor: number): number {
+  const idx = clamp(Math.round(warpFactor), WARP_FACTOR_MIN, WARP_FACTOR_MAX) - 1
+  return WARP_ANIMATION_MS[idx]
+}
+
+/**
+ * Tempo que cada evento de combate fica em cena durante a apresentação de um
+ * turno. Valor de partida — calibrado no playthrough (task 5.4).
+ */
+export const TURN_EVENT_PRESENT_MS = 650
+
 export const PROBES_INITIAL = 3
 export const BOOST_MAX_TURNS = 5
 /** Cooldown = turnos usados × isto, arredondado pra cima (decisão #23). */

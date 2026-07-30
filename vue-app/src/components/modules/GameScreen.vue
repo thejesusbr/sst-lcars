@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted, watch } from 'vue'
 import { useGameState } from '@/stores/useGameState'
+import { usePresentation } from '@/stores/usePresentation'
 import BriefingScreen from './BriefingScreen.vue'
 import GameHud from './GameHud.vue'
 import ResultScreen from './ResultScreen.vue'
@@ -36,6 +37,16 @@ const reason = computed(() =>
 )
 
 const rating = computed(() => String(gameState.result?.rating ?? 0))
+
+// Sair da tela de jogo mata a apresentação: um fim de jogo no meio de uma
+// encenação (ou de uma viagem de warp) deixaria a fila drenando e o modo de
+// viagem avançando turnos numa partida que já acabou. Um dono só de timer só
+// serve se alguém mandar ele parar.
+const presentation = usePresentation()
+watch(mode, (m) => {
+  if (m !== 'playing') presentation.cancel()
+})
+onUnmounted(() => presentation.cancel())
 
 const startMission = () => gameState.setMode('playing')
 const newGame = () => gameState.newGame()
