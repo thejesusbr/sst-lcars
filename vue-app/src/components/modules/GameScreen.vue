@@ -70,6 +70,7 @@ const newGame = () => gameState.newGame()
     :ship-name="gameState.shipName"
     :mission-text="missionText"
     @start="startMission"
+    @regenerate="newGame"
   />
   <GameHud v-else-if="mode === 'playing'" />
   <ResultScreen
