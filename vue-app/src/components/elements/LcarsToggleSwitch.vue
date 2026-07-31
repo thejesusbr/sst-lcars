@@ -78,25 +78,29 @@ const toggle = () => emit("update:modelValue", !props.modelValue);
    ao conteudo (dois check blocks + um texto com piso de 7.5rem proprio), o
    toggle chegava a estourar a caixa e desalinhar da etiqueta acima dele. */
 .lcars-toggle-switch {
-  min-width: 7.5rem;
+  /* `width`, nao so `min-width`: com piso, a caixa continuava sendo MEDIDA pelo
+     conteudo e so nao encolhia abaixo de 7.5rem -- media 8.6rem contra os 7.5
+     da etiqueta ao lado. Largura definida inverte quem manda: a caixa fixa o
+     tamanho e os filhos se acomodam dentro (todos encolhiveis, o texto com
+     `min-width: 0`).
+
+     Chamador que passa `flex` inline continua esticando: `flex: 1` implica
+     `flex-basis: 0%`, que substitui `width` no calculo do flex. E o que o
+     SituationPanel faz com o toggle de Red Alert. */
+  width: 7.5rem;
   min-height: 3rem;
 }
 
-/* O texto ocupa a SOBRA da caixa em vez de definir o tamanho dela.
-   `width: 0` e o que faz isso ser deterministico: com largura definida em zero,
-   a contribuicao dele pra largura intrinseca do toggle e zero, entao o
-   `min-width: 7.5rem` acima passa a valer como largura final, e nao como piso
-   que o texto empurra. Sem isso a caixa media a palavra renderizada -- "OFF" a
-   2.8rem sobrava ~0.5rem, e qualquer troca de fonte ou tema desalinharia de
-   novo.
+/* O texto ocupa a SOBRA da caixa fixada acima. `min-width: 0` e o que permite
+   isso: `module.css` da a ele `min-width: 7.5rem` -- a largura de um button
+   INTEIRO -- calibrado pros displays numericos do tipo "3000"/"100%". Com o
+   piso solto ele encolhe pro que sobrar e centraliza.
 
-   O `margin-left: 0.5rem` herdado tambem sai: ele existe pros displays
-   numericos, onde o texto vem depois de um rotulo.
+   Sai tambem o `margin-left: 5px` que `.complex-button *` da a todo filho.
 
    A fonte fica no padrao de um LcarsText indicativo -- sem `font-size` proprio,
    herda os 2.8rem do SDK. */
 .lcars-toggle-switch :deep(.text) {
-  width: 0;
   min-width: 0;
   flex: 1 1 0;
   margin-left: 0;
