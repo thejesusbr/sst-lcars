@@ -5,7 +5,7 @@
  * Roda em node — Pinia funciona sem browser via `setActivePinia`.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useGameState } from '@/stores/useGameState'
 import { WARP_CORE_OUTPUT } from '@/engine/constants'
@@ -320,5 +320,70 @@ describe('stores/useGameState', () => {
 
     gs.markLogRead(category)
     expect(gs.unreadByCategory[category]).toBe(0)
+  })
+})
+
+describe('stores/useGameState — selo de integridade', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  /** `localStorage` mínimo e isolado por teste. */
+  function fakeStorage() {
+    const data = new Map<string, string>()
+    return {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+      clear: () => data.clear(),
+      key: () => null,
+      length: 0,
+    } as Storage
+  }
+
+  it('save honesto não liga a infestação', async () => {
+    const storage = fakeStorage()
+    vi.stubGlobal('localStorage', storage)
+    const gs = useGameState()
+
+    // Um turno resolvido grava o selo sobre o estado atual.
+    await gs.executeEndTurn()
+    const honesto = JSON.parse(JSON.stringify(gs.$state))
+
+    await gs.checkSaveIntegrity(honesto)
+    expect(gs.tribbleInfestationActive).toBe(false)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('save adulterado liga a flag, em silêncio', async () => {
+    const storage = fakeStorage()
+    vi.stubGlobal('localStorage', storage)
+    const gs = useGameState()
+
+    await gs.executeEndTurn()
+    const adulterado = JSON.parse(JSON.stringify(gs.$state))
+    adulterado.torpedoStock = 999
+
+    const logAntes = gs.combatLog.length
+    await gs.checkSaveIntegrity(adulterado)
+
+    expect(gs.tribbleInfestationActive).toBe(true)
+    // Punição silenciosa: nada na UI, nada no log.
+    expect(gs.combatLog.length).toBe(logAntes)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('sem payload gravado não verifica nem regenera a galáxia', async () => {
+    const gs = useGameState()
+    const galaxiaAntes = JSON.stringify(gs.galaxy)
+
+    await gs.checkSaveIntegrity(null)
+
+    // Sem a guarda, `migrateSave(null, defaults)` patchearia por cima uma
+    // galáxia NOVA, gerada aqui só pra servir de default.
+    expect(JSON.stringify(gs.galaxy)).toBe(galaxiaAntes)
+    expect(gs.tribbleInfestationActive).toBe(false)
   })
 })

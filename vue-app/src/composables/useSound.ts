@@ -17,6 +17,7 @@ import hullHit2Sound from '@/assets/audio/tos_hullhit_2.mp3'
 import hullHit3Sound from '@/assets/audio/tos_hullhit_3.mp3'
 import hullHit4Sound from '@/assets/audio/tos_hullhit_4.mp3'
 import explosionSound from '@/assets/audio/largeexplosion4.mp3'
+import tribblesSound from '@/assets/audio/tos_many_tribble.mp3'
 
 export const Sound = {
   CONFIRM: 'confirm',
@@ -37,7 +38,8 @@ export const Sound = {
   HULL_HIT_2: 'hull_hit_2',
   HULL_HIT_3: 'hull_hit_3',
   HULL_HIT_4: 'hull_hit_4',
-  EXPLOSION: 'explosion'
+  EXPLOSION: 'explosion',
+  TRIBBLES: 'tribbles'
 } as const
 
 export type SoundKey = typeof Sound[keyof typeof Sound]
@@ -61,7 +63,8 @@ const sources: Record<SoundKey, string> = {
   [Sound.HULL_HIT_2]: hullHit2Sound,
   [Sound.HULL_HIT_3]: hullHit3Sound,
   [Sound.HULL_HIT_4]: hullHit4Sound,
-  [Sound.EXPLOSION]: explosionSound
+  [Sound.EXPLOSION]: explosionSound,
+  [Sound.TRIBBLES]: tribblesSound
 }
 
 /**
@@ -91,7 +94,8 @@ const maxDuration: Partial<Record<SoundKey, number>> = {
   [Sound.HULL_HIT_2]: 1200,
   [Sound.HULL_HIT_3]: 1200,
   [Sound.HULL_HIT_4]: 1200,
-  [Sound.EXPLOSION]: 2000
+  [Sound.EXPLOSION]: 2000,
+  [Sound.TRIBBLES]: 6000
 }
 
 const pool = new Map<SoundKey, HTMLAudioElement>()
