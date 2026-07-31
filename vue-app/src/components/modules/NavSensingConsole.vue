@@ -113,12 +113,15 @@ const corruptCode = (code: string, key: string): string =>
 
 const activeShortRangeGrid = computed(() => {
   if (srsDark.value) return {};
-  return (
-    props.shortRangeGrid ??
-    sectorCells(gameState.currentSector, gameState.position.sector, {
-      srsOnline: srsOnline.value,
-    })
-  );
+  if (props.shortRangeGrid) return props.shortRangeGrid;
+  // O setor vem da apresentação, não do estado vivo: enquanto a fila drena ela
+  // devolve o congelado (icone bate com o feixe), em warp devolve `null` (grid
+  // em branco — a nave está fora de alcance), e o resolvido no resto do tempo.
+  const view = presentation.sectorView;
+  if (!view) return {};
+  return sectorCells(view.entities, view.ship, {
+    srsOnline: srsOnline.value,
+  });
 });
 
 // LRS classico so cobre os quadrantes VIZINHOS (bloco 3x3 ao redor da nave)

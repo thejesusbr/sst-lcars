@@ -93,10 +93,14 @@ const targetLabel = (tube: TorpedoTube) => {
 
 // Grid do setor com o numero do tubo sobreposto no alvo dele.
 const scannerGrid = computed(() => {
-  const grid = sectorCells(
-    gameState.currentSector,
-    gameState.position.sector
-  ) as Record<string, { img?: string; text?: string; color?: string }>;
+  // Mesma fonte do SRS do NavSensing: os dois desenham o MESMO setor, então
+  // ler estados diferentes os faria divergir no meio da encenação.
+  const view = presentation.sectorView;
+  if (!view) return {};
+  const grid = sectorCells(view.entities, view.ship) as Record<
+    string,
+    { img?: string; text?: string; color?: string }
+  >;
 
   for (const enemy of enemyTargets.value) {
     const assigned = tubes.value

@@ -10,11 +10,9 @@
 import { computed } from 'vue'
 import type { ScannerOverlay } from '@/components/elements/LcarsScanner.vue'
 import { TURN_EVENT_PRESENT_MS } from '@/engine/constants'
-import { useGameState } from '@/stores/useGameState'
 import { usePresentation } from '@/stores/usePresentation'
 
 export function useCombatOverlay() {
-  const gameState = useGameState()
   const presentation = usePresentation()
 
   return computed<ScannerOverlay | null>(() => {
@@ -23,7 +21,12 @@ export function useCombatOverlay() {
     // não tem o que encenar no grid.
     if (!evt?.at) return null
 
-    const ship = { ...gameState.position.sector }
+    // A nave sai do MESMO snapshot que o grid desenha. Lendo
+    // `gameState.position.sector` ao vivo, um feixe disparado antes de a nave
+    // se mover seria desenhado a partir da posição de destino dela.
+    const view = presentation.sectorView
+    if (!view) return null
+    const ship = { ...view.ship }
     const key = presentation.sequence
     const durationMs = TURN_EVENT_PRESENT_MS
 

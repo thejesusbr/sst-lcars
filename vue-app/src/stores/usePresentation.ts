@@ -16,8 +16,15 @@
 
 import { defineStore } from 'pinia'
 import { TURN_EVENT_PRESENT_MS, warpAnimationMs } from '@/engine/constants'
-import type { TurnEvent, TurnEventType } from '@/types/game'
+import type { GridCoord, SectorEntity, TurnEvent, TurnEventType } from '@/types/game'
 import { useGameState } from '@/stores/useGameState'
+import { HULL_HIT_SOUNDS, Sound, useSound } from '@/composables/useSound'
+
+/** O setor como estava no início do turno, enquanto a fila drena. */
+export interface SectorSnapshot {
+  entities: SectorEntity[]
+  ship: GridCoord
+}
 
 /**
  * Só efeito de combate é encenado. Encenar tudo faria um turno tranquilo demorar
@@ -60,11 +67,37 @@ export const usePresentation = defineStore('presentation', {
     travelWaits: 0,
     /** Turnos de engine ainda por avançar. Total = turnos − 1 (o 1º já resolveu). */
     travelTurns: 0,
+    /**
+     * Setor congelado no início do turno. Enquanto existe, é ELE que os
+     * scanners desenham — não `gameState.currentSector`.
+     *
+     * O engine resolve o turno inteiro antes do primeiro evento entrar em cena,
+     * então o estado vivo já é o final: inimigo que se moveu está no destino
+     * enquanto o feixe dele ancora na origem, e inimigo destruído já sumiu
+     * enquanto o tiro que o matou ainda está sendo desenhado. `evt.at` guarda a
+     * célula do instante da emissão (decisão certa — entidade morta não tem
+     * posição viva pra ler), e era o grid que discordava.
+     */
+    sectorSnapshot: null as SectorSnapshot | null,
   }),
 
   getters: {
     presenting(state): boolean {
       return state.current !== null || state.queue.length > 0
+    },
+
+    /**
+     * O que os scanners devem desenhar AGORA.
+     *
+     * `null` = grid em branco: a nave está em bolha de warp, fora de alcance, e
+     * o setor de destino ainda não é dela. Mostrar o destino no instante do
+     * engage entregava a chegada antes da animação rodar.
+     */
+    sectorView(state): SectorSnapshot | null {
+      if (state.travelling) return null
+      if (state.sectorSnapshot) return state.sectorSnapshot
+      const game = useGameState()
+      return { entities: game.currentSector, ship: game.position.sector }
     },
 
     /**
@@ -78,25 +111,79 @@ export const usePresentation = defineStore('presentation', {
   },
 
   actions: {
+    /**
+     * Congela o setor ANTES de o engine resolver o turno.
+     *
+     * No-op se já houver snapshot: uma viagem de warp resolve vários turnos
+     * (`scheduleTravelTurn` chama `executeEndTurn`), e recapturar a cada um
+     * substituiria o congelado pelo estado já movido.
+     */
+    captureSector() {
+      if (this.sectorSnapshot) return
+      const game = useGameState()
+      this.sectorSnapshot = {
+        // Cópia rasa das entidades: a apresentação lê posição e tipo, e o
+        // engine substitui entidades em vez de mutá-las no lugar.
+        entities: game.currentSector.map((e) => ({ ...e })),
+        ship: { ...game.position.sector },
+      }
+    },
+
+    /**
+     * Devolve o grid ao estado resolvido, quando não há mais nada em cena nem
+     * viagem em curso. Chamada dos dois pontos que podem ser o último a
+     * terminar — fila e viagem — porque qualquer um deles pode acabar por
+     * último.
+     */
+    settle() {
+      if (this.presenting || this.travelling) return
+      this.sectorSnapshot = null
+    },
+
     /** Enfileira os eventos encenáveis de um turno resolvido. */
     enqueue(events: TurnEvent[]) {
       const staged = events.filter((e) => STAGED_TYPES.has(e.type))
-      if (staged.length === 0) return
+      if (staged.length === 0) {
+        // Turno tranquilo: nada a encenar, o grid assenta na hora em vez de o
+        // jogador olhar pro setor congelado sem motivo.
+        this.settle()
+        return
+      }
       this.queue.push(...staged)
       if (!this.current) this.advance()
     },
 
-    /** Põe o próximo evento em cena e agenda o seguinte. */
+    /** Põe o próximo evento em cena, toca o som dele e agenda o seguinte. */
     advance() {
       clearTimeout(stageTimer)
       const next = this.queue.shift()
       if (!next) {
         this.current = null
+        this.settle()
         return
       }
       this.current = next
       this.sequence += 1
+      this.playEventSound(next)
       stageTimer = setTimeout(() => this.advance(), TURN_EVENT_PRESENT_MS)
+    },
+
+    /**
+     * Som do impacto, no instante em que o evento entra em cena.
+     *
+     * Disparo já tinha som (phaser e torpedo tocam no tiro); faltava a
+     * chegada — o jogador se ouvia atirar e via o dano aparecer em silêncio. A
+     * fila é o único lugar onde o momento do impacto existe como instante, e
+     * não como número que mudou.
+     */
+    playEventSound(evt: TurnEvent) {
+      const { playSound } = useSound()
+      if (evt.type === 'shield_absorb') {
+        playSound(Sound.SHIELD_SIZZLE)
+      } else if (evt.type === 'hull_damage') {
+        playSound(HULL_HIT_SOUNDS[Math.floor(Math.random() * HULL_HIT_SOUNDS.length)])
+      }
+      if (evt.destroyed) playSound(Sound.EXPLOSION)
     },
 
     /**
@@ -152,15 +239,18 @@ export const usePresentation = defineStore('presentation', {
       this.travelling = false
       this.travelWaits = 0
       this.travelTurns = 0
+      // Chegada: o setor de destino aparece agora, não no engage.
+      this.settle()
     },
 
     /** Cancela tudo. Chamada no unmount da tela de jogo e no New Game. */
     cancel() {
       clearTimeout(stageTimer)
       stageTimer = undefined
-      this.endTravel()
       this.queue = []
       this.current = null
+      this.endTravel()
+      this.sectorSnapshot = null
     },
   },
 })

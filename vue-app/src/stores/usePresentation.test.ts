@@ -218,3 +218,100 @@ describe('stores/usePresentation — fila', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 })
+
+describe('stores/usePresentation — snapshot do setor', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    usePresentation().cancel()
+    vi.useRealTimers()
+  })
+
+  const klingon = (id: string, row: number, col: number): SectorEntity => ({
+    id,
+    type: 'klingon_cruiser',
+    position: { row, col },
+    enemyPower: 300,
+    cloaked: false,
+  })
+
+  it('sem nada em cena, a view é o estado resolvido', () => {
+    const gs = useGameState()
+    const pres = usePresentation()
+    gs.$state.currentSector = [klingon('k1', 5, 5)]
+    gs.$state.position.sector = { row: 2, col: 2 }
+
+    expect(pres.sectorView?.entities).toEqual(gs.currentSector)
+    expect(pres.sectorView?.ship).toEqual({ row: 2, col: 2 })
+  })
+
+  it('enquanto a fila drena, a view é o congelado — não o resolvido', async () => {
+    const gs = useGameState()
+    const pres = usePresentation()
+    gs.$state.currentSector = [klingon('k1', 5, 5)]
+    gs.$state.position.sector = { row: 2, col: 2 }
+
+    pres.captureSector()
+    // O engine "resolve": o inimigo morre e a nave se move.
+    gs.$state.currentSector = []
+    gs.$state.position.sector = { row: 4, col: 4 }
+    pres.enqueue([
+      { step: 1, type: 'player_phasers', entityId: 'k1', at: { row: 5, col: 5 }, text: 'a' },
+    ])
+
+    // O alvo destruído segue desenhado enquanto o tiro que o matou é encenado,
+    // e a nave segue na célula de onde atirou.
+    expect(pres.sectorView?.entities.map((e) => e.id)).toEqual(['k1'])
+    expect(pres.sectorView?.ship).toEqual({ row: 2, col: 2 })
+
+    await advance(TURN_EVENT_PRESENT_MS * 2)
+    expect(pres.presenting).toBe(false)
+    expect(pres.sectorView?.entities).toEqual([])
+    expect(pres.sectorView?.ship).toEqual({ row: 4, col: 4 })
+  })
+
+  it('turno sem nada encenável assenta na hora', () => {
+    const gs = useGameState()
+    const pres = usePresentation()
+    gs.$state.currentSector = [klingon('k1', 5, 5)]
+
+    pres.captureSector()
+    gs.$state.currentSector = []
+    pres.enqueue([{ step: 5, type: 'repair', text: 'reparo' }])
+
+    expect(pres.sectorSnapshot).toBeNull()
+    expect(pres.sectorView?.entities).toEqual([])
+  })
+
+  it('em warp a view é nula: grid em branco até a animação terminar', async () => {
+    const gs = useGameState()
+    const pres = usePresentation()
+    gs.$state.warpFactor = 1
+    gs.$state.position.quadrant = { row: 1, col: 1 }
+
+    await gs.moveWarp({ row: 3, col: 1 })
+    expect(pres.travelling).toBe(true)
+    // Destino já povoado no estado, mas o scanner não pode entregá-lo ainda.
+    expect(pres.sectorView).toBeNull()
+
+    await advance(warpAnimationMs(1) * 3)
+    expect(pres.travelling).toBe(false)
+    expect(pres.sectorView).not.toBeNull()
+    expect(pres.sectorView?.entities.length).toBeGreaterThan(0)
+  })
+
+  it('recapturar durante a viagem não substitui o congelado', () => {
+    const gs = useGameState()
+    const pres = usePresentation()
+    gs.$state.currentSector = [klingon('k1', 5, 5)]
+
+    pres.captureSector()
+    gs.$state.currentSector = [klingon('k2', 1, 1)]
+    pres.captureSector()
+
+    expect(pres.sectorSnapshot?.entities.map((e) => e.id)).toEqual(['k1'])
+  })
+})

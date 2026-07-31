@@ -322,6 +322,15 @@ export interface TurnEvent {
   at?: GridCoord
   /** Payload numérico do efeito: dano, absorção, reparo. */
   amount?: number
+  /**
+   * O golpe deste evento destruiu a entidade.
+   *
+   * Campo no evento do acerto, e não um tipo `destroyed` próprio: um tipo novo
+   * exigiria entrada em `TURN_EVENT_CATEGORY` e em `STAGED_TYPES`, e repetiria
+   * `at`/`entityId` do acerto que o causou. A destruição não é um efeito
+   * separado — é o desfecho daquele acerto.
+   */
+  destroyed?: boolean
 }
 
 /** Evento antes de a etapa ser carimbada. Módulos folha não sabem em que etapa rodam. */

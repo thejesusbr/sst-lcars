@@ -178,6 +178,9 @@ export const useGameState = defineStore('gameState', {
         return refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
       }
 
+      // Congela o setor ANTES da resolução: o engine resolve o turno inteiro
+      // de uma vez, então depois já não existe o estado que a animação encena.
+      presentation.captureSector()
       const res = resolvePlayerTurn(this.$state, action, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })
@@ -192,6 +195,7 @@ export const useGameState = defineStore('gameState', {
       if (usePresentation().presenting) {
         return refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
       }
+      usePresentation().captureSector()
       const res = endTurn(this.$state, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })
@@ -206,6 +210,7 @@ export const useGameState = defineStore('gameState', {
         const refused = refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
         return { completedTurns: 0, stoppedEarly: true, lastResult: refused }
       }
+      usePresentation().captureSector()
       const res = skipTurns(this.$state, count, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })
@@ -219,6 +224,7 @@ export const useGameState = defineStore('gameState', {
       if (usePresentation().presenting) {
         return refusedTurn(this.$state.stardate, 'Aguarde a resolução do turno.')
       }
+      usePresentation().captureSector()
       const res = dockAndRepairTurn(this.$state, Math.random, {
         onQuadrantEnter: quadrantEnterHook,
       })

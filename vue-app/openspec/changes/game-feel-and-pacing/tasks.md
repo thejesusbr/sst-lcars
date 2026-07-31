@@ -96,3 +96,25 @@
 - [ ] 6.1 Medir o balanceamento de combate com o ritmo novo e só então mexer em
       constante. É Non-Goal desta mudança de propósito — medir antes seria medir
       no escuro (design.md Non-Goals)
+
+## 7. Emenda da 3ª rodada: sincronia e som
+
+Achados da 3ª rodada contra o que esta mudança entregou. A encenação funciona;
+o que falha é a sincronia com o grid (itens 14.1, 14.2, 14.10) e a ausência de
+som no impacto.
+
+- [x] 7.1 Snapshot do setor no início do turno, guardado em `usePresentation`
+      (não em `GameState` — o checksum do selo hasheia o estado inteiro)
+- [x] 7.2 Scanners leem o snapshot enquanto a fila drena e o estado resolvido
+      quando ela esvazia
+- [x] 7.3 `useCombatOverlay` lê a posição da nave do snapshot, não de
+      `gameState.position.sector`
+- [x] 7.4 Turno sem nada encenado assenta na hora, sem snapshot intermediário
+- [x] 7.5 Engajar warp não repovoa o SRS até a animação de viagem terminar; LRS
+      segue atualizando na chegada, como já fazia
+- [x] 7.6 Acrescentar `shield_sizzle.mp3`, `tos_hullhit_1..4.mp3` e
+      `largeexplosion4.mp3` ao catálogo de `useSound.ts`
+- [x] 7.7 Tocar cada um no evento correspondente da fila, sorteando entre as 4
+      variantes de hull hit
+- [x] 7.8 Teste: fila drenando expõe o snapshot; fila vazia expõe o resolvido
+- [ ] 7.9 4ª rodada: itens 14.1, 14.2 e 14.10

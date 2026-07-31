@@ -246,6 +246,7 @@ function applyPlayerAction(
           entityId: hit.enemyId,
           at: hit.position,
           amount: hit.damage,
+          destroyed: hit.destroyed,
           text: hit.destroyed
             ? `Phasers: alvo atingido com ${hit.damage} de dano — destruído.`
             : `Phasers: alvo atingido com ${hit.damage} de dano.`,
@@ -263,6 +264,7 @@ function applyPlayerAction(
           entityId: hit.enemyId,
           at: hit.position,
           amount: hit.damage,
+          destroyed: hit.destroyed,
           text: hit.destroyed
             ? `Torpedo do tubo ${hit.tubeId} atingiu com ${hit.damage} de dano — alvo destruído.`
             : `Torpedo do tubo ${hit.tubeId} atingiu com ${hit.damage} de dano.`,
