@@ -11,6 +11,23 @@ depois. Aqui ficam juntas.
 **Como usar:** ao abrir uma change que cobre um item, apague o item daqui e
 cite a origem no `proposal.md` dela.
 
+## Ordem: engine primeiro, UI depois
+
+Decisão de 31/07, e é ela que segura a maior parte desta lista.
+
+Ajuste de UI só depois de a engine consolidar, porque **cada rodada de
+playthrough tem pedido elemento novo** — indicador de Life Support, `SHD/PWR`
+do inimigo, mostrador `T-n`, 3ª coluna de ciência, previsão de turnos. Mexer na
+apresentação antes disso é retrabalho garantido: o layout muda de novo assim que
+a rodada seguinte encontrar o que falta.
+
+Vale inclusive pro **baseline de regressão visual**: montado agora, ele fixaria
+uma foto de algo que ainda vai mudar, e cada elemento novo o invalidaria. Ele é
+pré-requisito do refactor de CSS, não coisa a fazer antes dele.
+
+Itens segurados por esta ordem: refactor de CSS scoped, baseline visual,
+Briefing/manual, e os dois de antecipação de custo/tempo.
+
 ---
 
 ## Antecipação de custo e de tempo
