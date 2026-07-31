@@ -1,4 +1,8 @@
-# Roteiro de Playthrough — 4ª rodada
+# Roteiro de Playthrough — 4ª rodada (HISTÓRICO)
+
+> **Encerrada.** A 5ª rodada roda em `openspec/PLAYTHROUGH_5.md`. Este arquivo
+> fica como registro do que a 4ª achou e do tratamento que cada achado recebeu.
+> **Não marque itens aqui** — os pendentes foram migrados.
 
 Substitui `changes/engine-integration/PLAYTHROUGH.md`, que virou histórico: as
 3 primeiras rodadas, os achados de cada uma e o tratamento que receberam ficam
