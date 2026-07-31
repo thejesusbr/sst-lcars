@@ -63,6 +63,16 @@ const hullColor = computed(() => {
   return `${statusColor("critical")} blink`;
 });
 
+// Suporte de vida: dano nesse sistema causa derrota por morte da tripulação
+const lifeSupportIntegrity = computed(() =>
+  Math.round(gameState.subsystems.life)
+);
+const lifeSupportColor = computed(() => {
+  if (lifeSupportIntegrity.value > 60) return statusColor("nominal");
+  if (lifeSupportIntegrity.value > 25) return statusColor("damaged");
+  return `${statusColor("critical")} blink`;
+});
+
 // Overload efetivo em % da escala 0-20, incluindo o automático do consumo real.
 const overloadPercent = computed(() =>
   Math.round((gameState.manualOverload / OVERLOAD_MAX) * 100)
@@ -208,198 +218,192 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
           justifyContent: 'space-evenly',
           width: '100%',
           padding: '.35rem 0',
+          gap: '1.25rem',
         }"
       >
         <!-- Coluna de dados A: Energy, Enemies, Torpedoes, Warp Core -->
         <LcarsColumn id="stn-pnl-dsp-a" :style="{ flex: '1' }">
+          <!-- Stardate indicator-->
+          <LcarsComplexButton color="secondary-interactive">
+            <LcarsCap version="round-left" />
+            <LcarsBlock
+              label="Stardate"
+              :style="{ flex: 'none', width: '5.5rem' }"
+            />
+            <LcarsText
+              id="sdtIndTxt"
+              color="text-light"
+              :text="String(stardate)"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
+            <LcarsCap version="round-right" />
+          </LcarsComplexButton>
           <!-- Energy level indicator -->
-          <LcarsRow>
-            <LcarsComplexButton color="primary-interactive">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Energy Level"
-                :style="{ flex: 'none', width: '6.5rem' }"
-              />
-              <LcarsText
-                color="text-light"
-                :text="String(energyLevel)"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                color="tertiary-static"
-                :label="energyStatus"
-                :style="{ flex: 'none', width: '5.5rem' }"
-              />
-              <LcarsCap version="round-right" color="tertiary-static" />
-            </LcarsComplexButton>
-          </LcarsRow>
-
+          <LcarsComplexButton color="primary-interactive">
+            <LcarsCap version="round-left" />
+            <LcarsBlock
+              label="Energy Level"
+              :style="{ flex: 'none', width: '6.5rem' }"
+            />
+            <LcarsText
+              color="text-light"
+              :text="String(energyLevel)"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock
+              color="tertiary-static"
+              :label="energyStatus"
+              :style="{ flex: 'none', width: '5.5rem' }"
+            />
+            <LcarsCap version="round-right" color="tertiary-static" />
+          </LcarsComplexButton>
           <!-- Enemies Left -->
-          <LcarsRow>
-            <LcarsComplexButton color="tertiary-interactive">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Enemies Left"
-                :style="{ flex: 'none', width: '6.5rem' }"
-              />
-              <LcarsText
-                color="text-dark"
-                :text="String(enemiesLeft)"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                version="round-right"
-                color="secondary-static"
-                :style="{ flex: 'none', width: '3rem' }"
-              />
-              <LcarsCap version="round-right" color="secondary-static" />
-            </LcarsComplexButton>
-          </LcarsRow>
-
+          <LcarsComplexButton color="tertiary-interactive">
+            <LcarsCap version="round-left" />
+            <LcarsBlock
+              label="Enemies Left"
+              :style="{ flex: 'none', width: '6.5rem' }"
+            />
+            <LcarsText
+              color="text-dark"
+              :text="String(enemiesLeft)"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock
+              version="round-right"
+              color="secondary-static"
+              :style="{ flex: 'none', width: '3rem' }"
+            />
+            <LcarsCap version="round-right" color="secondary-static" />
+          </LcarsComplexButton>
           <!-- Torpedo Stock -->
-          <LcarsRow>
-            <LcarsComplexButton color="highlight-interactive">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Torpedoes"
-                :style="{ flex: 'none', width: '6.5rem' }"
-              />
-              <LcarsText
-                color="text-highlight"
-                :text="String(torpedoStock)"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                version="round-right"
-                :style="{ flex: 'none', width: '3rem' }"
-              />
-              <LcarsCap :style="{ background: 'transparent' }" />
-            </LcarsComplexButton>
-          </LcarsRow>
-
-          <!-- Warp Core Status -->
-          <LcarsRow>
-            <LcarsComplexButton color="tertiary-static">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Warp Core"
-                :style="{ flex: 'none', width: '6.5rem' }"
-              />
-              <LcarsText
-                color="text-light"
-                :text="warpCoreStatus"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                version="round-right"
-                :color="warpCoreColor"
-                :style="{ flex: 'none', width: '3rem' }"
-              />
-              <LcarsCap :style="{ background: 'transparent' }" />
-            </LcarsComplexButton>
-          </LcarsRow>
+          <LcarsComplexButton color="highlight-interactive">
+            <LcarsCap version="round-left" />
+            <LcarsBlock
+              label="Torpedoes"
+              :style="{ flex: 'none', width: '6.5rem' }"
+            />
+            <LcarsText
+              color="text-highlight"
+              :text="String(torpedoStock)"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock
+              version="round-right"
+              :style="{ flex: 'none', width: '3rem' }"
+            />
+            <LcarsCap :style="{ background: 'transparent' }" />
+          </LcarsComplexButton>
+          <!-- Starbases Left -->
+          <LcarsComplexButton color="tertiary-static">
+            <LcarsCap version="round-left" />
+            <LcarsBlock
+              label="Starbases Left"
+              :style="{ flex: 'none', width: '6.5rem' }"
+            />
+            <LcarsBlock version="decorator" />
+            <LcarsText
+              id="stb-lft-ind"
+              color="text-light"
+              :text="String(starbasesLeft)"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock
+              :label="starbasesStatus"
+              :style="{ flex: 'none', width: '5.5rem' }"
+            />
+            <LcarsCap :style="{ background: 'transparent' }" />
+          </LcarsComplexButton>
         </LcarsColumn>
         <!-- Coluna de dados B: Stardate, Starbases, Shields, Overload -->
         <LcarsColumn id="stn-pnl-dsp-b" :style="{ flex: '1' }">
-          <!-- Stardate indicator-->
-          <LcarsRow>
-            <LcarsComplexButton color="secondary-interactive">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Stardate"
-                :style="{ flex: 'none', width: '5.5rem' }"
-              />
-              <LcarsText
-                id="sdtIndTxt"
-                color="text-light"
-                :text="String(stardate)"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock version="decorator" color="primary-interactive" />
-              <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
-              <LcarsCap version="round-right" />
-            </LcarsComplexButton>
-          </LcarsRow>
-
-          <!-- Starbases Left -->
-          <LcarsRow>
-            <LcarsComplexButton color="highlight-interactive">
-              <LcarsCap version="round-left" />
-              <LcarsBlock
-                label="Starbases Left"
-                :style="{ flex: 'none', width: '6.5rem' }"
-              />
-              <LcarsBlock version="decorator" />
-              <LcarsText
-                id="stb-lft-ind"
-                color="text-light"
-                :text="String(starbasesLeft)"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                :label="starbasesStatus"
-                :style="{ flex: 'none', width: '5.5rem' }"
-              />
-            </LcarsComplexButton>
-          </LcarsRow>
-
           <!-- Shield status -->
-          <LcarsRow>
-            <LcarsComplexButton color="primary-interactive">
-              <LcarsCap :style="{ background: 'transparent' }" />
-              <LcarsBlock
-                label="Shields"
-                :style="{ flex: 'none', width: '5.5rem' }"
-              />
-              <LcarsBlock version="decorator" />
-              <LcarsText
-                color="text-light"
-                :text="shieldStatus"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
-            </LcarsComplexButton>
-          </LcarsRow>
-
+          <LcarsComplexButton color="primary-interactive">
+            <LcarsCap :style="{ background: 'transparent' }" />
+            <LcarsBlock
+              label="Shields"
+              :style="{ flex: 'none', width: '5.5rem' }"
+            />
+            <LcarsText
+              color="text-light"
+              :text="shieldStatus"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock version="decorator" />
+            <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
+            <LcarsCap :style="{ background: 'transparent' }" />
+          </LcarsComplexButton>
           <!-- Hull integrity -->
-          <LcarsRow>
-            <LcarsComplexButton color="primary-interactive">
-              <LcarsCap :style="{ background: 'transparent' }" />
-              <LcarsBlock
-                label="Hull"
-                :style="{ flex: 'none', width: '5.5rem' }"
-              />
-              <LcarsBlock version="decorator" />
-              <LcarsText
-                color="text-light"
-                :text="`${hullIntegrity}%`"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock
-                :color="hullColor"
-                :style="{ flex: 'none', width: '3rem' }"
-              />
-            </LcarsComplexButton>
-          </LcarsRow>
-
+          <LcarsComplexButton color="primary-interactive">
+            <LcarsCap version="round-left" color="secondary-static" />
+            <LcarsBlock
+              label="Hull"
+              :style="{ flex: 'none', width: '5.5rem' }"
+            />
+            <LcarsBlock version="decorator" />
+            <LcarsText
+              color="text-light"
+              :text="`${hullIntegrity}%`"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock
+              :color="hullColor"
+              :style="{ flex: 'none', width: '3rem' }"
+            />
+            <LcarsCap version="round-right" color="secondary-static" />
+          </LcarsComplexButton>
           <!-- Overload -->
-          <LcarsRow>
-            <LcarsComplexButton color="secondary-interactive">
-              <LcarsCap :style="{ background: 'transparent' }" />
-              <LcarsBlock
-                label="Overload"
-                :style="{ flex: 'none', width: '5.5rem' }"
-              />
-              <LcarsBlock version="decorator" />
-              <LcarsText
-                color="text-light"
-                :text="`${overloadPercent}%`"
-                :style="{ flex: '1' }"
-              />
-              <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
-              <LcarsCap version="round-right" />
-            </LcarsComplexButton>
-          </LcarsRow>
+          <LcarsComplexButton color="secondary-interactive">
+            <LcarsCap :style="{ background: 'transparent' }" />
+            <LcarsBlock
+              label="Overload"
+              :style="{ flex: 'none', width: '5.5rem' }"
+            />
+            <LcarsBlock version="decorator" />
+            <LcarsText
+              color="text-light"
+              :text="`${overloadPercent}%`"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
+            <LcarsCap version="round-right" />
+          </LcarsComplexButton>
+          <!-- Warp Core Status -->
+          <LcarsComplexButton color="tertiary-static">
+            <LcarsCap version="round-left" />
+            <LcarsBlock
+              label="Warp Core"
+              :style="{ flex: 'none', width: '6.5rem' }"
+            />
+            <LcarsText
+              color="text-light"
+              :text="warpCoreStatus"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock
+              version="round-right"
+              :color="warpCoreColor"
+              :style="{ flex: 'none', width: '3rem' }"
+            />
+            <LcarsCap :style="{ background: 'transparent' }" />
+          </LcarsComplexButton>
+          <!-- Life Support Integrity -->
+          <LcarsComplexButton color="primary-static">
+            <LcarsCap version="round-left" color="secondary-static" />
+            <LcarsBlock label="Life Support" :style="{ flex: 'none' }" />
+            <LcarsText
+              color="text-light"
+              :text="`${lifeSupportIntegrity}%`"
+              :style="{ flex: '1' }"
+            />
+            <LcarsBlock
+              version="round-right"
+              :color="lifeSupportColor"
+              :style="{ flex: 'none', width: '3rem' }"
+            />
+            <LcarsCap :style="{ background: 'transparent' }" />
+          </LcarsComplexButton>
         </LcarsColumn>
         <!-- Botão Toggle Red Alert, Brig, Avanço de turno -->
         <LcarsColumn id="stn-pnl-dsp-c" :style="{ flex: '1' }">
@@ -443,6 +447,8 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
                 :text="prisoners"
                 :style="{ flex: '1' }"
               />
+              <LcarsBlock color="highlight-interactive" />
+              <LcarsBlock color="highlight-interactive" />
               <LcarsCap version="round-right" />
             </LcarsComplexButton>
           </LcarsRow>
@@ -452,6 +458,7 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
             <LcarsButton
               id="end-turn-btn"
               label="End Turn"
+              version="round"
               color="primary-interactive"
               :disabled="busy || presentation.busy"
               :style="{ flex: '1' }"
@@ -460,6 +467,7 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
             <LcarsButton
               id="skip-turns-btn"
               :label="`Skip ${SKIP_TURNS}`"
+              version="round"
               color="tertiary-interactive"
               :disabled="busy || presentation.busy"
               :style="{ flex: '1' }"

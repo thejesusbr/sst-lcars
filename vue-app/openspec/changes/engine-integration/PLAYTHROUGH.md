@@ -252,8 +252,18 @@ Ordem de prioridade Kobayashi Maru: derrota sempre supera vitória.
 
 - [x] 12.1 F5 no meio da partida: stardate, posição, integridades, log e nível de
       alerta voltam iguais.
-- [ ] 12.2 Editar `sst-lcars-game-state` no DevTools **sem** regravar o selo:
-      Tribbles aparecem depois de alguns turnos, **sem** aviso na UI.
+- [ ] 12.2 Tribbles por selo adulterado. **Procedimento** (nenhum funcionava
+      antes: a verificação nunca era chamada — ver achados da 3ª rodada):
+      1. Jogar **1 turno** (o selo só é gravado no fim de um turno resolvido).
+      2. DevTools → Application → Local Storage. Existem **duas** chaves:
+         `sst-lcars-game-state` (o save) e `sst-lcars:save-checksum` (o selo).
+      3. Editar **só** o save — trocar `stardate`, `torpedoStock`, o que for —
+         e **não tocar** no `sst-lcars:save-checksum`.
+      4. F5. A partir daí a população dobra a cada turno: 2, 4, 8, 16…
+      5. Esperado: Tribbles flutuando sobre a UI já no 1º turno depois do
+         reload, o som entrando no 4º (>10 ícones), e **nenhuma** mensagem
+         explicando. Editar pelo devtools do Vue **não** serve: o selo compara
+         contra o que está no `localStorage`, não contra o estado em memória.
       (Não é anti-cheat, é piada — ver `saveIntegrity.ts`.)
 
 ## 13. Balanceamento (anotar, não corrigir agora)
@@ -512,3 +522,46 @@ Itens destravados por esta rodada de implementação:
 15.4 Muitos dos inimigos danificados se renderam, acho que podemos diminuir o teto da chance. Afinal, são Klingons... Não encontrei nenhum Romulano vagando por aí...
 
 15.9 Apareceu a informação, mas a fonte estava muito pequena. Tive uma ideia, acrescentar uma terceira coluna no painel de navegação, exclusivo para resultados de scan, hail e exploração, funções que seriam logs tradicionais de uma estação de ciência. Sr. Spock, relatório.
+
+---
+
+## Tratamento dos achados da 3ª rodada
+
+| Achado | Tratamento | Onde |
+| --- | --- | --- |
+| 2.4 KBS não muda ao limpar setor | `liveKbsCode` única, 5 produtores | `playtest-round-3` ✅ |
+| 11.5 campo do Life Support | `subsystems.life` | `playtest-round-3` ✅ |
+| 12.2 Tribbles nunca apareceram | selo ligado + camada de render | `playtest-round-3` ✅ |
+| 14.1/14.2 animação deslocada | grid congelado na encenação | `game-feel-and-pacing` ✅ |
+| 14.10 SRS entrega o destino cedo | mesmo mecanismo | `game-feel-and-pacing` ✅ |
+| — impacto sem som | sizzle / hull hit / explosão | `game-feel-and-pacing` ✅ |
+| 10.0 alerta não engaja sozinho | `red` + `yellow` automáticos | `bridge-awareness` |
+| 11.5 dano de LS invisível | mostrador `T-n` + Alert 10 | `bridge-awareness` |
+| 13.4 Send Party às cegas | ação Survey atrelada ao SRS | `bridge-awareness` |
+| 15.9 fonte pequena / sem lugar | categoria `science` + 3ª coluna | `bridge-awareness` |
+| 13.1 tempo curto | `MISSION_DURATION` 40 | `mission-pacing` |
+| 13.3 fadiga alta demais | meia-vida 3 → 6 | `mission-pacing` |
+| 13.5 poucas sondas | 3 → 4 | `mission-pacing` |
+| 14.1/14.2 cor por raça | cor de facção via tema | `enemy-species` |
+| 15.4 rendição fácil demais | piso/teto por espécie | `enemy-species` |
+| — só nascia `KLINGON_CRUISER` | sorteio ponderado dos 5 tipos | `enemy-species` |
+
+**Descoberto durante a análise, não na rodada:** `materializeSector` cravava
+`KLINGON_CRUISER` em todo inimigo, então os outros 4 tipos de `ENEMY_TYPES`
+nunca nasceram — daí "não encontrei nenhum Romulano vagando por aí" (15.4) não
+ser azar. E `renderedTribbleCount` também nunca teve chamador: nenhum
+componente desenhava Tribble, então o item 12.2 era inverificável mesmo com o
+selo funcionando.
+
+### Retestar na 4ª rodada
+
+- **2.4** o dígito K cai ao limpar o setor, nos 4 leitores (SRS, LRS, sonda,
+  Star Chart), e continua caído depois de sair e voltar do quadrante.
+- **11.5** indicador de Life Support mostra número em vez de erro.
+- **12.2** procedimento acima — é a primeira vez que pode funcionar.
+- **14.1 / 14.2** feixe e asterisco ancorados nos ícones; inimigo destruído
+  segue desenhado enquanto o tiro que o matou é encenado.
+- **14.10** SRS em branco durante o warp, destino aparecendo só no fim da
+  animação; LRS atualizando na chegada como antes.
+- **Novo:** som de absorção de escudo, acerto de casco (4 variantes) e
+  explosão, em passo com a animação de cada evento.
