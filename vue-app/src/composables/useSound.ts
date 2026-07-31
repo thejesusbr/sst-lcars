@@ -83,12 +83,15 @@ export const HULL_HIT_SOUNDS = [
 // demais pra tocar inteiro toda vez que dispara).
 const maxDuration: Partial<Record<SoundKey, number>> = {
   [Sound.RED_ALERT]: 5000,
-  [Sound.PHASER]: 3000,
   [Sound.TRANSPORTER]: 3000,
-  // Som de impacto não pode sobreviver ao evento que o causou: a fila encena um
-  // evento a cada `TURN_EVENT_PRESENT_MS` (650), então uma amostra de 3s ainda
-  // estaria tocando 4 eventos depois. O corte é folgado o bastante pra não soar
-  // truncado, curto o bastante pra não empilhar.
+  // Som de evento de combate não pode sobreviver ao evento que o causou: a
+  // fila encena um evento a cada `TURN_EVENT_PRESENT_MS` (650), então uma
+  // amostra de 3s (o corte antigo do phaser) ainda estaria tocando 4 eventos
+  // depois — era exatamente o atropelo relatado na 5ª rodada, item 26.4:
+  // disparo e explosão em cima um do outro. O corte é folgado o bastante pra
+  // não soar truncado, curto o bastante pra não empilhar com o próximo evento.
+  [Sound.PHASER]: 1200,
+  [Sound.TORPEDO]: 1200,
   [Sound.SHIELD_SIZZLE]: 1200,
   [Sound.HULL_HIT_1]: 1200,
   [Sound.HULL_HIT_2]: 1200,
@@ -101,7 +104,14 @@ const maxDuration: Partial<Record<SoundKey, number>> = {
 const pool = new Map<SoundKey, HTMLAudioElement>()
 const stopTimers = new Map<SoundKey, ReturnType<typeof setTimeout>>()
 
-function getAudio(key: SoundKey): HTMLAudioElement {
+function getAudio(key: SoundKey): HTMLAudioElement | undefined {
+  // `Audio` não existe em ambiente de teste (node, sem DOM) — os testes de
+  // integração passaram a exercitar `playEventSound` de verdade (evento
+  // `player_phasers`/`player_torpedo` na fila) depois da `round-5-fixes`, e
+  // sem esta guarda todo teste que enfileira um disparo quebraria. Mesmo
+  // padrão do `localStorage` opcional em `saveIntegrity.ts`: sem o objeto,
+  // sem som, sem drama — não é o que o teste está verificando.
+  if (typeof Audio === 'undefined') return undefined
   let audio = pool.get(key)
   if (!audio) {
     audio = new Audio(sources[key])
@@ -113,6 +123,7 @@ function getAudio(key: SoundKey): HTMLAudioElement {
 export function useSound() {
   const playSound = (key: SoundKey) => {
     const audio = getAudio(key)
+    if (!audio) return
     audio.currentTime = 0
     void audio.play()
 

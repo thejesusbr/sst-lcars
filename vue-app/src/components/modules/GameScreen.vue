@@ -38,6 +38,17 @@ const reason = computed(() =>
 
 const rating = computed(() => String(gameState.result?.rating ?? 0))
 
+// O relógio da missão SEGUE a frota gerada desde a `mission-scaling`
+// (duração = 25 + 1.2 × frota) — cada partida tem prazo próprio, e o
+// Briefing seguia com texto fixo. O jogador só descobria o prazo real
+// olhando o localStorage (5ª rodada, item 24.1).
+const missionText = computed(
+  () =>
+    `Destroy the ${gameState.enemiesLeft} Klingon vessel(s) detected before ` +
+    `Stardate ${gameState.stardateLimit.toFixed(1)} ` +
+    `(${(gameState.stardateLimit - gameState.stardate).toFixed(0)} stardates allocated).`,
+)
+
 // Sair da tela de jogo mata a apresentação: um fim de jogo no meio de uma
 // encenação (ou de uma viagem de warp) deixaria a fila drenando e o modo de
 // viagem avançando turnos numa partida que já acabou. Um dono só de timer só
@@ -57,6 +68,7 @@ const newGame = () => gameState.newGame()
     v-if="mode === 'briefing'"
     :commander-name="gameState.captainName"
     :ship-name="gameState.shipName"
+    :mission-text="missionText"
     @start="startMission"
   />
   <GameHud v-else-if="mode === 'playing'" />

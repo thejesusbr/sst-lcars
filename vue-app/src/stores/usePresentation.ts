@@ -169,16 +169,22 @@ export const usePresentation = defineStore('presentation', {
     },
 
     /**
-     * Som do impacto, no instante em que o evento entra em cena.
+     * Som do evento, no instante em que ele entra em cena — disparo e
+     * impacto na MESMA linha do tempo.
      *
-     * Disparo já tinha som (phaser e torpedo tocam no tiro); faltava a
-     * chegada — o jogador se ouvia atirar e via o dano aparecer em silêncio. A
-     * fila é o único lugar onde o momento do impacto existe como instante, e
-     * não como número que mudou.
+     * O disparo tocava no clique do botão (corte em 3s), num relógio
+     * diferente do da fila (650ms/evento): a explosão de um alvo abatido
+     * disparava em cima do phaser ainda tocando, e a animação do feixe
+     * acabava muito antes do próprio som (5ª rodada, item 26.4). Um relógio
+     * só — o da fila — é o que resolve, não ajustar offset entre dois.
      */
     playEventSound(evt: TurnEvent) {
       const { playSound } = useSound()
-      if (evt.type === 'shield_absorb') {
+      if (evt.type === 'player_phasers') {
+        playSound(Sound.PHASER)
+      } else if (evt.type === 'player_torpedo') {
+        playSound(Sound.TORPEDO)
+      } else if (evt.type === 'shield_absorb') {
         playSound(Sound.SHIELD_SIZZLE)
       } else if (evt.type === 'hull_damage') {
         playSound(HULL_HIT_SOUNDS[Math.floor(Math.random() * HULL_HIT_SOUNDS.length)])

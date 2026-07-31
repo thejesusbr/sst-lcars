@@ -191,17 +191,14 @@ const canFireTorpedoes = computed(
     tubes.value.some((t) => t.loaded)
 );
 
-const firePhasers = () =>
-  withTurn(async () => {
-    playSound(Sound.PHASER);
-    await gameState.firePhasers();
-  });
+// O som do disparo migrou pra fila de apresentação (`playEventSound`), que
+// toca quando o evento entra em cena — não no clique. Antes os dois relógios
+// discordavam: o clique tocava o phaser (corte em 3s) enquanto a fila
+// encenava cada evento em 650ms, e a explosão de um alvo abatido disparava
+// em cima do phaser ainda tocando (5ª rodada, item 26.4).
+const firePhasers = () => withTurn(() => gameState.firePhasers());
 
-const fireTorpedoes = () =>
-  withTurn(async () => {
-    playSound(Sound.TORPEDO);
-    await gameState.fireTorpedoes();
-  });
+const fireTorpedoes = () => withTurn(() => gameState.fireTorpedoes());
 
 /** "Lock" e acao real: custa 1 turno de reaquisicao (decisao #23). */
 const lockTargets = () =>

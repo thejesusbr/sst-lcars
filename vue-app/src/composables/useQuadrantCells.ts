@@ -107,7 +107,13 @@ export function useQuadrantCells() {
       }
     }
 
-    grid[cellKey(shipSector)] = { img: playerIcon.value }
+    // Atracada, a nave está DENTRO da base — o ícone parado do lado de fora
+    // fazia o reposicionamento do undock (`round-4-fixes`) parecer inútil: a
+    // nave "estacionada" ali o tempo todo, nunca entrando em lugar nenhum
+    // (5ª rodada, item 25.1). Some enquanto `docked`, reaparece no undock.
+    if (!gameState.docked) {
+      grid[cellKey(shipSector)] = { img: playerIcon.value }
+    }
     return grid
   }
 
