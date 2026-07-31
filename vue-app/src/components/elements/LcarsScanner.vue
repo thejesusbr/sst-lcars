@@ -195,22 +195,35 @@ const boxSize = ref({ w: 0, h: 0 })
  * (short/long) e por tema — derivar a posição de constantes daria um número
  * certo hoje e errado no próximo ajuste de CSS. Medir é a única fonte que não
  * mente.
+ *
+ * **`offsetLeft`/`offsetTop`, NÃO `getBoundingClientRect()`.** O app inteiro
+ * roda dentro de `.zoom-wrapper`, que aplica `transform: scale(0.8)`.
+ * `getBoundingClientRect` devolve coordenada VISUAL, já multiplicada pela
+ * escala; o SVG desenha esses números na unidade dele e **também** está dentro
+ * do wrapper escalado, então levava 0.8 duas vezes. O efeito era um erro
+ * proporcional à distância do canto do scanner — célula perto da origem quase
+ * certa, célula longe muito errada. `offsetLeft` é coordenada de layout e
+ * ignora transform, que é exatamente o espaço em que o SVG desenha.
+ *
+ * `.scanner` tem `position: relative` (ver `<style>` abaixo), então é o
+ * `offsetParent` das células e o offset já é relativo a ele.
  */
 const cellCenter = (row: number, col: number): { x: number; y: number } | null => {
   const el = containerRef.value
   if (!el) return null
   const cell = el.children[row * (props.width + 1) + col] as HTMLElement | undefined
   if (!cell) return null
-  const c = cell.getBoundingClientRect()
-  const b = el.getBoundingClientRect()
-  return { x: c.left - b.left + c.width / 2, y: c.top - b.top + c.height / 2 }
+  return {
+    x: cell.offsetLeft + cell.offsetWidth / 2,
+    y: cell.offsetTop + cell.offsetHeight / 2,
+  }
 }
 
 const measure = () => {
   const el = containerRef.value
   if (!el) return
-  const b = el.getBoundingClientRect()
-  boxSize.value = { w: b.width, h: b.height }
+  // Mesmo espaço de coordenada do `cellCenter`: layout, não visual.
+  boxSize.value = { w: el.offsetWidth, h: el.offsetHeight }
 }
 
 /** Geometria do overlay atual, em px do próprio scanner. */
