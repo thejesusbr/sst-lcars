@@ -84,12 +84,13 @@ h1 {
   flex: none;
 }
 
-.complex-button .block.check {
+.row .block.check {
   min-width: 1rem !important;
-  flex: unset;
+  max-width: 1.5rem !important;
+  flex: unset !important;
 }
 
-.complex-button .block.check.transparent {
+.row .block.check.transparent {
   background-color: transparent;
   color: transparent;
 }

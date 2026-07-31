@@ -18,6 +18,7 @@ import { useGameState } from "@/stores/useGameState";
 import { usePresentation } from "@/stores/usePresentation";
 import { useCombatOverlay } from "@/composables/useCombatOverlay";
 import { useQuadrantCells } from "@/composables/useQuadrantCells";
+import { useLcarsColors } from "@/composables/useLcarsColors";
 import { damageFraction, isCritical, liveKbsCode } from "@/engine/constants";
 import {
   SENSOR_MODERATE_DAMAGE,
@@ -42,6 +43,7 @@ const gameState = useGameState();
 const presentation = usePresentation();
 const combatOverlay = useCombatOverlay();
 const { sectorCells, quadrantCells } = useQuadrantCells();
+const { statusColor } = useLcarsColors();
 
 const selectedSector = ref({ ...gameState.position.sector });
 const selectedSystem = ref({ ...gameState.position.quadrant });
@@ -268,7 +270,9 @@ const hail = () =>
 const adjacentBaseLabel = computed(() => {
   if (gameState.docked) return null;
   const base = gameState.currentSector.find(
-    (e) => isStarbaseType(e.type) && isAdjacent(e.position, gameState.position.sector)
+    (e) =>
+      isStarbaseType(e.type) &&
+      isAdjacent(e.position, gameState.position.sector)
   );
   // O `&&` no predicate acima perde a narrow do type guard; `isStarbaseType`
   // já garantiu que `base.type` é `StarbaseType` em runtime.
@@ -420,7 +424,11 @@ const toggleLrs = () => {
           id="srs-toggle-btn"
           version="round"
           :label="gameState.subsystemsOn.srs ? 'SRS On' : 'SRS Off'"
-          :color="gameState.subsystemsOn.srs ? 'secondary-interactive' : 'primary-static'"
+          :color="
+            gameState.subsystemsOn.srs
+              ? 'secondary-interactive'
+              : 'primary-static'
+          "
           :style="{ width: '6rem' }"
           @click="toggleSrs"
         />
@@ -438,7 +446,9 @@ const toggleLrs = () => {
           version="round"
           color="highlight-interactive"
           :label="gameState.docked ? 'Undock' : 'Dock'"
-          :disabled="(!gameState.docked && !gameState.canDockNow) || presentation.busy"
+          :disabled="
+            (!gameState.docked && !gameState.canDockNow) || presentation.busy
+          "
           :style="{ width: '7rem' }"
           @click="dock"
         />
@@ -460,7 +470,11 @@ const toggleLrs = () => {
         id="adjacent-base-hint"
         :text="`Adjacent: ${adjacentBaseLabel}`"
         class="text-light"
-        :style="{ 'font-size': '0.85rem', 'text-align': 'center', width: '24rem' }"
+        :style="{
+          'font-size': '0.85rem',
+          'text-align': 'center',
+          width: '24rem',
+        }"
       />
     </LcarsColumn>
 
@@ -540,12 +554,16 @@ const toggleLrs = () => {
       </LcarsRow>
 
       <!-- Controls row: Scan, Selected System, Snd to Helm -->
-      <LcarsRow :style="{ 'justify-content': 'space-evenly', width: '42rem' }">
+      <LcarsRow :style="{ 'justify-content': 'space-evenly' }">
         <LcarsButton
           id="lrs-toggle-btn"
           version="round"
           :label="gameState.subsystemsOn.lrs ? 'LRS On' : 'LRS Off'"
-          :color="gameState.subsystemsOn.lrs ? 'secondary-interactive' : 'primary-static'"
+          :color="
+            gameState.subsystemsOn.lrs
+              ? 'secondary-interactive'
+              : 'primary-static'
+          "
           :style="{ width: '6rem' }"
           @click="toggleLrs"
         />
@@ -569,7 +587,7 @@ const toggleLrs = () => {
             :text="selectedSystemLabel"
             :style="{ width: '4rem', 'text-align': 'center' }"
           />
-          <LcarsBlock version="decorator" :style="{ width: '4rem' }" />
+          <LcarsBlock version="decorator" />
         </LcarsComplexButton>
         <LcarsButton
           id="sndSysHlm"
@@ -603,9 +621,13 @@ const toggleLrs = () => {
           <LcarsBlock version="decorator" :style="{ width: '2rem' }" />
           <LcarsBlock
             id="prbStsInd"
-            :label="probeStatus === 'Active' ? `T-${probeTurnsLeft}` : probeStatus"
+            :label="
+              probeStatus === 'Active' ? `T-${probeTurnsLeft}` : probeStatus
+            "
             :version="probeStatus === 'Offline' ? 'red-dark-light' : undefined"
-            :color="probeStatus !== 'Offline' ? 'bg-green-5' : undefined"
+            :color="
+              probeStatus !== 'Offline' ? statusColor('nominal') : undefined
+            "
             :style="{ width: '7rem' }"
           />
           <LcarsButton
@@ -614,7 +636,12 @@ const toggleLrs = () => {
             label="Send to selected system"
             color="primary-interactive"
             :style="{ width: '16rem' }"
-            :disabled="remainingProbes === 0 || probeStatus !== 'Offline' || busy || presentation.busy"
+            :disabled="
+              remainingProbes === 0 ||
+              probeStatus !== 'Offline' ||
+              busy ||
+              presentation.busy
+            "
             @click="sendProbe"
           />
         </LcarsComplexButton>

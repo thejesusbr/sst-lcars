@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import LcarsComplexButton from "./LcarsComplexButton.vue";
+import LcarsRow from "./LcarsRow.vue";
 import LcarsBlock from "./LcarsBlock.vue";
 import LcarsText from "./LcarsText.vue";
 
@@ -32,19 +32,19 @@ const toggle = () => emit("update:modelValue", !props.modelValue);
 </script>
 
 <template>
-  <LcarsComplexButton
+  <LcarsRow
     :id="id"
     class="lcars-toggle-switch"
-    :color="color"
     :style="{ cursor: 'pointer', ...style }"
     @click="toggle"
   >
     <LcarsBlock
       version="check"
+      :color="color"
       :class="{ transparent: modelValue }"
       :style="!modelValue ? { filter: 'brightness(0.5)' } : {}"
     />
-    <LcarsBlock version="check" :class="{ transparent: !modelValue }" />
+    <LcarsBlock version="check" :color="color" :class="{ transparent: !modelValue }" />
     <!--
       LcarsText (nao LcarsBlock): o label precisa de fundo transparente, e
       todo `:before` (usado por LcarsBlock pra exibir o label) tem
@@ -64,46 +64,50 @@ const toggle = () => emit("update:modelValue", !props.modelValue);
         filter: !modelValue ? 'brightness(0.5)' : '',
       }"
     />
-  </LcarsComplexButton>
+  </LcarsRow>
 </template>
 
 <style scoped>
-/* O LCARS organiza um grid uniforme, e a base dele NESTE projeto e a de
-   `module.css`:
-
-     .block, .button { min-width: 7.5rem; min-height: 3rem; }
-
-   `.complex-button` -- que e o root deste componente -- nao recebe esse
-   override e fica com os `150px` do `lcars-sdk`, mais largos que a base. Somado
-   ao conteudo (dois check blocks + um texto com piso de 7.5rem proprio), o
-   toggle chegava a estourar a caixa e desalinhar da etiqueta acima dele. */
+/* Container e `LcarsRow`, nao `LcarsComplexButton`: o complex-button carrega
+   `min-width: 150px` do `lcars-sdk` e nao recebe o override de `module.css`
+   (`.block, .button { min-width: 7.5rem }`), entao ficava sempre mais largo que
+   a etiqueta ao lado. A `.row` herda a base certa. */
 .lcars-toggle-switch {
-  /* `width`, nao so `min-width`: com piso, a caixa continuava sendo MEDIDA pelo
-     conteudo e so nao encolhia abaixo de 7.5rem -- media 8.6rem contra os 7.5
-     da etiqueta ao lado. Largura definida inverte quem manda: a caixa fixa o
-     tamanho e os filhos se acomodam dentro (todos encolhiveis, o texto com
-     `min-width: 0`).
-
-     Chamador que passa `flex` inline continua esticando: `flex: 1` implica
-     `flex-basis: 0%`, que substitui `width` no calculo do flex. E o que o
-     SituationPanel faz com o toggle de Red Alert. */
-  width: 7.5rem;
+  min-width: 7.5rem;
   min-height: 3rem;
+  align-items: stretch;
 }
 
-/* O texto ocupa a SOBRA da caixa fixada acima. `min-width: 0` e o que permite
-   isso: `module.css` da a ele `min-width: 7.5rem` -- a largura de um button
-   INTEIRO -- calibrado pros displays numericos do tipo "3000"/"100%". Com o
-   piso solto ele encolhe pro que sobrar e centraliza.
+/* Quem pinta sao os DOIS check blocks, nunca o container.
+   Com a cor no ROW, o check herdava esse mesmo fundo e o indicador ficava
+   invisivel contra ele: no estado ON o toggle inteiro virava um retangulo de
+   cor solida, e o unico contraste vinha do check TRANSPARENTE, ou seja, do
+   buraco. Verificado no browser: `.block.check` com a classe de cor aplicada
+   direto pinta certo. */
+.lcars-toggle-switch :deep(.block.check) {
+  min-width: 1rem;
+  max-width: 1.5rem;
+  flex: 1 1 auto;
+}
 
-   Sai tambem o `margin-left: 5px` que `.complex-button *` da a todo filho.
+.lcars-toggle-switch :deep(.block.check.transparent) {
+  background-color: transparent;
+}
 
-   A fonte fica no padrao de um LcarsText indicativo -- sem `font-size` proprio,
-   herda os 2.8rem do SDK. */
+/* O texto ocupa a sobra da caixa. `min-width: 0` solta o piso de 7.5rem que
+   `module.css` da a `.text` -- a largura de um button INTEIRO, calibrado pros
+   displays numericos ("3000"/"100%").
+
+   `font-size` no padrao de um LcarsText indicativo, o mesmo 2.8rem que o
+   `.complex-button .text` aplicava antes da troca de container. */
 .lcars-toggle-switch :deep(.text) {
   min-width: 0;
   flex: 1 1 0;
-  margin-left: 0;
-  text-align: center;
+  margin-left: 0.5rem;
+  font-size: 2.8rem;
+  line-height: 1;
+  align-self: center;
+  text-align: right;
+  background-color: transparent;
 }
 </style>

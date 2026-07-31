@@ -534,20 +534,16 @@ const togglePhotons = () => {
 
       <!-- Header labels -->
       <LcarsRow :style="{ width: '100%' }">
-        <LcarsBlock
-          label="Tubes"
-          color="highlight-dark-interactive"
-          :style="{ width: '7rem', flex: 'none' }"
-        />
+        <LcarsBlock label="Tubes" color="highlight-dark-interactive" />
         <LcarsBlock
           label="Auto-load"
           color="primary-interactive"
-          :style="{ flex: '1', 'text-align': 'center' }"
+          :style="{ 'text-align': 'center' }"
         />
         <LcarsBlock
           label="Status"
           color="secondary-interactive"
-          :style="{ width: '7rem', flex: 'none' }"
+          :style="{ width: '7rem', flex: '1' }"
         />
       </LcarsRow>
 
@@ -558,7 +554,6 @@ const togglePhotons = () => {
         :style="{ width: '100%', 'align-items': 'stretch' }"
       >
         <LcarsButton
-          version="round"
           color="tertiary-interactive"
           :label="tube.loaded ? `Unload ${tube.id}` : `Load ${tube.id}`"
           :disabled="
@@ -567,19 +562,17 @@ const togglePhotons = () => {
             busy ||
             presentation.busy
           "
-          :style="{ width: '7rem', flex: 'none' }"
           @click="toggleTubeLoad(tube.id)"
         />
         <LcarsToggleSwitch
           :model-value="tube.autoLoad"
           color="highlight-interactive"
-          :style="{ flex: '1' }"
           @update:model-value="toggleAutoLoad(tube.id)"
         />
         <LcarsBlock
           :label="tube.loaded ? 'Loaded' : 'Empty'"
-          :version="tube.loaded ? undefined : 'red-dark-light'"
-          :style="{ width: '7rem', flex: 'none' }"
+          :version="tube.loaded ? 'highlight-interactive' : 'red-dark-light'"
+          :style="{ flex: '1' }"
         />
       </LcarsRow>
 
