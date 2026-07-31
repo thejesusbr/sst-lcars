@@ -68,10 +68,32 @@ const toggle = () => emit("update:modelValue", !props.modelValue);
 </template>
 
 <style scoped>
+/* O LCARS organiza um grid uniforme: todo controle ocupa a mesma pegada base
+   que um `.button` (150x60px no lcars-sdk). O root ja herda isso de
+   `.complex-button`, mas o CONTEUDO estourava a caixa e empurrava a linha
+   inteira -- `.complex-button .text` forca `min-width: 7.5rem`, que sozinho ja
+   e a largura de um button, e somados os dois check blocks o toggle chegava a
+   ~220px contra 150px de um botao vizinho. */
+.lcars-toggle-switch {
+  min-width: 150px;
+  min-height: 60px;
+}
+
 /* module.css fixa .complex-button .block.check em 1rem com !important --
    precisa de um seletor mais especifico (escopo do Vue) pra vencer e
    aumentar em 50%. */
 .lcars-toggle-switch :deep(.block.check) {
   min-width: 1.5rem !important;
+  flex: none;
+}
+
+/* Solta o piso de largura herdado dos displays numericos ("3000"/"100%"), que
+   e pra onde aquele 7.5rem foi calibrado. Aqui o texto e uma palavra curta:
+   ocupa a sobra da caixa em vez de definir o tamanho dela. */
+.lcars-toggle-switch :deep(.text) {
+  min-width: 0;
+  flex: 1;
+  font-size: 2.2rem;
+  text-align: center;
 }
 </style>
