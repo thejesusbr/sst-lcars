@@ -18,7 +18,7 @@ import { useGameState } from "@/stores/useGameState";
 import { usePresentation } from "@/stores/usePresentation";
 import { useCombatOverlay } from "@/composables/useCombatOverlay";
 import { useQuadrantCells } from "@/composables/useQuadrantCells";
-import { damageFraction, isCritical, kbsCode } from "@/engine/constants";
+import { damageFraction, isCritical, liveKbsCode } from "@/engine/constants";
 import {
   SENSOR_MODERATE_DAMAGE,
   corruptKbsCode,
@@ -164,11 +164,7 @@ const longRangeGrid = computed(() => {
   const hereKey = `${here.row},${here.col}`;
   const content = gameState.galaxy?.[hereKey];
   if (content) {
-    const here_code = kbsCode({
-      klingons: content.klingons,
-      bases: content.baseIds.length,
-      stars: content.stars,
-    });
+    const here_code = liveKbsCode(content);
     codes[hereKey] = {
       code: lrsBlinking.value ? corruptCode(here_code, hereKey) : here_code,
     };

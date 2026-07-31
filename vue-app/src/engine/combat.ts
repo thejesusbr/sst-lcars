@@ -20,6 +20,7 @@ import {
   damageFraction,
   degradedChance,
   hailSurrenderChance,
+  liveKbsCode,
   isCritical,
   round4,
 } from '@/engine/constants'
@@ -509,12 +510,23 @@ function removeEnemyFromSector(
   state.currentSector = state.currentSector.filter((e) => e.id !== enemyId)
   state.enemiesLeft = Math.max(0, state.enemiesLeft - 1)
 
-  const quadrant = state.galaxy?.[cellKey(state.position.quadrant)]
+  const quadrantKey = cellKey(state.position.quadrant)
+  const quadrant = state.galaxy?.[quadrantKey]
   if (quadrant) {
     quadrant.clearedEnemies = Math.min(
       quadrant.klingons,
       quadrant.clearedEnemies + 1,
     )
+    // Sua própria ação atualiza seu próprio mapa, com confiança cheia. O
+    // decaimento de confiança modela informação ENVELHECENDO — o quadrante
+    // mudou enquanto você estava longe —, não esquecer o que você mesmo fez.
+    // Sem isto, sair de um setor recém-limpo faria o Star Chart voltar ao
+    // código pré-combate, e o jogador teria que reescanear pra reaprender algo
+    // que presenciou.
+    state.exploredQuadrants[quadrantKey] = {
+      code: liveKbsCode(quadrant),
+      age: 0,
+    }
   }
 
   if (reason === 'captured') state.klingonsCaptured++

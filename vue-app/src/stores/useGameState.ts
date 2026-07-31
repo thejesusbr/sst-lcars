@@ -13,7 +13,7 @@ import {
   SHIELD_ENERGY_MAX,
   clamp,
   computeShieldIntegrity,
-  kbsCode,
+  liveKbsCode,
   warpCoreOutput,
 } from '@/engine/constants'
 import { createNewGameState } from '@/engine/newGame'
@@ -330,6 +330,10 @@ export const useGameState = defineStore('gameState', {
 
     /** Verificação do selo SHA-256 após reload (detecta adulteração e carrega estado). */
     async checkSaveIntegrity(raw: unknown): Promise<void> {
+      // Sem payload gravado não há o que verificar. Sem esta guarda, um primeiro
+      // boot cairia no `migrateSave(null, defaults)` e sobrescreveria a galáxia
+      // recém-criada por OUTRA, gerada aqui só pra servir de default.
+      if (raw === null || raw === undefined) return
       // `createNewGameState()` entra como defaults de campo ausente: o engine
       // não importa a fábrica (mantém `saveIntegrity` folha), a store injeta.
       const state = await verifySaveIntegrity(raw, createNewGameState())
@@ -427,14 +431,7 @@ export const useGameState = defineStore('gameState', {
         const key = `${q.row},${q.col}`
         const content = this.$state.galaxy?.[key]
         if (!content) continue
-        const entry = {
-          code: kbsCode({
-            klingons: content.klingons,
-            bases: content.baseIds.length,
-            stars: content.stars,
-          }),
-          age: 0,
-        }
+        const entry = { code: liveKbsCode(content), age: 0 }
         this.$state.lrsScan[key] = entry
         this.$state.exploredQuadrants[key] = { ...entry }
       }
@@ -508,5 +505,35 @@ export const useGameState = defineStore('gameState', {
 
   persist: {
     key: GAME_STATE_STORAGE_KEY,
+
+    /**
+     * Aqui é onde o selo de integridade passa a ser VERIFICADO.
+     *
+     * `checkSaveIntegrity` existia, com teste unitário verde, e nenhuma linha do
+     * app a chamava: o plugin restaura o estado direto do `localStorage` sem
+     * passar por ela, então um save adulterado carregava igual a um honesto e a
+     * infestação de Tribbles nunca pôde disparar — por procedimento nenhum.
+     *
+     * O payload vem do `localStorage` **cru**, não de `store.$state`. Passar o
+     * estado vivo faria o objeto hasheado compartilhar as referências aninhadas
+     * (`subsystems`, `teams`, `galaxy`) com a store reativa, e uma mutação
+     * durante o `await crypto.subtle.digest` mudaria o que está sendo hasheado.
+     * O texto cru é imune por construção.
+     *
+     * `afterHydrate` e não antes: patchear antes da hidratação seria desfeito
+     * pelo próprio plugin no instante seguinte.
+     */
+    afterHydrate: (ctx) => {
+      let raw: unknown = null
+      try {
+        const text = globalThis.localStorage?.getItem(GAME_STATE_STORAGE_KEY)
+        raw = text ? JSON.parse(text) : null
+      } catch {
+        // localStorage bloqueado ou JSON corrompido: sem baseline, sem
+        // comparação. O próximo fim de turno regrava o selo.
+        return
+      }
+      void (ctx.store as ReturnType<typeof useGameState>).checkSaveIntegrity(raw)
+    },
   },
 })

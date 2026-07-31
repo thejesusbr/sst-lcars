@@ -20,7 +20,7 @@ import {
   type StarbaseType,
 } from '@/types/game'
 import {
-  kbsCode as encodeKbs,
+  liveKbsCode,
   ENEMY_BASE_POWER,
   MISSION_DURATION,
   STARBASE_POOL_CAPACITY,
@@ -94,13 +94,9 @@ function rollCoord(rng: () => number): GridCoord {
   }
 }
 
-/** Código KBS de um quadrante gerado. Encoding vem da folha `constants.ts`. */
+/** Código KBS de um quadrante. Encoding e desconto de baixas vêm da folha. */
 export function kbsCode(content: QuadrantContent): string {
-  return encodeKbs({
-    klingons: content.klingons,
-    bases: content.baseIds.length,
-    stars: content.stars,
-  })
+  return liveKbsCode(content)
 }
 
 // ── Geração da galáxia ──────────────────────────────────────────────────────

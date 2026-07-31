@@ -17,7 +17,7 @@ import type {
   WarpTrip,
 } from '@/types/game'
 import {
-  kbsCode,
+  liveKbsCode,
   AUTO_NAV_DRAW,
   BOOST_COOLDOWN_FACTOR,
   BOOST_MAX_TURNS,
@@ -423,11 +423,7 @@ export function resolveProbeScan(
     }
   }
 
-  const code = kbsCode({
-    klingons: q.klingons,
-    bases: q.baseIds.length,
-    stars: q.stars,
-  })
+  const code = liveKbsCode(q)
   state.exploredQuadrants[key] = { code, age: 0 }
   // Datalink: a sonda alimenta o LRS também, não só o Star Chart — o código
   // aparece no display de longo alcance como se tivesse sido escaneado agora.

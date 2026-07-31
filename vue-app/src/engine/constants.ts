@@ -277,6 +277,14 @@ export const CAPTURED_RATING_WEIGHT = 1.5
 export const DESTROYED_RATING_WEIGHT = 1
 /** Teto de ícones renderizados; a população interna cresce sem limite. */
 export const TRIBBLE_RENDER_CAP = 200
+/**
+ * Acima deste número de ícones a infestação ganha som.
+ *
+ * Fica passado do seed de propósito: a população parte de 2 e dobra, então o
+ * som chega no 4º turno (2, 4, 8, 16) — três turnos de "por que tem Tribbles na
+ * minha ponte" antes de a piada se anunciar.
+ */
+export const TRIBBLE_SOUND_THRESHOLD = 10
 
 // ── Sensores ────────────────────────────────────────────────────────────────
 
@@ -407,4 +415,31 @@ export function kbsCode(parts: {
 }): string {
   const d = (n: number) => Math.min(9, Math.max(0, Math.floor(n)))
   return `${d(parts.klingons)}${d(parts.bases)}${d(parts.stars)}`
+}
+
+/**
+ * Código KBS **vivo** de um quadrante: o dígito K desconta os inimigos já
+ * destruídos ali.
+ *
+ * ÚNICO produtor de código pro jogador. Antes eram cinco, montando
+ * `{ klingons: content.klingons, ... }` na mão — SRS do quadrante atual,
+ * `scanLongRange`, relatório de sonda, Star Chart e `worldGen.kbsCode` — e só
+ * a materialização de setor sabia de `clearedEnemies`. O dígito nunca mudava:
+ * limpar um setor deixava o código afirmando que os inimigos seguiam lá,
+ * contradizendo o SRS, que varre continuamente.
+ *
+ * A duplicação ERA o defeito. Uma função só é o conserto e a prevenção: o sexto
+ * produtor nasce certo.
+ */
+export function liveKbsCode(content: {
+  klingons: number
+  clearedEnemies: number
+  baseIds: string[]
+  stars: number
+}): string {
+  return kbsCode({
+    klingons: Math.max(0, content.klingons - content.clearedEnemies),
+    bases: content.baseIds.length,
+    stars: content.stars,
+  })
 }
