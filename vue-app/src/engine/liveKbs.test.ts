@@ -49,18 +49,25 @@ describe('KBS vivo — produtores concordam', () => {
 
   it('destruir inimigo derruba o dígito e grava no mapa com confiança cheia', () => {
     const { state, key, q } = comDoisKlingons()
+    // Adjacente ao alvo: com combat-balance/combat-tuning o dano atenua por
+    // distância e o calor segue Joule (quadrático), então potência acima do
+    // teto do dial (5000 > PHASER_POWER_MAX) sobreaqueceria a ponto de zerar
+    // o multiplicador. Potência de combate normal + tiro à queima-roupa
+    // garante o abate sem depender da posição aleatória de New Game.
+    state.position.sector = { row: 1, col: 2 }
     state.currentSector = [
       {
         id: 'k1',
         type: SectorEntityType.KLINGON_CRUISER,
         position: { row: 1, col: 1 },
         enemyPower: 10,
+        enemyShield: 0,
       },
     ]
     state.weaponsLocked = true
 
     const antes = liveKbsCode(q)
-    const res = firePhasers(state, 5000, () => 0.9)
+    const res = firePhasers(state, 3000, () => 0.9)
 
     expect(res.hits[0].destroyed).toBe(true)
     expect(q.clearedEnemies).toBe(1)

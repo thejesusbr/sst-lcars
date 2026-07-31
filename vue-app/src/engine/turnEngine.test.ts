@@ -7,6 +7,7 @@ import {
   updateLifeSupportCountdown,
 } from '@/engine/turnEngine'
 import { createNewGameState } from '@/engine/newGame'
+import { ENEMY_ENERGY_MAX } from '@/engine/constants'
 import type { SectorEntity, Starbase } from '@/types/game'
 
 describe('engine/turnEngine', () => {
@@ -40,6 +41,7 @@ describe('engine/turnEngine', () => {
       type: 'klingon_cruiser',
       position: { row: 5, col: 5 },
       enemyPower: 200,
+      enemyEnergy: ENEMY_ENERGY_MAX,
       cloaked: false,
     }
     state.currentSector = [enemy]
@@ -69,6 +71,7 @@ describe('engine/turnEngine', () => {
       type: 'klingon_cruiser',
       position: { row: 5, col: 5 },
       enemyPower: 100,
+      enemyEnergy: ENEMY_ENERGY_MAX,
       cloaked: false,
     }
     state.currentSector = [enemy]

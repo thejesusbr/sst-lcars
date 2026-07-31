@@ -17,8 +17,14 @@ import type {
 import { STARBASE_TYPE_LABELS, SUBSYSTEM_KEYS } from '@/types/game'
 import {
   CRITICAL_INTEGRITY,
+  ENEMY_ATTACK_COST,
+  ENEMY_ENERGY_MAX,
+  ENEMY_ENERGY_RECHARGE,
   HULL_DAMAGE_DIVISOR,
-  SHIELD_REGEN_PER_ENERGY,
+  SHIELD_ENERGY_MAX,
+  SHIELD_REGEN_FLOOR_FRACTION,
+  SHIELD_REGEN_RATE,
+  clamp,
   STARDATE_PER_TURN,
   damageFalloff,
   damageFraction,
@@ -31,7 +37,7 @@ import {
   fireTorpedoes,
   hailTarget,
   loadTube,
-  repositionEnemies,
+  moveHostiles,
   resolveCombatTurn,
   tickCloakStress,
   unloadTube,
@@ -40,7 +46,7 @@ import {
 import {
   chebyshev,
   countEnemies,
-  getVisibleEnemies,
+  isEnemyType,
   obstaclesBetween,
   occupancyOf,
 } from '@/engine/sector'
@@ -363,8 +369,8 @@ function applyPlayerAction(
     }
 
     case 'move_impulse': {
-      // Movimento intra-setor. Inimigos reposicionam ANTES do deslocamento
-      // (decisão #21) — determinístico, só em ação de movimento.
+      // Movimento intra-setor. Inimigo se move na etapa 3, todo turno agora
+      // (`moveHostiles`) — não mais só em resposta a esta ação.
       const target = action.targetCoord
       if (!target || !inGrid(target)) return reject('Destino fora do setor.')
       if (propulsionBlocked(state.subsystems.warp)) {
@@ -374,8 +380,6 @@ function applyPlayerAction(
       if (power <= 0 && !state.boostActive) {
         return reject('Impulse Power em zero.')
       }
-
-      repositionEnemies(state, rng)
 
       if (rollStall(state.subsystems.warp, rng)) {
         events.push({
@@ -417,8 +421,6 @@ function applyPlayerAction(
       const target = action.targetCoord ?? state.destination
       // Viagem já em curso é barrada pelo guard geral de warp, acima.
       if (!target) return reject('Nenhum destino selecionado.')
-
-      repositionEnemies(state, rng)
 
       const plan = planWarpTrip({
         from: state.position.quadrant,
@@ -499,8 +501,13 @@ export function regenShields(state: GameState): void {
   if (state.shieldDamageTaken <= 0) return
   if (isCritical(state.subsystems.shields)) return
 
+  // Interpolação linear: 100% da taxa com escudo em 0, `SHIELD_REGEN_FLOOR_FRACTION`
+  // com escudo no teto — invertido do que a energia mantida sugeriria.
+  const energyFraction = state.shieldEnergy / SHIELD_ENERGY_MAX
+  const rateFraction =
+    1 - (1 - SHIELD_REGEN_FLOOR_FRACTION) * clamp(energyFraction, 0, 1)
   const efficiency = 1 - damageFraction(state.subsystems.shields)
-  const regen = state.shieldEnergy * SHIELD_REGEN_PER_ENERGY * efficiency
+  const regen = SHIELD_REGEN_RATE * rateFraction * efficiency
   state.shieldDamageTaken = Math.max(0, state.shieldDamageTaken - regen)
 }
 
@@ -539,23 +546,53 @@ function resolveEnemyTurn(
   const events: TurnEventDraft[] = []
   let dockedBaseDestroyed = false
 
+  // Movimento deliberado ANTES do ataque: o inimigo se posiciona (aproxima com
+  // energia, evade sem) e ataca da posição nova, mesmo turno — mesma ordem do
+  // 1978 (reposicionar, depois atacar). Roda TODO turno agora, não só quando o
+  // jogador engaja movimento (ver `moveHostiles`).
+  moveHostiles(state)
+
   // O tick de estresse de cloak NÃO mora aqui: `tickCloakStress` já percorre
   // `currentSector` inteiro, e chamá-la dentro de um laço sobre as entidades
   // fazia o estresse de TODOS subir 1× por raider cloacado — com 2 raiders,
   // dobrava. O `resolvePlayerTurn` chama uma vez, na etapa 3.
 
-  // Inimigos visíveis atacam
-  const visibleEnemies = getVisibleEnemies(state)
-  for (const enemy of visibleEnemies) {
+  // Todo hostil do setor participa — cloacado e sem energia não atacam, mas
+  // ainda recarregam (turno ocioso é o que devolve energia).
+  const hostiles = state.currentSector.filter((e) => isEnemyType(e.type))
+  for (const enemy of hostiles) {
     const power = enemy.enemyPower ?? 0
+    const energy = enemy.enemyEnergy ?? 0
+    const recharge = () => {
+      enemy.enemyEnergy = Math.min(ENEMY_ENERGY_MAX, energy + ENEMY_ENERGY_RECHARGE)
+    }
+
     if (power <= 0) continue
+    // Cloacado não ataca (mecânica do Cloaked Raider) — mas segue recarregando.
+    if (enemy.cloaked) {
+      recharge()
+      continue
+    }
+    // Sem energia pro custo do disparo: segura o fogo e recarrega. Substitui o
+    // auto-dreno de 1978 (`enemyPower = floor(power/(3+rng))`), que zerava o
+    // próprio poder em ~5 ataques e virava zumbi — nunca atacava, nunca
+    // morria sozinho, por fora do escudo (5ª rodada, itens 23.3 e 9.4).
+    if (energy < ENEMY_ATTACK_COST) {
+      recharge()
+      continue
+    }
 
     // Cobertura vale nos DOIS sentidos — se estrela/planeta barra o feixe do
     // jogador, barra o do inimigo. Cobertura de mão única seria vantagem
-    // disfarçada de mecânica.
+    // disfarçada de mecânica. Tiro barrado nunca sai: recarrega.
     if (obstaclesBetween(state.currentSector, enemy.position, state.position.sector) > 0) {
+      recharge()
       continue
     }
+
+    // Chegou até aqui: o disparo é tentado, e custa energia — mesmo que erre
+    // por esquiva do alvo logo abaixo. "Atacar" é tentar, não acertar.
+    enemy.enemyEnergy = energy - ENEMY_ATTACK_COST
 
     // Mesma atenuação por distância que o tiro do jogador sofre. Substitui o
     // `power / distânciaEuclidiana` do fonte de 1978: uma régua só pros dois
@@ -655,8 +692,8 @@ function resolveEnemyTurn(
       }
     }
 
-    // Ataque enfraquece o próprio inimigo: enemyPower / (3 + random(0,1))
-    enemy.enemyPower = Math.floor(power / (3 + rng()))
+    // `enemyPower` NÃO cai por atacar — só por dano do jogador (via
+    // `applyHostileDamage`, que passa pelo escudo). Ver `ENEMY_ENERGY_MAX`.
   }
 
   return { damageTaken, subsystemDamageTaken, events, dockedBaseDestroyed }

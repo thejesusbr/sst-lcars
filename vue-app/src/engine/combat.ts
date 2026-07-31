@@ -10,6 +10,8 @@ import {
   CLOAK_COOLDOWN_TURNS,
   CLOAK_STRESS_CAP,
   CLOAK_STRESS_PER_TURN,
+  ENEMY_ATTACK_COST,
+  ENEMY_MOVE_CELLS,
   EVASION_PER_CELL,
   INTERROGATION_CHANCE,
   PHASER_DAMAGE_PER_POWER,
@@ -134,13 +136,13 @@ export function firePhasers(
 
   const d = damageFraction(phaserIntegrity)
 
-  // Aquecimento cresce com a POTÊNCIA disparada, além do dano no subsistema.
-  // Antes era `30 * (1 + d)`: a potência nunca entrava na conta, então um tiro
-  // de 100 esquentava igual a um de 3000. Nem no século 23 estamos livres da
-  // termodinâmica. Normalizado em `PHASER_POWER_DEFAULT` pra que a potência
-  // padrão mantenha os 30 de sempre e só o topo do dial morda.
+  // Aquecimento segue Joule (Q = I²Rt): cresce com o QUADRADO da potência
+  // disparada, não linear. A 1ª versão era `30 × (potência/1500) × (1+d)`, que
+  // dava só 2× de calor a 3000 contra 1500 — a 5ª rodada pediu o modelo físico
+  // de verdade, que dá 4×. Normalizado em `PHASER_POWER_DEFAULT` pra que a
+  // potência padrão mantenha os 30 de sempre e só o topo do dial morda.
   const heatGain = round4(
-    PHASER_TEMP_PER_SHOT * (availablePower / PHASER_POWER_DEFAULT) * (1 + d),
+    PHASER_TEMP_PER_SHOT * (availablePower / PHASER_POWER_DEFAULT) ** 2 * (1 + d),
   )
   state.phaserTemp = clamp(state.phaserTemp + heatGain, 0, PHASER_TEMP_MAX)
 
@@ -433,44 +435,64 @@ export function acquireWeaponsLock(state: GameState): boolean {
 // ── Reposicionamento em movimento do jogador ────────────────────────────────
 
 /**
- * Reposiciona cada inimigo visível pra uma célula desocupada aleatória do setor.
+ * Movimento DELIBERADO de cada inimigo visível, uma vez por resolução de
+ * turno: aproxima do jogador se tem energia pra atacar, evade se não tem.
  *
- * **Determinístico**, não probabilístico: só dispara quando a ação do turno é
- * engajar movimento (impulso ou warp), e nunca em Fire/Hail/Lock/End Turn. É o
- * gatilho exato do fonte de 1978, confirmado com o usuário (`fase-4-engine`
- * design.md decisão #21). `Cloaked Raider` cloacado não reposiciona — ele só
- * acumula estresse (decisão #17).
+ * Substitui o reposicionamento aleatório (teleporte pra célula sorteada do
+ * setor, disparado só quando o JOGADOR engajava movimento). Com atenuação por
+ * distância em jogo, teleporte zerava fuga como tática — a 5ª rodada correu 7
+ * células a impulso máximo e encontrou o inimigo à queima-roupa de novo no
+ * mesmo turno. Agora roda TODO turno (etapa 3), e a decisão usa a energia de
+ * ENTRADA do turno — ou seja, reage ao estado de 1 turno atrás, não ao que o
+ * jogador acabou de fazer.
+ *
+ * `Cloaked Raider` cloacado não se move — ele só acumula estresse (decisão
+ * #17), preservado de antes.
  */
-export function repositionEnemies(state: GameState, rng = Math.random): void {
-  const taken = new Set(
-    state.currentSector.map((e) => `${e.position.row},${e.position.col}`),
+export function moveHostiles(state: GameState): void {
+  const player = state.position.sector
+  const occupied = new Set(
+    state.currentSector.map((e) => cellKey(e.position)),
   )
-  taken.add(`${state.position.sector.row},${state.position.sector.col}`)
+  occupied.add(cellKey(player))
 
   for (const enemy of getVisibleEnemies(state)) {
-    const from = `${enemy.position.row},${enemy.position.col}`
     const origin = { ...enemy.position }
+    occupied.delete(cellKey(origin))
 
-    // A célula de origem fica em `taken`: a spec diz célula **nova**, então
-    // sortear a própria posição não conta como reposicionar.
-    let next = from
-    // 64 células; algumas tentativas bastam. Se todas caírem ocupadas, o
-    // inimigo fica onde está — não é erro, é setor cheio.
-    for (let tries = 0; tries < 24; tries++) {
-      const row = Math.floor(rng() * 8) + 1
-      const col = Math.floor(rng() * 8) + 1
-      const key = `${row},${col}`
-      if (!taken.has(key)) {
-        enemy.position = { row, col }
-        next = key
-        taken.delete(from)
+    const approaching = (enemy.enemyEnergy ?? 0) >= ENEMY_ATTACK_COST
+    const rowDist = player.row - origin.row
+    const colDist = player.col - origin.col
+
+    // Passo decrescente: 3, 2, 1, 0. Aproximando, o passo por eixo é CAPADO
+    // pela distância real àquele eixo — sem isso, um inimigo a 1 célula de
+    // distância seria empurrado 3 células e ultrapassaria o jogador pro lado
+    // oposto (a distância aumentaria em vez de cair). O `0` final garante
+    // fallback: ficar parado é sempre livre, porque a própria célula saiu de
+    // `occupied` acima.
+    let landed = origin
+    for (let step = ENEMY_MOVE_CELLS; step >= 0; step--) {
+      const dRow = approaching
+        ? Math.sign(rowDist) * Math.min(step, Math.abs(rowDist))
+        : Math.sign(rowDist) * -step
+      const dCol = approaching
+        ? Math.sign(colDist) * Math.min(step, Math.abs(colDist))
+        : Math.sign(colDist) * -step
+      const next = {
+        row: clamp(origin.row + dRow, 1, 8),
+        col: clamp(origin.col + dCol, 1, 8),
+      }
+      if (!occupied.has(cellKey(next))) {
+        landed = next
         break
       }
     }
+
+    enemy.position = landed
     // Inimigo que se moveu também é alvo em movimento — a esquiva é simétrica,
     // e é o que explica por que perseguir custa caro.
-    enemy.cellsMovedThisTurn = chebyshev(origin, enemy.position)
-    taken.add(next)
+    enemy.cellsMovedThisTurn = chebyshev(origin, landed)
+    occupied.add(cellKey(landed))
   }
 }
 

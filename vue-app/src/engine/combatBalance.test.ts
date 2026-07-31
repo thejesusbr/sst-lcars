@@ -178,18 +178,22 @@ describe('combat-balance — regeneração de escudo', () => {
     expect(state.shieldDamageTaken).toBeLessThan(500)
   })
 
-  it('mais energia mantida recupera mais rápido', () => {
-    const alta = createNewGameState(1)
-    alta.shieldDamageTaken = 500
-    alta.shieldEnergy = 2000
+  it('escudo baixado recupera mais rápido que erguido (curva invertida)', () => {
+    // `combat-tuning`: modelo invertido de propósito — emissor ligado consome
+    // o que a recuperação usaria. A 1ª implementação escalava COM a energia
+    // mantida, e a 5ª rodada corrigiu: "deviam recuperar mais rápido com os
+    // escudos baixados".
     const baixa = createNewGameState(1)
     baixa.shieldDamageTaken = 500
     baixa.shieldEnergy = 500
+    const alta = createNewGameState(1)
+    alta.shieldDamageTaken = 500
+    alta.shieldEnergy = 2000
 
     regenShields(alta)
     regenShields(baixa)
 
-    expect(alta.shieldDamageTaken).toBeLessThan(baixa.shieldDamageTaken)
+    expect(baixa.shieldDamageTaken).toBeLessThan(alta.shieldDamageTaken)
   })
 
   it('Shield Control danificado regenera menos', () => {
@@ -220,13 +224,13 @@ describe('combat-balance — regeneração de escudo', () => {
 })
 
 describe('combat-balance — termodinâmica do phaser', () => {
-  it('potência maior esquenta mais', () => {
+  it('potência dobrada esquenta o QUADRUPLO (Joule)', () => {
     const a = duelo(1)
     const b = duelo(1)
     firePhasers(a, 1500, () => 0.5)
     firePhasers(b, 3000, () => 0.5)
 
-    expect(b.phaserTemp).toBeCloseTo(a.phaserTemp * 2, 5)
+    expect(b.phaserTemp).toBeCloseTo(a.phaserTemp * 4, 5)
   })
 
   it('a potência padrão mantém o aquecimento de sempre', () => {

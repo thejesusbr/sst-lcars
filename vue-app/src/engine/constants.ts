@@ -88,6 +88,41 @@ export const TORPEDO_DAMAGE_SPREAD = 100
 export const ENEMY_BASE_POWER = 200
 
 /**
+ * Energia de ataque do inimigo: pool CONSUMÍVEL, deliberadamente diferente do
+ * jogador (cujo Warp Core é vazão, gera por turno). Atacar custa energia; sem
+ * energia suficiente pro custo, o inimigo não ataca naquele turno — e turno
+ * sem atacar recarrega.
+ *
+ * Substitui o auto-dreno de 1978 (`enemyPower = floor(power/(3+rng))`), que
+ * dividia o próprio poder por ~3.5 a cada ataque — 300 → 85 → 24 → 6 → 1 → 0
+ * em 5 ataques. O inimigo virava zumbi (nunca ataca, nunca morre sozinho),
+ * passando por fora do escudo (`applyHostileDamage`) e explicando o mostrador
+ * confuso de poder caindo com escudo intacto (5ª rodada, item 23.3) e os
+ * Klingons inertes atracado (item 9.4). Coerente no design de stat único sem
+ * escudo e sem atenuação por distância; com `combat-balance`, virou
+ * auto-sabotagem.
+ *
+ * 100/25/15 dá 4 tiros de rajada seguidos, ~2 turnos por tiro recuperado —
+ * ritmo de combate real (rajada e pausa) em vez de pressão infinita ou
+ * autodesarme. Constantes de playtest.
+ */
+export const ENEMY_ENERGY_MAX = 100
+export const ENEMY_ATTACK_COST = 25
+export const ENEMY_ENERGY_RECHARGE = 15
+
+/**
+ * Células que o inimigo se move por turno, reagindo ao que viu no turno
+ * ANTERIOR — não teleporte pra célula aleatória. Contra os 8 do jogador em
+ * impulso máximo, fugir abre pelo menos 5 células por turno.
+ *
+ * Substitui `repositionEnemies` (reposicionamento aleatório disparado só
+ * quando o JOGADOR engajava movimento): a 5ª rodada correu 7 células a 100%
+ * de impulso e encontrou o inimigo à queima-roupa de novo no mesmo turno —
+ * com atenuação por distância em jogo, isso zerava a fuga como tática.
+ */
+export const ENEMY_MOVE_CELLS = 3
+
+/**
  * Escudo inicial do inimigo, por tipo, como multiplicador de
  * `ENEMY_BASE_POWER`. Absorve antes do `enemyPower` e **não regenera**.
  *
@@ -156,17 +191,25 @@ export const TORPEDO_OBSTRUCTION_MISS = 0.3
 export const EVASION_PER_CELL = 0.05
 
 /**
- * Regeneração de escudo por turno, como fração da energia mantida.
+ * Regeneração de escudo por turno: taxa MÁXIMA, plena com escudo em 0 (todo
+ * joule na recuperação), reduzida a `SHIELD_REGEN_FLOOR_FRACTION` com escudo no
+ * teto (emissão consome o que a recuperação usaria). Interpolada linear entre
+ * os dois.
  *
  * A spec de `shields` sempre disse "absorption **and regen**"; a metade do
  * regen nunca foi implementada. `shieldDamageTaken` só acumulava e nada no
  * projeto o reduzia — nem atracar. Não era regeneração faltando, era dano
  * permanente por construção.
  *
- * Manter escudo alto custa vazão todo turno **e** compra recuperação, coerente
- * com energia ser fluxo e não estoque.
+ * A 1ª implementação escalava a taxa COM a energia mantida — lia ao contrário,
+ * e a 5ª rodada corrigiu de vez: "deviam recuperar mais rápido com os escudos
+ * baixados, toda energia concentrada na recuperação com a emissão desligada".
+ * Erguer escudo cura mais devagar; baixar é a escolha agressiva de cura rápida
+ * com o casco exposto.
  */
-export const SHIELD_REGEN_PER_ENERGY = 0.02
+export const SHIELD_REGEN_RATE = 50
+/** Fração da taxa máxima que ainda se aplica com `shieldEnergy` no teto. */
+export const SHIELD_REGEN_FLOOR_FRACTION = 0.4
 
 /** Chance de rendição ao dar Hail num inimigo intacto — o PISO da escala (decisão #23). */
 export const HAIL_SURRENDER_CHANCE = 0.3

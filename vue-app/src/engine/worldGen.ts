@@ -22,6 +22,7 @@ import {
 import {
   liveKbsCode,
   ENEMY_BASE_POWER,
+  ENEMY_ENERGY_MAX,
   ENEMY_SHIELD_BAND,
   missionDurationFor,
   STARBASE_POOL_CAPACITY,
@@ -296,6 +297,7 @@ export function materializeSector(
       position: freeCell(),
       enemyPower: ENEMY_BASE_POWER * (0.5 + rng()),
       enemyShield: ENEMY_BASE_POWER * (lo + rng() * (hi - lo)),
+      enemyEnergy: ENEMY_ENERGY_MAX,
     })
   }
 

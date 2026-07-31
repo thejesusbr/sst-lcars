@@ -20,6 +20,8 @@ import {
 } from '@/engine/turnEngine'
 import { dispatchTeam } from '@/engine/damageControl'
 import { createNewGameState } from '@/engine/newGame'
+import { ENEMY_ENERGY_MAX } from '@/engine/constants'
+import { chebyshev } from '@/engine/sector'
 import type { GameState, GridCoord, SectorEntity } from '@/types/game'
 
 /** Estado com posição fixa e setor vazio: isola o efeito sob teste. */
@@ -34,8 +36,16 @@ function fixture(seed = 1): GameState {
 /** RNG que nunca dispara roll probabilístico (estagnação, falha, destruição). */
 const noRolls = () => 0.99
 
+// `enemyEnergy` cheia por padrão: sem isso o inimigo fica sem energia pro
+// custo do ataque (`ENEMY_ATTACK_COST`) e nunca dispara — `combat-tuning`.
 function klingon(id: string, position: GridCoord, power = 200): SectorEntity {
-  return { id, type: 'klingon_cruiser', position, enemyPower: power }
+  return {
+    id,
+    type: 'klingon_cruiser',
+    position,
+    enemyPower: power,
+    enemyEnergy: ENEMY_ENERGY_MAX,
+  }
 }
 
 describe('integração: damage-control ligado ao turnEngine', () => {
@@ -254,21 +264,24 @@ describe('integração: ações declaradas nunca são no-op silencioso', () => {
     }
   })
 
-  it('inimigos reposicionam antes do deslocamento, e não em ação parada', () => {
-    const moving = fixture()
-    moving.currentSector = [klingon('k1', { row: 1, col: 1 })]
-    const posBefore = { ...moving.currentSector[0].position }
-    // rng crescente: garante que o sorteio de célula caia em outro lugar.
-    let n = 0
-    const rng = () => (n++ % 7) / 10
-    resolvePlayerTurn(moving, { type: 'move_impulse', targetCoord: { row: 6, col: 6 } }, rng)
-    expect(moving.currentSector[0].position).not.toEqual(posBefore)
+  it('inimigo com energia aproxima; sem energia, evade — todo turno, não só em ação de movimento', () => {
+    // `combat-tuning`: reposicionamento aleatório-no-engage saiu, movimento
+    // deliberado entra na etapa 3 de TODA resolução — inclusive End Turn.
+    const armed = fixture()
+    armed.currentSector = [klingon('k1', { row: 1, col: 1 })] // energia cheia por padrão
+    const distBefore = chebyshev(armed.currentSector[0].position, armed.position.sector)
+    endTurn(armed, noRolls)
+    const distAfter = chebyshev(armed.currentSector[0].position, armed.position.sector)
+    expect(distAfter).toBeLessThan(distBefore)
 
-    const still = fixture()
-    still.currentSector = [klingon('k1', { row: 1, col: 1 })]
-    const stillBefore = { ...still.currentSector[0].position }
-    endTurn(still, noRolls)
-    expect(still.currentSector[0].position).toEqual(stillBefore)
+    // Longe do canto do grid: no canto, evadir bateria na borda e não
+    // aumentaria a distância — não é o cenário que este teste mede.
+    const drained = fixture()
+    drained.currentSector = [{ ...klingon('k1', { row: 6, col: 6 }), enemyEnergy: 0 }]
+    const distBefore2 = chebyshev(drained.currentSector[0].position, drained.position.sector)
+    endTurn(drained, noRolls)
+    const distAfter2 = chebyshev(drained.currentSector[0].position, drained.position.sector)
+    expect(distAfter2).toBeGreaterThan(distBefore2)
   })
 })
 

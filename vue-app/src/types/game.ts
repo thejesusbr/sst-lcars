@@ -113,6 +113,12 @@ export interface SectorEntity {
    */
   enemyShield?: number
   /**
+   * Energia de ataque consumível — atacar custa, turno ocioso recarrega, sem
+   * o suficiente pro custo não ataca. Substitui o auto-dreno de `enemyPower`
+   * (`combat`, "Enemy energy gates attacks").
+   */
+  enemyEnergy?: number
+  /**
    * Células que esta entidade cobriu na resolução do turno corrente. Alimenta a
    * esquiva (`combat`, "A moving target is harder to hit") e é zerada no
    * início de cada resolução — alvo parado nunca esquiva.
