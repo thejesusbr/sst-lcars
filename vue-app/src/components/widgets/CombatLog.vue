@@ -87,7 +87,7 @@ watch(
 .log-content {
   width: 0;
   min-width: 100%;
-  max-height: 15rem;
+  max-height: 13.25rem;
   box-sizing: border-box;
   padding: 0.5rem 1rem;
   overflow-y: auto;

@@ -238,15 +238,15 @@ const raiseShields = () => {
           :style="{ width: '100%' }"
         >
           <LcarsButton
-            version="round-left"
-            label="-"
-            @click="withdrawEnergy(preset)"
-          />
-          <LcarsButton
             version="round"
             label="Set to"
             @click="setShieldTo(preset)"
             :style="{ flex: '0 0 auto' }"
+          />
+          <LcarsButton
+            version="round-left"
+            label="-"
+            @click="withdrawEnergy(preset)"
           />
           <LcarsText
             :text="preset.toString()"
