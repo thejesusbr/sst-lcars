@@ -124,6 +124,26 @@ const teamLabel = (team: DamageControlTeam) =>
   team.assignedSystem ? SUBSYSTEM_LABELS[team.assignedSystem] : "—";
 
 /**
+ * Rotulo de status da equipe.
+ *
+ * `DISPATCHING` no turno do despacho: o reparo so comeca a contar no turno
+ * seguinte (a equipe esta indo ate o subsistema), e o painel dizia `WORKING`
+ * imediatamente -- o jogador via equipe "trabalhando" sem render nada e nao
+ * tinha como saber se a mecanica estava quebrada ou so atrasada.
+ *
+ * Derivado de `turnsWorked === 0`, nao de um `TeamStatus` novo: a informacao ja
+ * esta no estado, e um status a mais obrigaria todo leitor a aprender mais um
+ * caso.
+ */
+const teamStatusLabel = (team: DamageControlTeam) =>
+  team.status === "working" && team.turnsWorked === 0
+    ? "DISPATCHING"
+    : team.status.toUpperCase();
+
+/** Equipe travada na cela nao e despachavel -- a linha inteira fica inerte. */
+const teamLocked = (team: DamageControlTeam) => team.status === "guard";
+
+/**
  * Cicla o subsistema atribuido. Despacho e LIVRE (nao consome turno), mas o
  * reparo so comeca a contar no turno SEGUINTE -- e o engine que garante isso
  * via `turnsWorked`, nao esta tela.
@@ -321,7 +341,8 @@ const repairTurn = async () => {
                  da linha usa cor normal de tema, pra nao ficar invasivo. -->
             <LcarsButton
               :color="teamEfficiencyColor(team.efficiency)"
-              :label="team.status.toUpperCase()"
+              :label="teamStatusLabel(team)"
+              :disabled="teamLocked(team)"
               :style="{ width: '7rem' }"
               @click="recallTeam(team)"
             />
@@ -336,6 +357,7 @@ const repairTurn = async () => {
               version="round-right"
               color="highlight-interactive"
               :label="team.assignedSystem ? teamLabel(team) : 'Dispatch'"
+              :disabled="teamLocked(team)"
               :style="{ width: '11rem' }"
               @click="cycleAssignment(team)"
             />

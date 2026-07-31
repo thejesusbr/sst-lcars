@@ -58,7 +58,12 @@ describe('engine/docking', () => {
   })
 
   it('undock sets docked to false and clears dockedBaseId', () => {
-    const state = { docked: true, dockedBaseId: 'sb-1' }
+    const state = {
+      docked: true,
+      dockedBaseId: 'sb-1',
+      position: { quadrant: { row: 1, col: 1 }, sector: { row: 4, col: 4 } },
+      currentSector: [],
+    }
     undock(state)
     expect(state.docked).toBe(false)
     expect(state.dockedBaseId).toBeNull()

@@ -243,6 +243,12 @@ function applyPlayerAction(
     return reject('Nave em warp — nenhuma ação disponível até a chegada.')
   }
 
+  // Nada impedia engajar impulso ou warp direto do berço de atracagem. Undock
+  // primeiro — e é ação livre, então o custo de lembrar é um clique.
+  if (state.docked && (action.type === 'move_impulse' || action.type === 'move_warp')) {
+    return reject('Nave atracada — desatraque antes de manobrar.')
+  }
+
   switch (action.type) {
     // Um evento POR ALVO, não um agregado: a linha de phaser é desenhada entre
     // quem atira e cada alvo, então a apresentação precisa saber contra quem
@@ -716,6 +722,17 @@ export function resolvePlayerTurn(
     rng
   )
   state.subsystems.warpCore = Math.max(0, state.subsystems.warpCore - wcRes.damage)
+  // Correr forte cobra, e o jogador precisa SABER que cobrou. Cinco travessias
+  // em warp 8 custavam 1% de integridade sem uma linha no log — custo que não é
+  // sentido nem reportado não é custo (4ª rodada, item 5.7).
+  if (stress > 0 && wcRes.damage > 0) {
+    events.push({
+      step: 2,
+      type: 'warp_core',
+      amount: wcRes.damage,
+      text: `Warp ${state.warpTrip?.warpFactor} estressa o núcleo: −${wcRes.damage.toFixed(1)} de integridade.`,
+    })
+  }
   if (wcRes.breachStarted) {
     state.breach = startBreach()
     events.push({

@@ -211,7 +211,14 @@ export const WARP_FACTOR_MAX = 8
 /** Acima disso, viagem estressa o Warp Core (decisão #23). */
 export const WARP_SAFE_FACTOR = 4
 /** Pontos de overload efetivo por ponto de warp acima do seguro. */
-export const WARP_STRESS_PER_POINT = 2
+/**
+ * Estresse por ponto de warp acima do seguro.
+ *
+ * Era `2`, o que dava 1% de dano em CINCO travessias completas em warp 8 —
+ * invisível no efeito e, sem log, invisível também no registro (4ª rodada). A
+ * 6 o mesmo abuso passa a doer o suficiente pra correr forte ser escolha.
+ */
+export const WARP_STRESS_PER_POINT = 6
 /**
  * Duração da APRESENTAÇÃO de um turno de viagem, em ms, indexada pelo fator de
  * warp (índice 0 = warp 1). Duração total = `turnos × LUT[fator]`, com

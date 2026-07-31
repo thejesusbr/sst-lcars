@@ -21,11 +21,12 @@ import {
 import {
   SectorEntityType,
   type GameState,
+  type GridCoord,
   type SectorEntity,
   type Starbase,
   type StarbaseType,
 } from '@/types/game'
-import { isAdjacent, isEnemyType, isStarbaseType } from '@/engine/sector'
+import { cellKey, isAdjacent, isEnemyType, isStarbaseType } from '@/engine/sector'
 
 /**
  * Conversão de "recurso genérico do pool" pro que a base entrega. Calibrado
@@ -251,9 +252,55 @@ function resupply(
 }
 
 /** Desatracar é livre, sem custo de turno (decisão #23). */
-export function undock(state: Pick<DockState, 'docked' | 'dockedBaseId'>): void {
+export function undock(
+  state: Pick<DockState, 'docked' | 'dockedBaseId' | 'position' | 'currentSector'>,
+): void {
+  const base = state.currentSector.find(
+    (e) => isStarbaseType(e.type) && isAdjacent(e.position, state.position.sector),
+  )
+
   state.docked = false
   state.dockedBaseId = null
+  if (!base) return
+
+  // Recolocar a nave AO LADO da base. `undock` só limpava dois flags e nunca
+  // moveu nada — o item 9.5 do roteiro descrevia comportamento que não
+  // existia. Direção fixa ("a sudoeste") quebra com a base na borda do setor,
+  // que foi exatamente o caso que a 4ª rodada encontrou; procurar entre as
+  // adjacentes livres resolve sem caso especial.
+  const taken = new Set(state.currentSector.map((e) => cellKey(e.position)))
+  const candidates: GridCoord[] = []
+  for (let dRow = -1; dRow <= 1; dRow++) {
+    for (let dCol = -1; dCol <= 1; dCol++) {
+      if (dRow === 0 && dCol === 0) continue
+      const cell = { row: base.position.row + dRow, col: base.position.col + dCol }
+      if (cell.row < 1 || cell.row > 8 || cell.col < 1 || cell.col > 8) continue
+      if (!taken.has(cellKey(cell))) candidates.push(cell)
+    }
+  }
+  if (candidates.length > 0) {
+    state.position.sector = candidates[0]
+    return
+  }
+
+  // Vizinhança lotada: a célula livre mais próxima da base serve. Sobrepor a
+  // nave numa entidade seria pior que andar um pouco mais.
+  let best: GridCoord | null = null
+  let bestDist = Infinity
+  for (let row = 1; row <= 8; row++) {
+    for (let col = 1; col <= 8; col++) {
+      if (taken.has(cellKey({ row, col }))) continue
+      const dist = Math.max(
+        Math.abs(row - base.position.row),
+        Math.abs(col - base.position.col),
+      )
+      if (dist < bestDist) {
+        bestDist = dist
+        best = { row, col }
+      }
+    }
+  }
+  if (best) state.position.sector = best
 }
 
 /**

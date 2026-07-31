@@ -275,14 +275,16 @@ const adjacentBaseLabel = computed(() => {
   return base ? STARBASE_TYPE_LABELS[base.type as StarbaseType] : null;
 });
 
-// Atracagem é LIVRE (não resolve turno): é o loop de docking que consome.
-const dock = () => {
+// Atracar consome 1 turno; desatracar é livre. Manobrar ao lado de uma estação
+// e amarrar é trabalho, largar amarra não é.
+const dock = async () => {
   if (gameState.docked) {
     gameState.undock();
     playSound(Sound.POWER_DOWN);
     return;
   }
-  const res = gameState.dock();
+  // Atracar consome 1 turno agora, então a ação é assíncrona.
+  const res = await gameState.dock();
   if (res.docked) playSound(Sound.POWER_UP);
 };
 

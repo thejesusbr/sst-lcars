@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { QuadrantMap, Starbase } from '@/types/game'
 import { createNewGameState } from '@/engine/newGame'
+import { WARP_STRESS_PER_POINT } from '@/engine/constants'
 import {
   resolveProbeScan,
   autoNavAvailable,
@@ -82,9 +83,11 @@ describe('duração e estresse de warp', () => {
     expect(warpStress(4)).toBe(0)
   })
 
-  it('soma +2 por ponto acima de 4', () => {
-    expect(warpStress(6)).toBe(4)
-    expect(warpStress(8)).toBe(8)
+  it('soma WARP_STRESS_PER_POINT por ponto acima do fator seguro', () => {
+    // Era 2 por ponto, o que dava 1% de dano em CINCO travessias completas em
+    // warp 8 — custo invisível (4ª rodada, item 5.7).
+    expect(warpStress(6)).toBe(2 * WARP_STRESS_PER_POINT)
+    expect(warpStress(8)).toBe(4 * WARP_STRESS_PER_POINT)
   })
 })
 

@@ -318,10 +318,22 @@ export const useGameState = defineStore('gameState', {
       return this.dispatchPlayerAction({ type: 'send_party', teamId, targetCoord })
     },
 
-    // ── Atracagem (livre: não resolve turno) ────────────────────────────────
+    // ── Atracagem ───────────────────────────────────────────────────────────
 
-    dock() {
-      return engineDock(this.$state)
+    /**
+     * Atracar CONSOME 1 turno: manobrar ao lado de uma estação e amarrar é
+     * trabalho. Largar amarra não é — `undock` segue livre. A assimetria também
+     * impede que o par dock/undock vire ação gratuita ciclável.
+     *
+     * O turno é resolvido DEPOIS da atracagem, pra que o inimigo já encontre a
+     * nave sob a proteção da base (o redirecionamento de dano pro pool depende
+     * de `docked`).
+     */
+    async dock() {
+      const res = engineDock(this.$state)
+      if (!res.docked) return res
+      await this.executeEndTurn()
+      return res
     },
 
     undock() {
