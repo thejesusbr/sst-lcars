@@ -10,31 +10,54 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  MISSION_DURATION,
+  MISSION_PER_ENEMY,
   PROBES_INITIAL,
   TEAM_EFFICIENCY_FLOOR,
   TEAM_FATIGUE_HALFLIFE,
   TEAM_RECOVERY_PER_TURN,
+  missionDurationFor,
 } from '@/engine/constants'
 import { resolveDamageControlTurn } from '@/engine/damageControl'
 import { createNewGameState } from '@/engine/newGame'
 import { SUBSYSTEM_KEYS, type SubsystemKey } from '@/types/game'
 
-describe('mission-pacing — relógio e sondas', () => {
-  it('a missão dura 40 stardates', () => {
-    expect(MISSION_DURATION).toBe(40)
-  })
-
+describe('mission-scaling — relógio segue a frota', () => {
   it('uma partida nova começa com 4 sondas', () => {
     expect(PROBES_INITIAL).toBe(4)
     expect(createNewGameState(1).remainingProbes).toBe(4)
   })
 
-  it('o limite de stardate é o inicial mais a duração', () => {
+  it('frota maior compra missão mais longa', () => {
+    expect(missionDurationFor(22)).toBeGreaterThan(missionDurationFor(13))
+  })
+
+  it('turnos por inimigo variam menos de 1.4x na faixa gerável', () => {
+    // Relógio fixo dava 3.08 com 13 inimigos e 1.82 com 22 — dispersão de
+    // 1.7x, decidida no sorteio antes de o jogador agir.
+    const razoes = [13, 15, 17, 20, 22].map((k) => missionDurationFor(k) / k)
+    const dispersao = Math.max(...razoes) / Math.min(...razoes)
+    expect(dispersao).toBeLessThan(1.4)
+  })
+
+  it('o limite de stardate deriva da frota realmente gerada', () => {
     const state = createNewGameState(1)
-    // A salvaguarda do original (`IFK9>T9THENT9=K9+1`) só eleva o limite se a
-    // frota gerada passar da duração — com ~17 inimigos contra 40, nunca.
-    expect(state.stardateLimit).toBe(state.stardate + MISSION_DURATION)
+    const esperado = Math.max(
+      missionDurationFor(state.enemiesLeft),
+      state.enemiesLeft + 1,
+    )
+    expect(state.stardateLimit).toBe(state.stardate + esperado)
+  })
+
+  it('a salvaguarda de 1978 ficou inalcançável, e isso é o esperado', () => {
+    // `IFK9>T9THENT9=K9+1` existia pra proteger a cauda azarada de um relógio
+    // FIXO. Com `MISSION_PER_ENEMY` acima de 1, a fórmula domina `total + 1`
+    // pra qualquer frota — o relógio já escala mais rápido do que a frota
+    // cresce. O `Math.max` fica no código como rede pra quem baixar a
+    // constante abaixo de 1 no futuro, não como caminho vivo.
+    expect(MISSION_PER_ENEMY).toBeGreaterThan(1)
+    for (const frota of [0, 13, 22, 100, 500]) {
+      expect(missionDurationFor(frota)).toBeGreaterThan(frota + 1)
+    }
   })
 })
 
@@ -105,6 +128,6 @@ describe('mission-pacing — reparo pesado cabe na missão', () => {
     expect(turnos).toBe(11)
     // O ponto da mudança: reparo pesado é ~27% de uma missão de 40, não 63% de
     // uma de 30.
-    expect(turnos / MISSION_DURATION).toBeLessThan(0.3)
+    expect(turnos / missionDurationFor(17)).toBeLessThan(0.3)
   })
 })

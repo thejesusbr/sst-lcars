@@ -29,7 +29,7 @@ Estado inicial de referência (semente aleatória por partida):
 
 | Campo                                    | Valor                                                        |
 | ---------------------------------------- | ------------------------------------------------------------ |
-| `stardate`                               | 3600.0, limite **3640.0**                                    |
+| `stardate`                               | 3600.0, limite = 3600 + (25 + 1.2 x frota)                   |
 | `WARP_CORE_OUTPUT` (vazão, core intacto) | 4500                                                         |
 | `hullIntegrity`                          | 100                                                          |
 | consumo em New Game                      | ~1915                                                        |

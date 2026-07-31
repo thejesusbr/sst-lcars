@@ -24,9 +24,11 @@ Together they cut the spread to 1.36× (3.15 turns per enemy at 13, 2.32 at 22)
 without flattening it entirely: a small galaxy still plays looser than a crowded
 one, which is the difference between variety and a coin flip.
 
-The original's own safeguard SHALL be preserved as the floor it always was: if the
-generated Klingon total exceeds the computed duration, the duration becomes
-`total + 1` (`IFK9>T9THENT9=K9+1`).
+The original's own safeguard (`IFK9>T9THENT9=K9+1`) SHALL be kept in the code as a
+floor, but it becomes **unreachable** and that is the intended outcome: it existed
+to protect the unlucky tail of a *fixed* clock, and with a per-enemy term above 1
+the formula outgrows `total + 1` for every fleet size. It stays as a net for anyone
+who later lowers the per-enemy term below 1, not as a live path.
 
 #### Scenario: Enemy count reflects what was generated
 - **WHEN** generation produces 19 Klingons across the galaxy
@@ -40,9 +42,10 @@ generated Klingon total exceeds the computed duration, the duration becomes
 - **WHEN** durations are computed across the full 13–22 generation range
 - **THEN** turns-per-enemy varies by less than 1.4×, versus 1.7× with a fixed clock
 
-#### Scenario: An oversized fleet extends the mission clock
-- **WHEN** generation produces more Klingons than the computed duration
-- **THEN** the stardate limit becomes that total plus 1
+#### Scenario: The 1978 safeguard never fires
+- **WHEN** durations are computed for any fleet size
+- **THEN** the formula's result always exceeds `total + 1`, so the floor is never
+  the binding value
 
 #### Scenario: Victory still requires clearing the generated fleet
 - **WHEN** the player destroys or captures every generated Klingon

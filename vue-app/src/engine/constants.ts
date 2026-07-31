@@ -278,6 +278,27 @@ export const STARDATE_INITIAL = 3600.0
  * combate deixaria a espera relativamente mais cara.
  */
 export const MISSION_DURATION = 40
+
+/**
+ * Duração da missão = `MISSION_BASE + MISSION_PER_ENEMY × frota gerada`.
+ *
+ * Relógio fixo contra frota que varia ±40% fazia a dificuldade ser um dado
+ * lançado antes de o jogador tocar em nada: 3.08 turnos por inimigo com 13
+ * inimigos, 1.82 com 22 — a mesma missão, 1.7× mais apertada. A 4ª rodada
+ * reportou como "depende muito da sorte".
+ *
+ * A base é o custo que NÃO escala com a frota: explorar, viajar, reparar entre
+ * brigas. O termo por inimigo é o que escala. Juntos derrubam a dispersão pra
+ * 1.36× sem achatá-la de vez — galáxia vazia ainda joga mais folgada que
+ * galáxia cheia, que é a diferença entre variedade e cara-ou-coroa.
+ */
+export const MISSION_BASE = 25
+export const MISSION_PER_ENEMY = 1.2
+
+/** Duração da missão pra uma frota gerada, antes da salvaguarda do original. */
+export function missionDurationFor(enemyTotal: number): number {
+  return Math.round(MISSION_BASE + MISSION_PER_ENEMY * enemyTotal)
+}
 export const STARDATE_PER_TURN = 1
 
 /**

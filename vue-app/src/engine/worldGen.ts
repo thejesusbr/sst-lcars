@@ -23,7 +23,7 @@ import {
   liveKbsCode,
   ENEMY_BASE_POWER,
   ENEMY_SHIELD_BAND,
-  MISSION_DURATION,
+  missionDurationFor,
   STARBASE_POOL_CAPACITY,
   STARDATE_INITIAL,
 } from './constants'
@@ -162,10 +162,13 @@ export function generateWorld(seed: number): GeneratedWorld {
     placeGuaranteedBase(galaxy, starbases, rng, randomBaseType(rng))
   }
 
-  // Salvaguarda da própria fonte (`IFK9>T9THENT9=K9+1`): frota maior que o
-  // relógio da missão estica o relógio. Com ~17 inimigos e 30 stardates nunca
-  // dispara — protege só a cauda azarada.
-  const duration = Math.max(MISSION_DURATION, enemyTotal + 1)
+  // O relógio SEGUE a frota: base fixa + termo por inimigo. Relógio constante
+  // fazia a dificuldade oscilar 1.7x por sorteio, antes de o jogador agir.
+  //
+  // A salvaguarda da própria fonte (`IFK9>T9THENT9=K9+1`) continua, agora como
+  // o piso que ela sempre foi — com o relógio escalando junto, ela deixa de ser
+  // o único freio da cauda azarada.
+  const duration = Math.max(missionDurationFor(enemyTotal), enemyTotal + 1)
 
   return {
     galaxy,
