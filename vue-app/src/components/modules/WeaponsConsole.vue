@@ -87,20 +87,36 @@ const targetOf = (tube: TorpedoTube) =>
   enemyTargets.value.find((e) => e.id === tube.targetId) ?? null;
 
 /**
- * Estado do alvo: escudo/poder restantes.
+ * Inimigo selecionado no display, pro painel "Enemy info".
  *
  * O jogador nunca viu estado de inimigo nenhum — não existia display de
  * `enemyPower` em lugar nenhum. Passou a importar quando o combate deixou de
  * resolver no primeiro tiro: sem isto, o jogador atira 2 a 12 vezes sem saber
  * se está progredindo, e a rendição por Hail (que escala com o dano do alvo)
  * vira aposta cega.
+ *
+ * Guarda o `id` estável, não o objeto nem o índice: a lista do setor muda de
+ * tamanho no meio do próprio turno quando um inimigo morre (decisão #6).
  */
-const targetStatus = (tube: TorpedoTube) => {
-  const target = targetOf(tube);
-  if (!target) return "—";
-  const shield = Math.max(0, Math.round(target.enemyShield ?? 0));
-  const power = Math.max(0, Math.round(target.enemyPower ?? 0));
-  return `${shield}/${power}`;
+const selectedEnemyId = ref<string | null>(null);
+
+const selectedEnemy = computed(
+  () => enemyTargets.value.find((e) => e.id === selectedEnemyId.value) ?? null
+);
+
+/** Valor do indicador, ou `-` sem seleção (ou com o alvo já destruído). */
+const enemyStat = (field: "enemyShield" | "enemyPower") => {
+  const enemy = selectedEnemy.value;
+  if (!enemy) return "-";
+  return String(Math.max(0, Math.round(enemy[field] ?? 0)));
+};
+
+const handleScannerCellClick = (data: { row: number; col: number }) => {
+  const hit = enemyTargets.value.find(
+    (e) => e.position.row === data.row && e.position.col === data.col
+  );
+  // Clicar em célula vazia limpa a seleção — é o gesto óbvio pra "nenhum".
+  selectedEnemyId.value = hit?.id ?? null;
 };
 
 const targetLabel = (tube: TorpedoTube) => {
@@ -153,8 +169,12 @@ const withTurn = async (fn: () => Promise<unknown>) => {
   }
 };
 
-const phasersCritical = computed(() => isCritical(gameState.subsystems.phasers));
-const photonsCritical = computed(() => isCritical(gameState.subsystems.photons));
+const phasersCritical = computed(() =>
+  isCritical(gameState.subsystems.phasers)
+);
+const photonsCritical = computed(() =>
+  isCritical(gameState.subsystems.photons)
+);
 
 /** Sem trava ou em critico o disparo nao sai -- o botao fica desabilitado. */
 const canFirePhasers = computed(
@@ -408,8 +428,45 @@ const togglePhotons = () => {
             :height="8"
             :grid-data="scannerGrid"
             :overlay="combatOverlay"
+            @cell-click="handleScannerCellClick"
           />
         </DefaultBracket>
+        <LcarsColumn>
+          <LcarsRow>
+            <LcarsBlock
+              label="Enemy info"
+              color="primary-static"
+              :style="{ flex: '1' }"
+            />
+            <LcarsCap version="round-right" color="highlight-interactive" />
+          </LcarsRow>
+          <LcarsRow>
+            <LcarsBlock
+              label="Shield"
+              color="primary-static"
+              :style="{ flex: '1' }"
+            />
+            <LcarsText
+              id="enm-shd-ind"
+              :text="enemyStat('enemyShield')"
+              :style="{ width: '2.5rem', 'text-align': 'center' }"
+            />
+            <LcarsCap version="round-right" color="highlight-interactive" />
+          </LcarsRow>
+          <LcarsRow>
+            <LcarsBlock
+              label="Power"
+              color="primary-static"
+              :style="{ flex: '1' }"
+            />
+            <LcarsText
+              id="enm-pwr-ind"
+              :text="enemyStat('enemyPower')"
+              :style="{ width: '2.5rem', 'text-align': 'center' }"
+            />
+            <LcarsCap version="round-right" color="highlight-interactive" />
+          </LcarsRow>
+        </LcarsColumn>
       </LcarsRow>
 
       <!-- Tube targeting rows -->
@@ -426,12 +483,6 @@ const togglePhotons = () => {
           :text="targetLabel(tube)"
           color="text-light"
           :style="{ width: '2.5rem', 'text-align': 'center' }"
-        />
-        <LcarsBlock label="SHD/PWR" :style="{ width: '3.5rem' }" />
-        <LcarsText
-          :text="targetStatus(tube)"
-          color="text-light"
-          :style="{ width: '4.5rem', 'text-align': 'center' }"
         />
         <LcarsBlock version="decorator" :style="{ flex: '1' }" />
         <LcarsButton
@@ -510,7 +561,12 @@ const togglePhotons = () => {
           version="round"
           color="tertiary-interactive"
           :label="tube.loaded ? `Unload ${tube.id}` : `Load ${tube.id}`"
-          :disabled="(!tube.loaded && torpedoStock === 0) || photonsCritical || busy || presentation.busy"
+          :disabled="
+            (!tube.loaded && torpedoStock === 0) ||
+            photonsCritical ||
+            busy ||
+            presentation.busy
+          "
           :style="{ width: '7rem', flex: 'none' }"
           @click="toggleTubeLoad(tube.id)"
         />
@@ -539,8 +595,16 @@ const togglePhotons = () => {
       <LcarsButton
         id="photons-toggle-btn"
         version="round"
-        :label="gameState.subsystemsOn.photons ? 'Photon Tubes On' : 'Photon Tubes Off'"
-        :color="gameState.subsystemsOn.photons ? 'secondary-interactive' : 'primary-static'"
+        :label="
+          gameState.subsystemsOn.photons
+            ? 'Photon Tubes On'
+            : 'Photon Tubes Off'
+        "
+        :color="
+          gameState.subsystemsOn.photons
+            ? 'secondary-interactive'
+            : 'primary-static'
+        "
         :style="{ width: '50%' }"
         @click="togglePhotons"
       />
