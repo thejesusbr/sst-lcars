@@ -110,18 +110,21 @@ o conjunto de regras equivalente nos 7 temas.
 
 ### IA de inimigo
 
-Inimigo hoje **reage**: reposiciona quando o jogador engaja movimento, atira se
-tiver linha de tiro. Não caça, não manobra pra buscar ângulo, não recua ferido,
-não coordena com outros no setor.
+O `combat-tuning` (rodada 5) plantou a semente: movimento deliberado por estado
+de energia — aproxima com energia pra atacar, evade pra recarregar sem. O que
+fica pra cá é o refinamento:
 
-Ganhou peso com a `combat-balance`: agora que distância atenua dano e obstáculo
-bloqueia linha, um inimigo que **manobra** seria adversário de verdade em vez de
-alvo que se move ao acaso.
+- **Inimigo coberto reposiciona pra buscar linha de tiro** (5ª rodada, item
+  23.8: hoje ele fica parado atrás da estrela, inofensivo).
+- Recuar quando ferido; pesar escudo/poder na decisão de aproximar.
+- Coordenação entre inimigos do setor (flanquear, revezar rajadas).
+- Caçar o jogador ENTRE setores (a ambição original desta entrada).
 
-O `yellow` da `bridge-awareness` já antecipa parte disso — responde a hostil
+O `yellow` da `bridge-awareness` antecipa parte disso — responde a hostil
 *conhecido* na vizinhança, não a hostil se aproximando.
 
-**Origem:** `bridge-awareness` e `enemy-species`.
+**Origem:** `bridge-awareness`, `enemy-species`, e itens 23.8/23.18 da 5ª
+rodada.
 
 ### Território romulano
 

@@ -139,6 +139,8 @@ distância do canto do scanner.
       igualmente bem.
 - [ ] 26.4 (18.3) O som da explosão não atropela mais o do phaser.
 
+       - Ainda atropela, a nave explode antes do phaser terminar de tocar. A animação de phaser também está mais curta que o som.
+
 ---
 
 # PARTE B — Nunca alcançado
@@ -274,3 +276,30 @@ distância do canto do scanner.
       - Também seria bom colocar um marcador de objeto selecionado no SRS, como a moldura de posição no SRS. Ambas usando a cor primary-static, para acompanhar o tema e reagir a alertas.
 
       - Insira um delay de 500ms antes do início do turno do inimigo. O contra-ataque está acontecendo imediatamente após o ataque do jogador, está confuso. Mesmo com o código por cores a chegar, é interessante dar um respiro ao jogador.
+
+---
+
+## Tratamento dos achados da 5ª rodada
+
+| Achado | Tratamento | Onde |
+| --- | --- | --- |
+| 11.3/11.4 breach incontível | equipe fica no núcleo com breach ativo | commit `656bf6b` ✅ |
+| 23.3 poder caía com escudo cheio | auto-dreno de 1978 removido | `combat-tuning` |
+| 9.4 Klingons inertes atracado | idem — eram zumbis (poder 0) | `combat-tuning` (reteste) |
+| 23.18 inimigo teleporta na fuga | movimento deliberado, 3 células/turno | `combat-tuning` |
+| — pressão infinita sem o dreno | `enemyEnergy`: rajada e recarga | `combat-tuning` |
+| 23.13/23.14 regen invertida | baixado = taxa cheia, erguido ~40% | `combat-tuning` |
+| 23.17 termodinâmica | Joule: calor ∝ potência² | `combat-tuning` |
+| 26.4 som atropelado | disparo migra pra fila de apresentação | `round-5-fixes` |
+| 24.1 briefing fixo | frota + stardates reais na tela | `round-5-fixes` |
+| 25.1 nave "estacionada" | ícone some enquanto atracada | `round-5-fixes` |
+| 9.3 modelo por tipo de base | drones / sem stacking / sem cooldown | `docking-overhaul` |
+| 23.8 inimigo coberto passivo | refinamento de IA | `BACKLOG.md` |
+
+**Fechadas de tabela pela `docking-overhaul`:** a dívida
+`DOCKED_REPAIR_PER_TICK` (allowlist do ratchet) e "working como idle" (backlog).
+
+**Nesta rodada também nasceu o `reachability.test.ts`** (ratchet de integração
+oca), que pegou 4 achados na primeira execução — `toggleRedAlert` morta, pesos
+de rating nunca lidos, `CRITICAL_INTEGRITY` cravado como `40`, e
+`MISSION_DURATION` morta desde a `mission-scaling`.
