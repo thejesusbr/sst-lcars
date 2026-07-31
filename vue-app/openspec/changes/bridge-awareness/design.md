@@ -16,12 +16,13 @@ forma de reduzir incerteza sobre um planeta é a ação mais cara do jogo.
 
 **Non-Goals:**
 - **Tema do alerta amarelo.** ~49 variáveis × 7 temas é trabalho de sistema de
-  cor (seção 13 do dossiê), registrado como pendência futura. `yellow` funciona
+  cor (seção 13 do dossiê) — ver `openspec/BACKLOG.md`. `yellow` funciona
   mecanicamente sem tema próprio.
 - **IA de inimigo.** O `yellow` responde a hostil *conhecido* na vizinhança, não
-  a hostil se aproximando. Inimigo que caça o jogador é pendência futura.
-- Reescrever o Briefing / escrever manual do jogador — pendência futura do
-  usuário, junto da dica de stacking de equipes.
+  a hostil se aproximando. Inimigo que caça o jogador está em
+  `openspec/BACKLOG.md`.
+- Reescrever o Briefing / escrever manual do jogador — ver
+  `openspec/BACKLOG.md`.
 
 ## Decisions
 

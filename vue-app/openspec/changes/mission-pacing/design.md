@@ -59,8 +59,8 @@ número sem mudar jogo, e atrapalharia atribuir causa na 4ª rodada.
 mesmo sistema resolvem a mesma batalha em 10 turnos onde 1-por-sistema leva 13,
 porque `STACKING_MULTIPLIERS` começa `[1, 1, ...]` — a segunda equipe entra com
 valor cheio. É estratégia dominante e invisível. Decisão: **fica invisível por
-ora**, e o Briefing menciona o princípio quando for reescrito (pendência futura,
-junto do manual do jogador).
+ora**, e o Briefing menciona o princípio quando for reescrito (ver
+`openspec/BACKLOG.md`).
 
 ## Risks / Trade-offs
 

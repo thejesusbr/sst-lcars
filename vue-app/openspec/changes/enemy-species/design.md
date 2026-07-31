@@ -16,7 +16,7 @@ mesmo dia em que nasceu.
 **Non-Goals:**
 - **IA de inimigo.** Inimigo continua reagindo, não caçando. Movimento
   intencional (perseguir o jogador entre setores) está registrado como pendência
-  futura e não entra aqui.
+  futura (`openspec/BACKLOG.md`) e não entra aqui.
 - Comportamento tático por espécie (scout foge, D7 avança). O tipo muda poder e
   disposição a se render; não muda como o inimigo decide agir no turno.
 - Ícones novos: a arte dos 5 tipos já existe.
