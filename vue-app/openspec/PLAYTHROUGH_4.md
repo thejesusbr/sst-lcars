@@ -22,14 +22,14 @@ npm run storybook    # cenários isolados (stories por console)
 | `hail-and-identity` | aplicada | base científica |
 | `playtest-round-3` | aplicada | KBS vivo, selo/Tribbles, campo do Life Support |
 | `enemy-species` | **não aplicada** | — seção 20 fica bloqueada |
-| `mission-pacing` | **não aplicada** | — seção 21 fica bloqueada |
+| `mission-pacing` | aplicada | relógio de 40, fadiga meia-vida 6, 4 sondas |
 | `bridge-awareness` | **não aplicada** | — seção 22 fica bloqueada |
 
 Estado inicial de referência (semente aleatória por partida):
 
 | Campo | Valor |
 | --- | --- |
-| `stardate` | 3600.0, limite 3630.0 (vira 3640.0 com `mission-pacing`) |
+| `stardate` | 3600.0, limite **3640.0** |
 | `WARP_CORE_OUTPUT` (vazão, core intacto) | 4500 |
 | `hullIntegrity` | 100 |
 | consumo em New Game | ~1915 |
@@ -37,7 +37,7 @@ Estado inicial de referência (semente aleatória por partida):
 | `shieldEnergy` | 1500 |
 | `phaserPower` | 1500 (unidades de energia) |
 | `torpedoStock` | 8, tubos vazios |
-| `remainingProbes` | 3 (vira 4 com `mission-pacing`) |
+| `remainingProbes` | **4** |
 | inimigos na galáxia | ~17 (13–22), **todos `KLINGON_CRUISER` até `enemy-species`** |
 | bases | ~4,6 (≥1 `STARBASE_DOCK`) |
 
@@ -118,6 +118,31 @@ Disparo já tinha som; faltava a chegada.
 
 ---
 
+## 21. Ritmo da missão (`mission-pacing`)
+
+Três constantes mudaram com base em simulação, e a simulação está presa em
+teste (`missionPacing.test.ts`): a engine confirma 11 turnos de reparo pesado e
+a curva `89 / 71 / 50 / 25` nos turnos 1 / 3 / 6 / 12. **O que a 4ª rodada
+mede é se o número certo produz a sensação certa** — teste verde não diz isso.
+
+- [ ] 21.1 (13.1) 40 stardates dão pra caçar ~17 inimigos **e** se recuperar de
+      uma batalha dura? A 3ª rodada: "depois de uma batalha difícil, a espera
+      para recuperar dano sempre levou a derrota por tempo".
+- [ ] 21.2 (13.3) Reparo pesado (6 subsistemas a 20%, 1 equipe cada) sai em ~11
+      turnos, não ~19 — e dá pra sentir a diferença jogando, não só na tabela.
+- [ ] 21.3 Equipe trabalhando 12 turnos seguidos ainda rende. Antes ela batia no
+      piso no 7º e virava inerte a 3 pontos/turno.
+- [ ] 21.4 (13.5) 4 sondas. Ainda é pouco?
+- [ ] 21.5 **Afrouxou demais? A partida virou passeio?** É o risco declarado
+      desta change — anotar sensação, não corrigir. Três constantes se moveram
+      juntas, então se ficou fácil demais o suspeito é o conjunto.
+- [ ] 21.6 Concentrar 2 equipes num sistema continua batendo espalhar 1 por
+      sistema? (`STACKING_MULTIPLIERS` começa `[1, 1, ...]` — a 2ª equipe entra
+      com valor cheio.) Estratégia dominante e invisível: se pesar demais no
+      jogo real, vira candidata a dica no Briefing.
+
+---
+
 # PARTE B — Nunca alcançado nas rodadas 1–3
 
 ## 3. Turno
@@ -182,8 +207,8 @@ Ordem de prioridade Kobayashi Maru: derrota sempre supera vitória.
 
 ## 13. Balanceamento (anotar, não corrigir agora)
 
-Sem número esperado — é pra registrar sensação. **13.1, 13.3 e 13.5 só fazem
-sentido depois da `mission-pacing`** (ver seção 21).
+Sem número esperado — é pra registrar sensação. 13.1, 13.3 e 13.5 migraram
+pra seção 21, que agora está liberada.
 
 - [ ] 13.2 Overload/breach está punitivo demais? (segue sem observação desde a
       1ª rodada)
@@ -226,18 +251,6 @@ desenhado, e pra o item nascer junto da change que o resolve.
       verde Romulano, roxo raider.
 - [ ] 20.6 As cores seguem o tema nos 7 temas, e continuam legíveis sob
       `.red-alert`.
-
-## 21. `mission-pacing`
-
-- [ ] 21.1 (13.1) 40 stardates dão pra caçar ~17 inimigos **e** se recuperar de
-      uma batalha dura? A 3ª rodada: "depois de uma batalha difícil, a espera
-      para recuperar dano sempre levou a derrota por tempo".
-- [ ] 21.2 (13.3) Reparo pesado (6 subsistemas a 20%) leva ~11 turnos, não ~19.
-- [ ] 21.3 Equipe trabalhando 12 turnos seguidos ainda rende — não vira inerte
-      no piso a partir do 8º.
-- [ ] 21.4 (13.5) 4 sondas.
-- [ ] 21.5 Afrouxou demais? A partida virou passeio? É o risco declarado desta
-      change — anotar sensação, não corrigir.
 
 ## 22. `bridge-awareness`
 
