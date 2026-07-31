@@ -82,14 +82,24 @@ const toggle = () => emit("update:modelValue", !props.modelValue);
   min-height: 3rem;
 }
 
-/* O texto solta o piso de largura herdado dos displays numericos
-   ("3000"/"100%"), que e pra onde aquele 7.5rem de `.complex-button .text` foi
-   calibrado. Aqui e uma palavra curta: ocupa a sobra da caixa em vez de definir
-   o tamanho dela. A fonte fica no padrao de um LcarsText indicativo -- sem
-   `font-size` proprio, herda os 2.8rem do SDK. */
+/* O texto ocupa a SOBRA da caixa em vez de definir o tamanho dela.
+   `width: 0` e o que faz isso ser deterministico: com largura definida em zero,
+   a contribuicao dele pra largura intrinseca do toggle e zero, entao o
+   `min-width: 7.5rem` acima passa a valer como largura final, e nao como piso
+   que o texto empurra. Sem isso a caixa media a palavra renderizada -- "OFF" a
+   2.8rem sobrava ~0.5rem, e qualquer troca de fonte ou tema desalinharia de
+   novo.
+
+   O `margin-left: 0.5rem` herdado tambem sai: ele existe pros displays
+   numericos, onde o texto vem depois de um rotulo.
+
+   A fonte fica no padrao de um LcarsText indicativo -- sem `font-size` proprio,
+   herda os 2.8rem do SDK. */
 .lcars-toggle-switch :deep(.text) {
+  width: 0;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 0;
+  margin-left: 0;
   text-align: center;
 }
 </style>
