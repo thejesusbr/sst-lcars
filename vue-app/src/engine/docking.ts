@@ -79,6 +79,7 @@ export type DockState = Pick<
   | 'dockedBaseId'
   | 'hullIntegrity'
   | 'shieldEnergy'
+  | 'shieldDamageTaken'
   | 'manualOverload'
   | 'torpedoStock'
   | 'brig'
@@ -171,6 +172,11 @@ export function dock(state: DockState): DockResult {
   // libera a vazão que ele consumia.
   state.shieldEnergy = 0
   state.manualOverload = 0
+  // A estação repara o que a tripulação não consegue: o dano acumulado no
+  // escudo zera aqui. Sem isto, a regeneração em voo (proporcional à energia
+  // mantida) seria a única via, e uma campanha longa acumularia um resíduo que
+  // nunca sai.
+  state.shieldDamageTaken = 0
 
   const { torpedoes, hull: hullRepair, spent } = resupply(state, baseType, pool)
   state.torpedoStock += torpedoes

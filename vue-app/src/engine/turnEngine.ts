@@ -17,7 +17,11 @@ import type {
 import { STARBASE_TYPE_LABELS, SUBSYSTEM_KEYS } from '@/types/game'
 import {
   HULL_DAMAGE_DIVISOR,
+  SHIELD_REGEN_PER_ENERGY,
   STARDATE_PER_TURN,
+  damageFalloff,
+  damageFraction,
+  isCritical,
   warpCoreOutput,
 } from '@/engine/constants'
 import {
@@ -30,8 +34,15 @@ import {
   resolveCombatTurn,
   tickCloakStress,
   unloadTube,
+  evasionChance,
 } from '@/engine/combat'
-import { countEnemies, getVisibleEnemies, occupancyOf } from '@/engine/sector'
+import {
+  chebyshev,
+  countEnemies,
+  getVisibleEnemies,
+  obstaclesBetween,
+  occupancyOf,
+} from '@/engine/sector'
 import { autoOverload, resolveWarpCoreTurn, startBreach, subsystemDraw } from '@/engine/warpCore'
 import { evaluateEndGame } from '@/engine/endGame'
 import { regenStarbasePools } from '@/engine/docking'
@@ -373,6 +384,12 @@ function applyPlayerAction(
       const isOccupied = occupancyOf(state.currentSector)
       const move = manualMove(state.position.sector, target, isOccupied, speed)
       if (move.rejected) return reject('Destino fora do setor.')
+      // Deslocamento REAL, não o pedido: alimenta a esquiva deste turno. Ficar
+      // preso atrás de uma estrela não compra manobra evasiva nenhuma. Boost
+      // concede esquiva máxima independente de quanto cobriu.
+      state.cellsMovedThisTurn = state.boostActive
+        ? 8
+        : chebyshev(state.position.sector, move.position)
       state.position.sector = move.position
       const arrived =
         move.position.row === target.row && move.position.col === target.col
@@ -459,6 +476,28 @@ function applyPlayerAction(
 }
 
 /**
+ * Regenera o escudo: `shieldDamageTaken` decai proporcional à energia mantida.
+ *
+ * A spec de `shields` sempre disse "absorption **and regen**" e a metade do
+ * regen nunca existiu — nada no projeto reduzia `shieldDamageTaken`, nem
+ * atracar. Não era regeneração faltando, era dano permanente por construção, e
+ * a 4ª rodada pegou ("a regeneração dos escudos está ativa? Não me pareceu").
+ *
+ * Segurar escudo alto custa vazão todo turno **e** compra recuperação —
+ * coerente com energia ser fluxo, não estoque. Shield Control danificado
+ * degrada a taxa pelas mesmas faixas de dano do resto do jogo, e em crítico
+ * para de vez.
+ */
+export function regenShields(state: GameState): void {
+  if (state.shieldDamageTaken <= 0) return
+  if (isCritical(state.subsystems.shields)) return
+
+  const efficiency = 1 - damageFraction(state.subsystems.shields)
+  const regen = state.shieldEnergy * SHIELD_REGEN_PER_ENERGY * efficiency
+  state.shieldDamageTaken = Math.max(0, state.shieldDamageTaken - regen)
+}
+
+/**
  * Atualiza a contagem regressiva de asfixia do Life Support:
  * - Se integridade < 40: inicia em 5 (se ainda não iniciado) ou decrementa em 1.
  * - Se integridade >= 40: limpa a contagem (null).
@@ -504,14 +543,32 @@ function resolveEnemyTurn(
     const power = enemy.enemyPower ?? 0
     if (power <= 0) continue
 
-    const dist = Math.hypot(
-      state.position.sector.row - enemy.position.row,
-      state.position.sector.col - enemy.position.col
-    )
-    const euclideanDist = Math.max(1, dist)
-    // H = floor((enemyPower / euclideanDistance) * (2 + random(0,1)))
-    const H = Math.floor((power / euclideanDist) * (2 + rng()))
+    // Cobertura vale nos DOIS sentidos — se estrela/planeta barra o feixe do
+    // jogador, barra o do inimigo. Cobertura de mão única seria vantagem
+    // disfarçada de mecânica.
+    if (obstaclesBetween(state.currentSector, enemy.position, state.position.sector) > 0) {
+      continue
+    }
+
+    // Mesma atenuação por distância que o tiro do jogador sofre. Substitui o
+    // `power / distânciaEuclidiana` do fonte de 1978: uma régua só pros dois
+    // lados, na mesma tabela de balanceamento.
+    const dist = chebyshev(state.position.sector, enemy.position)
+    const H = Math.floor(power * damageFalloff(dist) * (2 + rng()))
     if (H <= 0) continue
+
+    // Nave em movimento é alvo difícil. `cellsMovedThisTurn` do jogador é
+    // zerado no início da resolução, então parar nunca esquiva.
+    if (rng() < evasionChance(state.cellsMovedThisTurn ?? 0)) {
+      events.push({
+        type: 'enemy_attack',
+        entityId: enemy.id,
+        at: { ...enemy.position },
+        amount: 0,
+        text: 'Ataque inimigo passou de raspão — nave em manobra evasiva.',
+      })
+      continue
+    }
 
     // Evento do DISPARO, antes do efeito. É o que a apresentação usa pra
     // desenhar a linha saindo do inimigo — sem ele, o jogador só via o
@@ -610,6 +667,11 @@ export function resolvePlayerTurn(
   const prevEnemyCount = countEnemies(state.currentSector)
   const quadrantBefore = { ...state.position.quadrant }
 
+  // Deslocamento do turno anterior não conta pra esquiva deste. Zerar aqui, no
+  // topo da resolução, é o que garante que ficar parado nunca esquiva.
+  state.cellsMovedThisTurn = 0
+  for (const entity of state.currentSector) entity.cellsMovedThisTurn = 0
+
   // ── ETAPA 1: Ação do jogador ─────────────────────────────────────────────
   const outcome = applyPlayerAction(state, action, rng)
   if (outcome.rejected) {
@@ -697,6 +759,8 @@ export function resolvePlayerTurn(
 
   // ── ETAPA 5: Log e atualização de domínios ───────────────────────────────
   state.stardate += STARDATE_PER_TURN
+
+  regenShields(state)
 
   const dcRes = resolveDamageControlTurn(state)
   for (const [sys, amount] of Object.entries(dcRes.repairs)) {

@@ -104,6 +104,20 @@ export interface SectorEntity {
    * consome (capability `combat`, "Enemy power is a single stat...").
    */
   enemyPower?: number
+  /**
+   * Escudo hostil: absorve dano ANTES de `enemyPower`, e o excedente transborda.
+   *
+   * **Não regenera** — assimetria deliberada com o jogador (ver
+   * `ENEMY_SHIELD_BAND`). Até esta mudança o inimigo tinha só `enemyPower`, sem
+   * estado intermediário: o feixe pousava e o alvo evaporava.
+   */
+  enemyShield?: number
+  /**
+   * Células que esta entidade cobriu na resolução do turno corrente. Alimenta a
+   * esquiva (`combat`, "A moving target is harder to hit") e é zerada no
+   * início de cada resolução — alvo parado nunca esquiva.
+   */
+  cellsMovedThisTurn?: number
   /** `Cloaked Raider` apenas: invisível/intargetável/não-ataca enquanto true. */
   cloaked?: boolean
   /** Estresse acumulado enquanto cloacado, 0-20 (força decloak no teto). */
@@ -483,6 +497,12 @@ export interface GameState {
    * (capability `shields`, "shieldIntegrity is derived, never raw-set").
    */
   shieldDamageTaken: number
+  /**
+   * Células que a NAVE cobriu na resolução do turno corrente. Alimenta a
+   * esquiva (`combat`, "A moving target is harder to hit"); zerado no início de
+   * cada resolução, então ficar parado nunca esquiva.
+   */
+  cellsMovedThisTurn?: number
   /** Dial 0-100% do Impulse; convertido via `IMPULSE_POWER_MAX` pro draw. */
   impulsePower: number
   /** UNIDADES DE ENERGIA (0-`PHASER_POWER_MAX`), não porcentagem. */

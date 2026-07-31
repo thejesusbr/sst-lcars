@@ -86,6 +86,23 @@ const tubes = computed(() => gameState.tubes);
 const targetOf = (tube: TorpedoTube) =>
   enemyTargets.value.find((e) => e.id === tube.targetId) ?? null;
 
+/**
+ * Estado do alvo: escudo/poder restantes.
+ *
+ * O jogador nunca viu estado de inimigo nenhum — não existia display de
+ * `enemyPower` em lugar nenhum. Passou a importar quando o combate deixou de
+ * resolver no primeiro tiro: sem isto, o jogador atira 2 a 12 vezes sem saber
+ * se está progredindo, e a rendição por Hail (que escala com o dano do alvo)
+ * vira aposta cega.
+ */
+const targetStatus = (tube: TorpedoTube) => {
+  const target = targetOf(tube);
+  if (!target) return "—";
+  const shield = Math.max(0, Math.round(target.enemyShield ?? 0));
+  const power = Math.max(0, Math.round(target.enemyPower ?? 0));
+  return `${shield}/${power}`;
+};
+
 const targetLabel = (tube: TorpedoTube) => {
   const target = targetOf(tube);
   return target ? `${target.position.col},${target.position.row}` : "—";
@@ -409,6 +426,12 @@ const togglePhotons = () => {
           :text="targetLabel(tube)"
           color="text-light"
           :style="{ width: '2.5rem', 'text-align': 'center' }"
+        />
+        <LcarsBlock label="SHD/PWR" :style="{ width: '3.5rem' }" />
+        <LcarsText
+          :text="targetStatus(tube)"
+          color="text-light"
+          :style="{ width: '4.5rem', 'text-align': 'center' }"
         />
         <LcarsBlock version="decorator" :style="{ flex: '1' }" />
         <LcarsButton

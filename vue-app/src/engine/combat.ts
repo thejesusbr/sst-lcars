@@ -10,13 +10,18 @@ import {
   CLOAK_COOLDOWN_TURNS,
   CLOAK_STRESS_CAP,
   CLOAK_STRESS_PER_TURN,
+  EVASION_PER_CELL,
   INTERROGATION_CHANCE,
+  PHASER_DAMAGE_PER_POWER,
+  PHASER_POWER_DEFAULT,
   PHASER_TEMP_MAX,
   PHASER_TEMP_PER_SHOT,
   TORPEDO_DAMAGE_MIN,
   TORPEDO_DAMAGE_SPREAD,
+  TORPEDO_OBSTRUCTION_MISS,
   TORPEDO_STOCK_MAX,
   clamp,
+  damageFalloff,
   damageFraction,
   degradedChance,
   hailSurrenderChance,
@@ -24,12 +29,20 @@ import {
   isCritical,
   round4,
 } from '@/engine/constants'
-import type { GameState, GridCoord, StarbaseType, TurnEventDraft } from '@/types/game'
+import type {
+  GameState,
+  GridCoord,
+  SectorEntity,
+  StarbaseType,
+  TurnEventDraft,
+} from '@/types/game'
 import {
   cellKey,
+  chebyshev,
   getVisibleEnemies,
   isEnemyType,
   isStarbaseType,
+  obstaclesBetween,
 } from '@/engine/sector'
 import { pickHailRefusal } from '@/engine/hailRefusals'
 
@@ -41,7 +54,52 @@ export interface PhaserFireResult {
   powerCommitted: number
   totalDamageDealt: number
   /** `position` é a célula do alvo NO DISPARO — depois do abate ele some do setor. */
-  hits: { enemyId: string; position: GridCoord; damage: number; destroyed: boolean }[]
+  hits: {
+    enemyId: string
+    position: GridCoord
+    damage: number
+    destroyed: boolean
+    /** Obstáculo na linha reta barrou o feixe. */
+    blocked?: boolean
+    /** Alvo em movimento se esquivou. */
+    evaded?: boolean
+  }[]
+}
+
+/**
+ * Chance de esquiva de quem cobriu `cells` células neste turno.
+ *
+ * Velocidade era só duração de travessia; amarrar esquiva a ela dá ao dial de
+ * impulso uma consequência defensiva — que é o que faltava pra ele ter 100
+ * posições em vez de 4 resultados úteis.
+ */
+export function evasionChance(cells: number): number {
+  return Math.max(0, Math.min(0.9, cells * EVASION_PER_CELL))
+}
+
+/**
+ * Aplica dano num hostil: o escudo come primeiro, o excedente transborda pro
+ * `enemyPower`. Fonte única — phaser e torpedo têm que concordar.
+ */
+export function applyHostileDamage(
+  state: GameState,
+  enemy: SectorEntity,
+  damage: number,
+): { destroyed: boolean; absorbed: number } {
+  const shield = enemy.enemyShield ?? 0
+  const absorbed = Math.min(shield, damage)
+  enemy.enemyShield = shield - absorbed
+
+  const spill = damage - absorbed
+  if (spill <= 0) return { destroyed: false, absorbed }
+
+  const remaining = (enemy.enemyPower ?? 0) - spill
+  if (remaining <= 0) {
+    removeEnemyFromSector(state, enemy.id, 'destroyed')
+    return { destroyed: true, absorbed }
+  }
+  enemy.enemyPower = remaining
+  return { destroyed: false, absorbed }
 }
 
 /**
@@ -76,8 +134,14 @@ export function firePhasers(
 
   const d = damageFraction(phaserIntegrity)
 
-  // Aquecimento por disparo aumenta com dano no subsistema: 30 * (1 + d)
-  const heatGain = round4(PHASER_TEMP_PER_SHOT * (1 + d))
+  // Aquecimento cresce com a POTÊNCIA disparada, além do dano no subsistema.
+  // Antes era `30 * (1 + d)`: a potência nunca entrava na conta, então um tiro
+  // de 100 esquentava igual a um de 3000. Nem no século 23 estamos livres da
+  // termodinâmica. Normalizado em `PHASER_POWER_DEFAULT` pra que a potência
+  // padrão mantenha os 30 de sempre e só o topo do dial morda.
+  const heatGain = round4(
+    PHASER_TEMP_PER_SHOT * (availablePower / PHASER_POWER_DEFAULT) * (1 + d),
+  )
   state.phaserTemp = clamp(state.phaserTemp + heatGain, 0, PHASER_TEMP_MAX)
 
   // Efetividade por calor: max(0, 100 - phaserTemp / 2.7) / 100
@@ -89,18 +153,41 @@ export function firePhasers(
   const hits: PhaserFireResult['hits'] = []
 
   for (const enemy of visibleEnemies) {
-    // Fórmula clássica de dano com roll randômico proporcional a share
-    const baseDamage = share * (0.8 + rng() * 0.4)
-    const finalDamage = Math.round(baseDamage * damageMultiplier)
-    const currentPower = enemy.enemyPower ?? 0
-    const remaining = currentPower - finalDamage
-    const destroyed = remaining <= 0
-
-    if (destroyed) {
-      removeEnemyFromSector(state, enemy.id, 'destroyed')
-    } else {
-      enemy.enemyPower = remaining
+    // Estrela ou planeta na linha reta barra o feixe. O phaser viaja reto — é o
+    // vocabulário visual que a apresentação já desenha — então cobertura é
+    // cobertura, e vale nos dois sentidos (o inimigo sofre a mesma regra).
+    if (obstaclesBetween(state.currentSector, state.position.sector, enemy.position) > 0) {
+      hits.push({
+        enemyId: enemy.id,
+        position: { ...enemy.position },
+        damage: 0,
+        destroyed: false,
+        blocked: true,
+      })
+      continue
     }
+
+    // Alvo que se moveu neste turno é mais difícil de acertar. Simétrico: o
+    // inimigo reposiciona sempre que o jogador engaja movimento.
+    if (rng() < evasionChance(enemy.cellsMovedThisTurn ?? 0)) {
+      hits.push({
+        enemyId: enemy.id,
+        position: { ...enemy.position },
+        damage: 0,
+        destroyed: false,
+        evaded: true,
+      })
+      continue
+    }
+
+    // Dano é FRAÇÃO da potência, atenuada pela distância — não mais ~igual à
+    // potência comprometida, que dava overkill de 4x a 18x.
+    const dist = chebyshev(state.position.sector, enemy.position)
+    const baseDamage =
+      share * PHASER_DAMAGE_PER_POWER * damageFalloff(dist) * (0.8 + rng() * 0.4)
+    const finalDamage = Math.round(baseDamage * damageMultiplier)
+
+    const { destroyed } = applyHostileDamage(state, enemy, finalDamage)
 
     totalDamageDealt += finalDamage
     hits.push({
@@ -138,6 +225,8 @@ export interface TorpedoFireResult {
     position: GridCoord
     damage: number
     destroyed: boolean
+    /** Errou: obstáculo na trajetória ou alvo em movimento. */
+    missed?: boolean
   }[]
 }
 
@@ -179,19 +268,33 @@ export function fireTorpedoes(
     shotsFired++
     state.torpedoesUsed++
 
+    // Torpedo é guiado: passa pela cobertura que barra o phaser. Mas corrigir
+    // trajetória no calor da batalha é difícil, então cada obstáculo na linha
+    // acrescenta chance de errar, acumulando com a degradação de Photon Tubes.
+    const obstacles = obstaclesBetween(
+      state.currentSector,
+      state.position.sector,
+      target.position,
+    )
+    const missChance = obstacles * TORPEDO_OBSTRUCTION_MISS
+    const evaded = rng() < evasionChance(target.cellsMovedThisTurn ?? 0)
+    if (evaded || (missChance > 0 && rng() < missChance)) {
+      hits.push({
+        tubeId: tube.id,
+        enemyId: target.id,
+        position: { ...target.position },
+        damage: 0,
+        destroyed: false,
+        missed: true,
+      })
+      continue
+    }
+
     const rawDamage =
       TORPEDO_DAMAGE_MIN + round4(rng() * TORPEDO_DAMAGE_SPREAD)
     const finalDamage = Math.round(rawDamage * damageMultiplier)
 
-    const currentPower = target.enemyPower ?? 0
-    const remaining = currentPower - finalDamage
-    const destroyed = remaining <= 0
-
-    if (destroyed) {
-      removeEnemyFromSector(state, target.id, 'destroyed')
-    } else {
-      target.enemyPower = remaining
-    }
+    const { destroyed } = applyHostileDamage(state, target, finalDamage)
 
     hits.push({
       tubeId: tube.id,
@@ -346,6 +449,7 @@ export function repositionEnemies(state: GameState, rng = Math.random): void {
 
   for (const enemy of getVisibleEnemies(state)) {
     const from = `${enemy.position.row},${enemy.position.col}`
+    const origin = { ...enemy.position }
 
     // A célula de origem fica em `taken`: a spec diz célula **nova**, então
     // sortear a própria posição não conta como reposicionar.
@@ -363,6 +467,9 @@ export function repositionEnemies(state: GameState, rng = Math.random): void {
         break
       }
     }
+    // Inimigo que se moveu também é alvo em movimento — a esquiva é simétrica,
+    // e é o que explica por que perseguir custa caro.
+    enemy.cellsMovedThisTurn = chebyshev(origin, enemy.position)
     taken.add(next)
   }
 }

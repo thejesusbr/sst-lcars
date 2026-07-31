@@ -100,3 +100,63 @@ export function entityAt(
 export function isAdjacent(a: GridCoord, b: GridCoord): boolean {
   return Math.abs(a.row - b.row) <= 1 && Math.abs(a.col - b.col) <= 1
 }
+
+// ── Linha de tiro ───────────────────────────────────────────────────────────
+
+/** Distância Chebyshev — a mesma régua do resto do jogo (warp, sonda, adjacência). */
+export function chebyshev(a: GridCoord, b: GridCoord): number {
+  return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col))
+}
+
+/**
+ * Células ENTRE dois pontos, exclusivas das pontas (Bresenham).
+ *
+ * Mora aqui, na folha, porque `combat.ts` (tiro do jogador) e o contra-ataque
+ * inimigo no `turnEngine` precisam da MESMA resposta pra mesma geometria —
+ * cobertura tem que valer nos dois sentidos ou vira vantagem de um lado só.
+ */
+export function lineBetween(a: GridCoord, b: GridCoord): GridCoord[] {
+  const out: GridCoord[] = []
+  let row = a.row
+  let col = a.col
+  const dRow = Math.abs(b.row - row)
+  const dCol = Math.abs(b.col - col)
+  const stepRow = row < b.row ? 1 : -1
+  const stepCol = col < b.col ? 1 : -1
+  let err = dCol - dRow
+
+  // Guarda de iteração: grid é 8x8, nenhuma linha honesta passa de 16 passos.
+  for (let guard = 0; guard < 32; guard++) {
+    const e2 = 2 * err
+    if (e2 > -dRow) {
+      err -= dRow
+      col += stepCol
+    }
+    if (e2 < dCol) {
+      err += dCol
+      row += stepRow
+    }
+    if (row === b.row && col === b.col) break
+    out.push({ row, col })
+  }
+  return out
+}
+
+/**
+ * Obstáculos (estrela/planeta) na linha reta entre dois pontos.
+ *
+ * Phaser viaja reto e é barrado por eles — é o vocabulário visual que a
+ * apresentação já desenha. Torpedo é guiado e passa, pagando chance de erro.
+ */
+export function obstaclesBetween(
+  entities: SectorEntity[],
+  from: GridCoord,
+  to: GridCoord,
+): number {
+  const path = lineBetween(from, to)
+  if (path.length === 0) return 0
+  const blocked = new Set(
+    entities.filter((e) => isObstacleType(e.type)).map((e) => cellKey(e.position)),
+  )
+  return path.filter((c) => blocked.has(cellKey(c))).length
+}

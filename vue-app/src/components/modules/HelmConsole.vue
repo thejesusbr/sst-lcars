@@ -391,9 +391,12 @@ watch(warpFactor, (value) => {
       <!-- Indicador de boost -->
       <LcarsComplexButton id="impBoostCtn">
         <LcarsCap version="round-left" color="primary-interactive" />
+        <!-- "Evade", não "Boost": as 8 células já saem do dial em 95%, então o
+             que o botão compra de verdade é esquiva máxima no turno. O rótulo
+             antigo anunciava velocidade, que era justamente a parte redundante. -->
         <LcarsButton
           id="impBoost"
-          label="Boost"
+          label="Evade"
           color="secondary-interactive"
           :class="{
             'white-flash': impulseBoost,

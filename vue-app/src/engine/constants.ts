@@ -65,6 +65,13 @@ export const PHASER_TEMP_MAX = 270
 export const PHASER_TEMP_INITIAL = 50
 /** Aquecimento por disparo E resfriamento passivo por turno sem atirar. */
 export const PHASER_TEMP_PER_SHOT = 30
+/**
+ * Potência de referência do phaser: onde o aquecimento por disparo vale
+ * exatamente `PHASER_TEMP_PER_SHOT`. É a potência com que a partida começa, de
+ * modo que a termodinâmica nova não muda o comportamento que o jogador já
+ * conhece no padrão — só morde quando ele escolhe queimar potência.
+ */
+export const PHASER_POWER_DEFAULT = PHASER_POWER_MAX / 2
 export const TORPEDO_STOCK_MAX = 12
 export const TORPEDO_STOCK_INITIAL = 8
 export const TORPEDO_TUBE_COUNT = 3
@@ -79,6 +86,88 @@ export const TORPEDO_DAMAGE_SPREAD = 100
  * faixa 100-300. Reusa o `S9=200` do fonte de 1978 (decisão #22).
  */
 export const ENEMY_BASE_POWER = 200
+
+/**
+ * Escudo inicial do inimigo, por tipo, como multiplicador de
+ * `ENEMY_BASE_POWER`. Absorve antes do `enemyPower` e **não regenera**.
+ *
+ * Até esta mudança um inimigo tinha exatamente um número e nenhum estado
+ * intermediário: o feixe pousava e o alvo evaporava. O jogador leu isso na
+ * própria animação na 4ª rodada — "os inimigos não parecem estar com escudos
+ * ativos" — e não estavam, porque a coisa não existia em lugar nenhum do engine.
+ *
+ * A assimetria com o jogador (que regenera) é deliberada: o jogador tem convés
+ * de engenharia, equipes de CdD e orçamento de energia pra trocar; o inimigo é
+ * um alvo com buffer finito. Os dois regenerando faria toda briga virar empate
+ * resolvido por quem trouxe mais turnos.
+ *
+ * Até a `enemy-species` entrar, só a faixa do cruiser se manifesta.
+ */
+export const ENEMY_SHIELD_BAND: Record<string, readonly [number, number]> = {
+  klingon_cruiser: [0.5, 1.0],
+  klingon_d7: [0.9, 1.4],
+  romulan_warbird: [0.9, 1.4],
+  romulan_scout: [0.2, 0.5],
+  cloaked_raider: [0.4, 0.8],
+}
+
+/**
+ * Dano de phaser por unidade de potência comprometida.
+ *
+ * Antes o dano era ~igual à potência: um tiro padrão de 1500 entregava
+ * 1200–1800 contra alvo de 100–300 — overkill de 4× a 18×, e briga 1v1
+ * resolvida no primeiro tiro (4ª rodada).
+ */
+export const PHASER_DAMAGE_PER_POWER = 0.15
+
+/**
+ * Atenuação de dano por distância Chebyshev, **simétrica**: vale pro tiro do
+ * jogador e pro ataque inimigo.
+ *
+ * Tabela explícita e não fórmula fechada, mesmo motivo da `WARP_ANIMATION_MS`:
+ * é tabela de balanceamento, mexida por playtest, e curva fechada esconde onde
+ * tocar.
+ *
+ * Com `PHASER_DAMAGE_PER_POWER`, um tiro padrão de 1500 entrega 225 à
+ * queima-roupa e 34 do canto oposto — ~2 tiros pra derrubar um alvo médio de
+ * perto, ~10 de longe. É essa diferença que faz aproximar-se ser decisão, com o
+ * preço de entrar no alcance bom do outro.
+ */
+export const DAMAGE_FALLOFF: readonly number[] = [
+  1.0, 1.0, 0.75, 0.55, 0.4, 0.3, 0.22, 0.15,
+]
+
+/** Multiplicador de dano pela distância. Índice 0 nunca ocorre (mesma célula). */
+export function damageFalloff(distance: number): number {
+  const d = Math.max(1, Math.min(DAMAGE_FALLOFF.length - 1, Math.round(distance)))
+  return DAMAGE_FALLOFF[d]
+}
+
+/**
+ * Chance de erro do torpedo por obstáculo na linha de tiro.
+ *
+ * Torpedo é guiado e passa pela cobertura, ao contrário do phaser — mas
+ * corrigir trajetória no calor da batalha é difícil. Acumula com a degradação
+ * de Photon Tubes que já existe.
+ */
+export const TORPEDO_OBSTRUCTION_MISS = 0.3
+
+/** Chance de esquiva por célula coberta no turno. 8 células ≈ 40%. */
+export const EVASION_PER_CELL = 0.05
+
+/**
+ * Regeneração de escudo por turno, como fração da energia mantida.
+ *
+ * A spec de `shields` sempre disse "absorption **and regen**"; a metade do
+ * regen nunca foi implementada. `shieldDamageTaken` só acumulava e nada no
+ * projeto o reduzia — nem atracar. Não era regeneração faltando, era dano
+ * permanente por construção.
+ *
+ * Manter escudo alto custa vazão todo turno **e** compra recuperação, coerente
+ * com energia ser fluxo e não estoque.
+ */
+export const SHIELD_REGEN_PER_ENERGY = 0.02
+
 /** Chance de rendição ao dar Hail num inimigo intacto — o PISO da escala (decisão #23). */
 export const HAIL_SURRENDER_CHANCE = 0.3
 /**

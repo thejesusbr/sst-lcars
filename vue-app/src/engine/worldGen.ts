@@ -22,6 +22,7 @@ import {
 import {
   liveKbsCode,
   ENEMY_BASE_POWER,
+  ENEMY_SHIELD_BAND,
   MISSION_DURATION,
   STARBASE_POOL_CAPACITY,
   STARDATE_INITIAL,
@@ -282,11 +283,16 @@ export function materializeSector(
 
   const liveEnemies = Math.max(0, content.klingons - content.clearedEnemies)
   for (let i = 0; i < liveEnemies; i++) {
+    const type = SectorEntityType.KLINGON_CRUISER
+    // Escudo absorve antes do poder. Faixa por tipo — até a `enemy-species`
+    // entrar, só a do cruiser se manifesta, porque só ele nasce.
+    const [lo, hi] = ENEMY_SHIELD_BAND[type] ?? [0.5, 1.0]
     entities.push({
       id: `${qk}-k-${i}`,
-      type: SectorEntityType.KLINGON_CRUISER,
+      type,
       position: freeCell(),
       enemyPower: ENEMY_BASE_POWER * (0.5 + rng()),
+      enemyShield: ENEMY_BASE_POWER * (lo + rng() * (hi - lo)),
     })
   }
 
