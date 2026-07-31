@@ -193,6 +193,31 @@ describe('bridge-awareness — categoria science vs captain (item 15.9)', () => 
   })
 })
 
+describe('autoload de torpedo — tubo com o toggle ligado carrega sozinho', () => {
+  it('tubo vazio com autoLoad carrega ao fim do turno, sem ação do jogador', () => {
+    const state = createNewGameState(1)
+    state.tubes[0].autoLoad = true
+    state.tubes[0].loaded = false
+    const stockBefore = state.torpedoStock
+
+    const res = resolvePlayerTurn(state, { type: 'end_turn' }, () => 0.99)
+
+    expect(res.rejected).toBe(false)
+    expect(state.tubes[0].loaded).toBe(true)
+    expect(state.torpedoStock).toBe(stockBefore - 1)
+  })
+
+  it('tubo sem o toggle não carrega sozinho', () => {
+    const state = createNewGameState(1)
+    state.tubes[0].autoLoad = false
+    state.tubes[0].loaded = false
+
+    resolvePlayerTurn(state, { type: 'end_turn' }, () => 0.99)
+
+    expect(state.tubes[0].loaded).toBe(false)
+  })
+})
+
 describe('bridge-awareness — Alert 10 (item 11.5)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

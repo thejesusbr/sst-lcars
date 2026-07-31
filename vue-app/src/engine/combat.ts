@@ -365,6 +365,24 @@ export function unloadTube(
 }
 
 /**
+ * Autoload: tubo com o toggle ligado carrega sozinho no fim do turno, sem
+ * gastar a ação do jogador — mesmas regras de falha/estoque/dano do `loadTube`
+ * manual, só que disparado pelo motor em vez de uma ação declarada.
+ */
+export function autoLoadTubes(
+  state: GameState,
+  rng = Math.random
+): { tubeId: number }[] {
+  const loaded: { tubeId: number }[] = []
+  for (const tube of state.tubes) {
+    if (!tube.autoLoad || tube.loaded) continue
+    const res = loadTube(state, tube.id, rng)
+    if (res.success) loaded.push({ tubeId: tube.id })
+  }
+  return loaded
+}
+
+/**
  * Cicla o alvo do tubo para o próximo inimigo detectado em `currentSector`.
  */
 export function cycleTorpedoTarget(state: GameState, tubeId: number): void {

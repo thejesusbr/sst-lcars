@@ -34,6 +34,7 @@ import {
 } from '@/engine/constants'
 import {
   acquireWeaponsLock,
+  autoLoadTubes,
   firePhasers,
   fireTorpedoes,
   hailTarget,
@@ -910,6 +911,15 @@ export function resolvePlayerTurn(
 
   const combatRes = resolveCombatTurn(state, { fired: outcome.fired }, rng)
   events.push(...stamp(5, combatRes.events))
+
+  const autoLoaded = autoLoadTubes(state, rng)
+  for (const { tubeId } of autoLoaded) {
+    events.push({
+      step: 5,
+      type: 'tube_ops',
+      text: `Tubo ${tubeId}: autoload carregou torpedo.`,
+    })
+  }
 
   const partyRes = resolveLandingPartyTurn(state, rng)
   if (partyRes.completed) {
