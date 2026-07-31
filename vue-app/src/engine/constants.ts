@@ -159,7 +159,7 @@ export function warpAnimationMs(warpFactor: number): number {
  */
 export const TURN_EVENT_PRESENT_MS = 650
 
-export const PROBES_INITIAL = 3
+export const PROBES_INITIAL = 4
 export const BOOST_MAX_TURNS = 5
 /** Cooldown = turnos usados × isto, arredondado pra cima (decisão #23). */
 export const BOOST_COOLDOWN_FACTOR = 1.5
@@ -169,10 +169,26 @@ export const BOOST_COOLDOWN_FACTOR = 1.5
 export const STARDATE_INITIAL = 3600.0
 /**
  * Duração da missão em stardates. O original sorteia `T9=25+INT(RND(1)*10)`
- * (25-34); usamos o meio da faixa. Stardate avança exatamente 1 por turno
- * resolvido (`T=T+1`, linha 3870 do fonte de 1978).
+ * (25-34); usávamos o meio da faixa.
+ *
+ * **Subiu pra 40 na 3ª rodada de playthrough.** Trinta era o número de 1978,
+ * calibrado pra um jogo cujo controle de danos era uma taxa de reparo sobre o
+ * array `D` — sem fadiga, sem alocação de equipe, sem missão de superfície.
+ * Esta engine cobra as três, e a rodada bateu no muro: uma batalha dura mais a
+ * recuperação dela consumiam a maior parte da missão, e o relógio decidia a
+ * partida em vez do jogador.
+ *
+ * Sobe JUNTO com a suavização da fadiga (ver `TEAM_FATIGUE_HALFLIFE`), não no
+ * lugar dela: sozinho, mais tempo só daria mais espaço pra sofrer o mesmo
+ * defeito, com a equipe ainda virando inerte no 8º turno trabalhado.
+ *
+ * Stardate avança exatamente 1 por turno resolvido (`T=T+1`, linha 3870 do
+ * fonte de 1978) — turno é a unidade indivisível de tempo. Custo fracionário
+ * por ação foi avaliado com número e recusado: a queixa era a ESPERA de
+ * reparo, que custa 1.0 sob qualquer esquema de preço, e baratear ação de
+ * combate deixaria a espera relativamente mais cara.
  */
-export const MISSION_DURATION = 30
+export const MISSION_DURATION = 40
 export const STARDATE_PER_TURN = 1
 
 /**
@@ -382,6 +398,33 @@ export function round4(value: number): number {
 export const DAMAGE_CONTROL_TEAM_COUNT = 6
 export const TEAM_EFFICIENCY_FLOOR = 20
 export const TEAM_RECOVERY_PER_TURN = 8
+
+/**
+ * Meia-vida da fadiga, em turnos trabalhados:
+ * `efficiency = max(FLOOR, 100 × 0.5^(turnsWorked / HALFLIFE))`.
+ *
+ * Era 3, cravado no expoente. Simulado contra a engine, isso fazia uma equipe
+ * entregar 29 dos primeiros 60 pontos de um subsistema em 4 turnos e depois
+ * virar quase inerte no piso, rendendo 3 pontos por turno pra sempre.
+ * Restaurar 6 subsistemas de 20% levava 19 turnos — 63% de uma missão de 30
+ * stardates, que é o que transformava "ganhei uma batalha dura" em "perdi no
+ * relógio".
+ *
+ * Com 6, o mesmo reparo leva 11 turnos, e a fadiga continua mordendo: 89%
+ * depois do 1º turno trabalhado, 71% no 3º, 50% no 6º, 25% no 12º. A mecânica
+ * mantém o formato no dobro da escala de tempo, em vez de ser removida.
+ *
+ * 8 foi medido e descartado (9 turnos, pouco a mais que 11) porque deixa
+ * parquear equipe e esquecer — a alocação deixa de ser decisão.
+ *
+ * **`TEAM_EFFICIENCY_FLOOR` e `TEAM_RECOVERY_PER_TURN` ficam como estão, e
+ * isso é medido, não esquecimento.** Subir a recuperação idle de 8 pra 16 moveu
+ * ZERO turnos em todo cenário simulado: equipe reparando está `working` e nunca
+ * entra no ramo de recuperação. E o piso deixa de importar acima de meia-vida
+ * 5, quando a curva já não chega lá num reparo realista. Mexer neles seria
+ * mudar número sem mudar jogo.
+ */
+export const TEAM_FATIGUE_HALFLIFE = 6
 
 /**
  * Calcula a integridade percentual do escudo (0-100) derivada da energia atual

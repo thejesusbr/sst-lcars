@@ -15,6 +15,7 @@ import {
   LANDING_PARTY_TURNS,
   STARBASE_SCIENCE_RECOVERY_MULTIPLIER,
   TEAM_EFFICIENCY_FLOOR,
+  TEAM_FATIGUE_HALFLIFE,
   TEAM_RECOVERY_PER_TURN,
   clamp,
 } from '@/engine/constants'
@@ -264,7 +265,9 @@ export function resolveDamageControlTurn(
   for (const team of state.teams) {
     if (team.status === 'working') {
       team.turnsWorked++
-      const rawEff = Math.round(100 * Math.pow(0.5, team.turnsWorked / 3))
+      const rawEff = Math.round(
+        100 * Math.pow(0.5, team.turnsWorked / TEAM_FATIGUE_HALFLIFE),
+      )
       team.efficiency = Math.max(TEAM_EFFICIENCY_FLOOR, rawEff)
     } else if (team.status === 'idle' || team.status === 'cooldown') {
       if (team.turnsWorked > 0) {
