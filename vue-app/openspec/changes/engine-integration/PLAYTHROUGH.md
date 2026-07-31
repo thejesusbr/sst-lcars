@@ -1,4 +1,11 @@
-# Roteiro de Playthrough — task 5.5 da `engine-integration`
+# Roteiro de Playthrough — rodadas 1 a 3 (HISTÓRICO)
+
+> **Encerrado.** A 4ª rodada em diante roda em `openspec/PLAYTHROUGH_4.md`, que
+> carrega só o que ainda não foi verificado mais o que as changes novas
+> introduziram. Este arquivo fica como registro: as 3 primeiras rodadas, o que
+> cada uma achou e o tratamento que cada achado recebeu. **Não marque itens
+> aqui** — os pendentes foram migrados.
+
 
 Verificação manual das condições terminais e do fluxo de turno. Testes
 automatizados cobrem o engine (161 verdes); isto cobre o que só aparece
