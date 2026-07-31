@@ -263,28 +263,6 @@ export const BOOST_COOLDOWN_FACTOR = 1.5
 // ── Missão (seção 2.3, corrigido por decisão #22) ───────────────────────────
 
 export const STARDATE_INITIAL = 3600.0
-/**
- * Duração da missão em stardates. O original sorteia `T9=25+INT(RND(1)*10)`
- * (25-34); usávamos o meio da faixa.
- *
- * **Subiu pra 40 na 3ª rodada de playthrough.** Trinta era o número de 1978,
- * calibrado pra um jogo cujo controle de danos era uma taxa de reparo sobre o
- * array `D` — sem fadiga, sem alocação de equipe, sem missão de superfície.
- * Esta engine cobra as três, e a rodada bateu no muro: uma batalha dura mais a
- * recuperação dela consumiam a maior parte da missão, e o relógio decidia a
- * partida em vez do jogador.
- *
- * Sobe JUNTO com a suavização da fadiga (ver `TEAM_FATIGUE_HALFLIFE`), não no
- * lugar dela: sozinho, mais tempo só daria mais espaço pra sofrer o mesmo
- * defeito, com a equipe ainda virando inerte no 8º turno trabalhado.
- *
- * Stardate avança exatamente 1 por turno resolvido (`T=T+1`, linha 3870 do
- * fonte de 1978) — turno é a unidade indivisível de tempo. Custo fracionário
- * por ação foi avaliado com número e recusado: a queixa era a ESPERA de
- * reparo, que custa 1.0 sob qualquer esquema de preço, e baratear ação de
- * combate deixaria a espera relativamente mais cara.
- */
-export const MISSION_DURATION = 40
 
 /**
  * Duração da missão = `MISSION_BASE + MISSION_PER_ENEMY × frota gerada`.
@@ -307,17 +285,6 @@ export function missionDurationFor(enemyTotal: number): number {
   return Math.round(MISSION_BASE + MISSION_PER_ENEMY * enemyTotal)
 }
 export const STARDATE_PER_TURN = 1
-
-/**
- * ⚠️ Totais de inimigo e base **não são mais constantes de estado inicial** —
- * viraram resultado da geração de mundo (`world-generation` design.md decisão 1),
- * como no original, onde `K9`/`B9` acumulam das rolagens por quadrante.
- *
- * Ficam aqui só como valor de referência esperado, pra teste e documentação:
- * ~17.3 inimigos e ~4.6 bases. Não usar pra inicializar `GameState`.
- */
-export const ENEMIES_EXPECTED = 17
-export const STARBASES_EXPECTED = 5
 
 // ── Cela de prisioneiros (decisão #23) ──────────────────────────────────────
 
@@ -474,14 +441,6 @@ export function damageFraction(integrity: number): number {
 export function hailSurrenderChance(enemyPower: number): number {
   const damaged = clamp(1 - enemyPower / ENEMY_BASE_POWER, 0, 1)
   return HAIL_SURRENDER_CHANCE + (HAIL_SURRENDER_CHANCE_MAX - HAIL_SURRENDER_CHANCE) * damaged
-}
-
-/** Banda em que a integridade cai. */
-export function damageBand(integrity: number): DamageBand {
-  const d = damageFraction(integrity)
-  if (d > DAMAGE_BAND_CRITICAL) return 'critico'
-  if (d > DAMAGE_BAND_MODERATE) return 'moderado'
-  return 'leve'
 }
 
 /** `true` quando o subsistema está paralisado/forçado a estado seguro. */

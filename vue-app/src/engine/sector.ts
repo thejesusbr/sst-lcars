@@ -80,18 +80,6 @@ export function occupancyOf(
   return (c) => taken.has(cellKey(c))
 }
 
-/** Entidade naquela célula exata, ou `null`. */
-export function entityAt(
-  entities: SectorEntity[],
-  coord: GridCoord,
-): SectorEntity | null {
-  return (
-    entities.find(
-      (e) => e.position.row === coord.row && e.position.col === coord.col,
-    ) ?? null
-  )
-}
-
 /**
  * Adjacência de Chebyshev ≤ 1 — as 8 vizinhas mais a própria célula. Padrão
  * único de Send Party e de Docking (decisão #23); estavam duplicadas em

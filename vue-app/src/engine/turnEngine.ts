@@ -16,6 +16,7 @@ import type {
 } from '@/types/game'
 import { STARBASE_TYPE_LABELS, SUBSYSTEM_KEYS } from '@/types/game'
 import {
+  CRITICAL_INTEGRITY,
   HULL_DAMAGE_DIVISOR,
   SHIELD_REGEN_PER_ENERGY,
   STARDATE_PER_TURN,
@@ -509,7 +510,7 @@ export function regenShields(state: GameState): void {
  * - Se integridade >= 40: limpa a contagem (null).
  */
 export function updateLifeSupportCountdown(state: GameState): void {
-  if (state.subsystems.life < 40) {
+  if (state.subsystems.life < CRITICAL_INTEGRITY) {
     if (state.lifeSupportTurnsRemaining === null) {
       state.lifeSupportTurnsRemaining = 5
     } else {

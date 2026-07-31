@@ -191,6 +191,29 @@ um componente tres arquivos longe e custou 4 tentativas pra achar.
 
 
 
+### Limpeza da lista de exceções do `reachability.test.ts`
+
+O ratchet contra integração oca nasceu com 6 exceções, todas dívida herdada:
+
+- **`DOCKED_REPAIR_PER_TICK`** — a spec de `docking` diz "25 pontos por
+  subsistema por tick, **sem** o teto de stacking da CdD", mas o loop usa
+  `calculateRepairRate` com tier 5, que só dá 25 com UMA equipe a 100% de
+  eficiência. Equipe cansada rende menos, contrariando a spec. Mesma família da
+  dívida do item 9.3 logo abaixo, e nunca verificado em playthrough.
+- **`undockSector`, `effectiveImpulseMax`, `markManyExplored`,
+  `nearestKnownStarbase`, `canEngageBoost`** — helpers de navegação sem
+  consumidor. `undockSector` é o mais irônico: implementava exatamente o
+  "sudoeste da base" do item 9.5 e ficou parado enquanto o item era reportado
+  como quebrado; a `round-4-fixes` acabou escrevendo posicionamento novo em
+  `docking.ts` (melhor, porque trata ocupação e borda) sem saber que ele
+  existia.
+
+Removê-los é seguro mas exige recorte à mão — a tentativa automática quebrou
+`navigation.ts` numa assinatura multi-linha, e não vale o risco no meio de uma
+rodada de playthrough.
+
+**Origem:** primeira execução do `reachability.test.ts`, 31/07.
+
 ### Equipes `working` tratadas como idle durante atracagem
 
 A spec de `docking` pede que **todas** as 6 equipes sejam tratadas como idle

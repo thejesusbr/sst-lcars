@@ -92,9 +92,11 @@ describe('stores/useGameState', () => {
     const gs = useGameState()
     expect(gs.alertLevel).toBe('green')
 
-    gs.toggleRedAlert()
+    // `toggleRedAlert` foi removida: nenhum console a chamava (o SituationPanel
+    // usa `setAlertLevel` pelo setter do computed). `reachability.test.ts` pegou.
+    gs.setAlertLevel('red')
     expect(gs.alertLevel).toBe('red')
-    gs.toggleRedAlert()
+    gs.setAlertLevel('green')
     expect(gs.alertLevel).toBe('green')
 
     // Yellow é representável e legível, só não tem tema próprio.

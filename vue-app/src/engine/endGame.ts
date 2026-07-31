@@ -6,6 +6,10 @@
  */
 
 import type { EndGameReason, EndGameResult, GameState } from '@/types/game'
+import {
+  CAPTURED_RATING_WEIGHT,
+  DESTROYED_RATING_WEIGHT,
+} from '@/engine/constants'
 
 /**
  * Verifica condições terminais de acordo com a ordem estrita Kobayashi Maru:
@@ -101,8 +105,10 @@ export function checkTerminalConditions(
  * - Torpedos consumidos: -1 pt cada
  */
 export function calculateCommanderRating(state: GameState): number {
-  const destroyedScore = state.klingonsDestroyed * 10
-  const capturedScore = Math.floor(state.klingonsCaptured * 15)
+  // Pelos CONSTANTES, nao 10/15 cravados: os dois existiam e ninguem os lia,
+  // entao mexer neles nao mudava nada (`reachability.test.ts` pegou).
+  const destroyedScore = state.klingonsDestroyed * 10 * DESTROYED_RATING_WEIGHT
+  const capturedScore = Math.floor(state.klingonsCaptured * 10 * CAPTURED_RATING_WEIGHT)
   const timeRemaining = Math.max(0, state.stardateLimit - state.stardate)
   const timeScore = Math.floor(timeRemaining * 2)
   const starbasesDestroyed = state.starbases.filter((b) => b.destroyed).length

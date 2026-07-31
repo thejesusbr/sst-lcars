@@ -455,10 +455,6 @@ export const useGameState = defineStore('gameState', {
     },
 
     /** Toggle do SituationPanel: alterna entre `red` e `green`. */
-    toggleRedAlert() {
-      this.$state.alertLevel =
-        this.$state.alertLevel === 'red' ? 'green' : 'red'
-    },
 
     /** Despacho de equipe de CdD — livre, não consome turno. */
     dispatchTeam(teamId: string, system: SubsystemKey) {

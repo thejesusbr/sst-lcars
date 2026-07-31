@@ -555,6 +555,7 @@ const togglePhotons = () => {
       >
         <LcarsButton
           color="tertiary-interactive"
+          version="round-left"
           :label="tube.loaded ? `Unload ${tube.id}` : `Load ${tube.id}`"
           :disabled="
             (!tube.loaded && torpedoStock === 0) ||
