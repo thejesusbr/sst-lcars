@@ -121,6 +121,59 @@ Encontrar Romulano viraria informação geográfica.
 
 ## Dívida técnica
 
+### CSS global do SDK migrando pro `<style scoped>`
+
+O framework antigo era CSS + JS puro, então o CSS dos elementos está espalhado
+em arquivos por tipo. Com a migração pro Vue, faz sentido colocar cada regra no
+componente que a renderiza. **Medido em 31/07:**
+
+```
+CSS total                                      4565 linhas
+  colors.css + theme.css + themes/*            1336  (29%)  fica global
+  estrutura de elemento                        3229  (71%), ~557 regras
+
+lcars-sdk.css                                   413 regras
+  reset / seletor de tag HTML                    30   fica global
+  1 classe so -- scopavel direto                234   57%
+  descendente/combinador -- precisa :deep       149   36%
+
+regras que atravessam fronteira de componente   208  (todos os arquivos)
+componentes: 22; so 4 ja tem <style scoped>
+```
+
+**Fatiar em 3 camadas, valor decrescente:**
+
+1. **377 linhas, 4 arquivos que ja mapeiam 1:1 a um componente** —
+   `default-bracket.css` → `DefaultBracket.vue`, `solid-level-bar.css` →
+   `SolidLevelBar.vue`, `default-bar-frame.css` → `DefaultBarFrame.vue`,
+   `scroll-button.css` → `ScrollButton.vue`. Zero ambiguidade de dono. É o
+   pedaço que compensa sozinho.
+2. **234 regras de classe única** em `lcars-sdk.css`. Mecânico, toca todos os
+   16 elements.
+3. **149+208 regras descendentes.** É a dívida de verdade, e mover pro scoped
+   **não a remove** — converte pra `:deep()`, que é o mesmo acoplamento com
+   ergonomia pior. O conserto real é redesenhar a API (prop em vez de seletor
+   descendente), e isso é bem maior que relocar CSS.
+
+**Nunca migrar:** `colors.css` (889 linhas — sistema de papéis de cor que os
+props referenciam por nome), `theme.css`, `themes/*` e os 30 resets.
+
+**Pré-requisito: baseline de regressão visual.** São 3229 linhas mexidas sem
+teste nenhum cobrindo aparência, e o modo de falha é quebra visual silenciosa.
+Com Playwright dirigindo o Storybook (verificado funcionando em 31/07:
+`node_modules/playwright` + chromium do cache, o MCP nao serve porque procura o
+Chrome do sistema em `/opt/google/chrome`), um screenshot por story vira rede
+de segurança — e serve pra muito além deste refactor.
+
+**Por que nao agora:** rodada 5 em curso, e `bridge-awareness` (29 tasks) e
+`enemy-species` (17) ainda vao mexer em UI. Depois delas ha menos atrito.
+
+**Origem:** ponderação do usuário, 31/07, depois do bug de largura do
+`LcarsToggleSwitch` — em que `.complex-button .text` em `module.css` governava
+um componente tres arquivos longe e custou 4 tentativas pra achar.
+
+
+
 ### Equipes `working` tratadas como idle durante atracagem
 
 A spec de `docking` pede que **todas** as 6 equipes sejam tratadas como idle
