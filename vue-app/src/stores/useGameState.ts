@@ -13,9 +13,11 @@ import {
   SHIELD_ENERGY_MAX,
   clamp,
   computeShieldIntegrity,
+  isCritical,
   liveKbsCode,
   warpCoreOutput,
 } from '@/engine/constants'
+import { Sound, useSound } from '@/composables/useSound'
 import { createNewGameState } from '@/engine/newGame'
 import {
   TURN_EVENT_CATEGORY,
@@ -129,6 +131,7 @@ export const useGameState = defineStore('gameState', {
         captain: 0,
         general: 0,
         engineering: 0,
+        science: 0,
       }
       for (const entry of state.combatLog) counts[entry.category] += 1
       return {
@@ -138,6 +141,7 @@ export const useGameState = defineStore('gameState', {
           0,
           counts.engineering - state.logReadMarkers.engineering,
         ),
+        science: Math.max(0, counts.science - state.logReadMarkers.science),
       }
     },
 
@@ -257,6 +261,42 @@ export const useGameState = defineStore('gameState', {
       // A store de apresentação filtra o que é encenável; recusa não encena
       // nada porque não produziu evento de combate.
       usePresentation().enqueue(res.events)
+      // Recusa não mudou integridade nenhuma — nada novo pra alarmar.
+      if (!res.rejected) this.checkTerminalAlarms()
+    },
+
+    /**
+     * Alert 10 (`alert10.mp3`, importado desde a `engine-integration` e nunca
+     * chamado — mesma classe de integração oca já catalogada aqui) nos 3
+     * sistemas que terminam a partida sozinhos.
+     *
+     * WC e Life Support: toca TODO turno em crítico sem equipe designada E
+     * `working` naquele subsistema — dispensar equipe silencia, ela cair em
+     * `cooldown` ou sair `away` faz o alarme voltar (é o aviso de que o reparo
+     * parou). Casco não tem equipe designável (só repara em doca): toca 1×
+     * ao cruzar, rearma se recuperar e cair de novo — `hullAlarmArmed` é o
+     * mesmo padrão do aviso de docking hostil (`hostileDockWarningShown`).
+     */
+    checkTerminalAlarms() {
+      const s = this.$state
+      const { playSound } = useSound()
+      const teamWorkingOn = (sys: SubsystemKey) =>
+        s.teams.some((t) => t.assignedSystem === sys && t.status === 'working')
+
+      if (isCritical(s.subsystems.warpCore) && !teamWorkingOn('warpCore')) {
+        playSound(Sound.WC_BREACH)
+      }
+      if (isCritical(s.subsystems.life) && !teamWorkingOn('life')) {
+        playSound(Sound.WC_BREACH)
+      }
+
+      const hullCritical = isCritical(s.hullIntegrity)
+      if (hullCritical && !s.hullAlarmArmed) {
+        playSound(Sound.WC_BREACH)
+        s.hullAlarmArmed = true
+      } else if (!hullCritical) {
+        s.hullAlarmArmed = false
+      }
     },
 
     // ── Ações que consomem turno (atalhos legíveis pros consoles) ───────────
@@ -288,6 +328,11 @@ export const useGameState = defineStore('gameState', {
 
     launchProbe(targetCoord: GridCoord) {
       return this.dispatchPlayerAction({ type: 'launch_probe', targetCoord })
+    },
+
+    /** Survey orbital do planeta no setor atual — 1 turno, sem alvo. */
+    survey() {
+      return this.dispatchPlayerAction({ type: 'survey' })
     },
 
     /** Movimento intra-setor sob impulso. Sem alvo, usa `destinationSector`. */
@@ -448,6 +493,16 @@ export const useGameState = defineStore('gameState', {
         this.$state.exploredQuadrants[key] = { ...entry }
       }
       this.$state.lrsScanAge = 0
+      // Livre não é o mesmo que invisível: o scan nunca passava pelo turnEngine
+      // (não consome turno), então nunca virava entrada de log — a leitura de
+      // sensor mais comum do jogo não tinha onde aparecer. Categoria vem da
+      // MESMA tabela que o engine usa (`TURN_EVENT_CATEGORY.scan`), não de uma
+      // string cravada aqui.
+      this.$state.combatLog.push({
+        stardate: this.$state.stardate,
+        category: TURN_EVENT_CATEGORY.scan,
+        text: 'LRS: bloco de longo alcance escaneado.',
+      })
     },
 
     setAlertLevel(level: AlertLevel) {

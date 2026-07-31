@@ -10,6 +10,7 @@ import {
   renderedTribbleCount,
 } from '@/engine/tribbleInfestation'
 import { createNewGameState } from '@/engine/newGame'
+import { GAME_SCHEMA_VERSION } from '@/types/game'
 
 describe('engine/saveIntegrity & tribbleInfestation', () => {
   it('computeChecksum computes SHA-256 hash string for state', async () => {
@@ -22,7 +23,21 @@ describe('engine/saveIntegrity & tribbleInfestation', () => {
   it('migrateSave ensures GAME_SCHEMA_VERSION is set on loaded state', () => {
     const migrated = migrateSave({ shieldEnergy: 2500 }, createNewGameState(0))
     expect(migrated.shieldEnergy).toBe(2500)
-    expect(migrated.schemaVersion).toBe(1)
+    expect(migrated.schemaVersion).toBe(GAME_SCHEMA_VERSION)
+  })
+
+  it('migrateSave preenche logReadMarkers.science ausente de save v1 (bridge-awareness)', () => {
+    const v1Save = {
+      ...createNewGameState(0),
+      logReadMarkers: { captain: 3, general: 1, engineering: 0 },
+    }
+    const migrated = migrateSave(v1Save, createNewGameState(0))
+    expect(migrated.logReadMarkers).toEqual({
+      captain: 3,
+      general: 1,
+      engineering: 0,
+      science: 0,
+    })
   })
 
   it('verifySaveIntegrity detects altered save when checksum record mismatches', async () => {

@@ -72,11 +72,19 @@ function defaultStorage(): IntegrityStorage | undefined {
  */
 export function migrateSave(raw: unknown, defaults: GameState): GameState {
   const loaded = (raw ?? {}) as Partial<GameState>
-  return {
+  const state: GameState = {
     ...defaults,
     ...loaded,
     schemaVersion: GAME_SCHEMA_VERSION,
   }
+  // v2 (`bridge-awareness`): `logReadMarkers` ganhou a chave `science`. O
+  // merge acima é RASO — se o save carregado já tinha `logReadMarkers` (save
+  // de v1, sem `science`), esse objeto inteiro substitui o default, e
+  // `science` fica `undefined`. Corrige aqui, não no spread.
+  if (state.logReadMarkers.science === undefined) {
+    state.logReadMarkers = { ...state.logReadMarkers, science: 0 }
+  }
+  return state
 }
 
 /** Payload canônico: só os campos da versão atual, em ordem estável. */

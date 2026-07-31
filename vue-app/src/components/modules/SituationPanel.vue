@@ -54,6 +54,15 @@ const warpCoreStatus = computed<"NOM" | "DAM" | "BRC">(() => {
 
 const breachTurnsRemaining = computed(() => gameState.breach.turnsRemaining);
 
+// Mostrador de sistema terminal: com relógio armado, o valor vira `T-n` em vez
+// do normal. Warp Core e Life Support têm relógio próprio já no estado (o de
+// Life Support nunca tinha sido renderizado — a asfixia contava 5 turnos em
+// silêncio); Hull não tem relógio nenhum e sempre mostra `%` (inventar uma
+// previsão seria um palpite disfarçado de fato).
+const warpCoreText = computed(() =>
+  gameState.breach.active ? `T-${breachTurnsRemaining.value}` : warpCoreStatus.value
+);
+
 // Casco: o que o dano inimigo consome depois que os escudos saturam. Zerar é
 // destruição da nave.
 const hullIntegrity = computed(() => Math.round(gameState.hullIntegrity));
@@ -72,6 +81,12 @@ const lifeSupportColor = computed(() => {
   if (lifeSupportIntegrity.value > 25) return statusColor("damaged");
   return `${statusColor("critical")} blink`;
 });
+
+const lifeSupportText = computed(() =>
+  gameState.lifeSupportTurnsRemaining !== null
+    ? `T-${gameState.lifeSupportTurnsRemaining}`
+    : `${lifeSupportIntegrity.value}%`
+);
 
 // Overload efetivo em % da escala 0-20, incluindo o automático do consumo real.
 const overloadPercent = computed(() =>
@@ -378,7 +393,7 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
             />
             <LcarsText
               color="text-light"
-              :text="warpCoreStatus"
+              :text="warpCoreText"
               :style="{ flex: '1' }"
             />
             <LcarsBlock
@@ -394,7 +409,7 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
             <LcarsBlock label="Life Support" :style="{ flex: 'none' }" />
             <LcarsText
               color="text-light"
-              :text="`${lifeSupportIntegrity}%`"
+              :text="lifeSupportText"
               :style="{ flex: '1' }"
             />
             <LcarsBlock
@@ -506,6 +521,19 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
               :class="tabClass('engineering')"
               :style="{ filter: tabDim('engineering') }"
               @click="toggleLogTab('engineering')"
+            />
+            <!-- 4ª aba: leitura de sensor (scan, survey, achado da party,
+                 relatório da sonda), separada da decisão de comando. Sem
+                 papel `-static` próprio no tema (só existem 3), então usa cor
+                 nomeada direto -- mesmo padrão do resto do app pra cor sem
+                 papel temático dedicado. -->
+            <LcarsButton
+              id="sci-log-tab"
+              label="Sci. Log"
+              color="caribbean-green-bg"
+              :class="tabClass('science')"
+              :style="{ filter: tabDim('science') }"
+              @click="toggleLogTab('science')"
             />
             <LcarsCap version="round-right" :color="lcarsColors.primary[4]" />
           </LcarsComplexButton>

@@ -66,7 +66,7 @@ export const UnreadLogs: Story = {
         { stardate: 3601, category: 'engineering', text: 'Reparo em warpCore: +12.' },
         { stardate: 3602, category: 'captain', text: 'Sonda reporta quadrante 5,3: KBS 104.' },
       ]
-      state.logReadMarkers = { captain: 0, general: 0, engineering: 0 }
+      state.logReadMarkers = { captain: 0, general: 0, engineering: 0, science: 0 }
     }),
     decorator,
   ],

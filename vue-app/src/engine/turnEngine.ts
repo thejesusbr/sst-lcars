@@ -14,7 +14,7 @@ import type {
   TurnEventDraft,
   TurnStep,
 } from '@/types/game'
-import { STARBASE_TYPE_LABELS, SUBSYSTEM_KEYS } from '@/types/game'
+import { STARBASE_TYPE_LABELS, SUBSYSTEM_KEYS, SectorEntityType } from '@/types/game'
 import {
   CRITICAL_INTEGRITY,
   ENEMY_ATTACK_COST,
@@ -28,6 +28,7 @@ import {
   STARDATE_PER_TURN,
   damageFalloff,
   damageFraction,
+  degradedChance,
   isCritical,
   warpCoreOutput,
 } from '@/engine/constants'
@@ -46,6 +47,7 @@ import {
 import {
   chebyshev,
   countEnemies,
+  getVisibleEnemies,
   isEnemyType,
   obstaclesBetween,
   occupancyOf,
@@ -65,6 +67,7 @@ import {
   impulseCellsPerTurn,
   inGrid,
   launchProbe,
+  lrsNeighborhood,
   manualMove,
   planWarpTrip,
   propulsionBlocked,
@@ -84,6 +87,7 @@ export type PlayerActionType =
   | 'move_warp'
   | 'launch_probe'
   | 'send_party'
+  | 'survey'
   | 'end_turn'
 
 export interface PlayerAction {
@@ -203,6 +207,39 @@ function knownHostileQuadrants(state: GameState): (c: GridCoord) => boolean {
     // Primeiro dígito do KBS é a contagem de Klingons. Quadrante não explorado
     // conta como livre: o Auto-Nav não pode desviar do que a nave não escaneou.
     return entry ? Number(entry.code[0]) > 0 : false
+  }
+}
+
+/** Urgência de cada nível — só serve pra comparar, nunca é exibida. */
+const ALERT_RANK: Record<GameState['alertLevel'], number> = {
+  green: 0,
+  yellow: 1,
+  red: 2,
+}
+
+/**
+ * Sobe o alerta sozinho: `red` com hostil visível no setor, `yellow` com
+ * hostil CONHECIDO na vizinhança (LRS ou adjacência já escaneada) e nenhum no
+ * setor. NUNCA desce — a spec (`game-state-store`, "Alert condition...")
+ * garante isso por construção aqui: só escreve se o nível calculado for MAIS
+ * urgente que o atual, então limpar o setor ou se afastar de vizinhança
+ * hostil não reverte o toggle que o jogador não tocou.
+ */
+function updateAlertLevel(state: GameState): void {
+  let level: 'yellow' | 'red' | null = null
+
+  if (getVisibleEnemies(state).length > 0) {
+    level = 'red'
+  } else {
+    const hostile = knownHostileQuadrants(state)
+    const nearby = lrsNeighborhood(state.position.quadrant).some(
+      (q) => !sameQuadrant(q, state.position.quadrant) && hostile(q),
+    )
+    if (nearby) level = 'yellow'
+  }
+
+  if (level && ALERT_RANK[level] > ALERT_RANK[state.alertLevel]) {
+    state.alertLevel = level
   }
 }
 
@@ -476,6 +513,38 @@ function applyPlayerAction(
         type: 'landing_party',
         text: 'Equipe de desembarque enviada ao planeta.',
       })
+      return ok()
+    }
+
+    case 'survey': {
+      // Custa mais que a sonda ler a distância porque é 1 turno gasto no
+      // LOCAL — mas é MUITO mais barato que a Send Party (3 turnos + equipe
+      // imobilizada + risco de perdê-la), pra responder só "vale a pena ir?".
+      if (isCritical(state.subsystems.srs)) {
+        return reject('SRS em estado crítico — survey indisponível.')
+      }
+      const planet = state.currentSector.find(
+        (e) => e.type === SectorEntityType.PLANET,
+      )
+      if (!planet) return reject('Nenhum planeta no setor.')
+
+      // Confiabilidade pela MESMA curva de toda falha probabilística por dano
+      // (`degradedChance`): 0 até moderado, sobe linear até 0.30 na borda do
+      // crítico. Leve = sempre certo; moderado = pode mentir; crítico já foi
+      // barrado acima. A mentira nunca se anuncia — reportar "não confiável"
+      // não teria risco nenhum, o jogador simplesmente ignoraria.
+      const misreport = rng() < degradedChance(state.subsystems.srs)
+      const hasDilithium = (planet.dilithiumCharges ?? 0) > 0
+      const reportsPresent = misreport ? !hasDilithium : hasDilithium
+
+      events.push({
+        type: 'survey',
+        text: reportsPresent
+          ? 'Survey orbital: leituras indicam depósito de dilítio no planeta.'
+          : 'Survey orbital: nenhum traço de dilítio detectado.',
+      })
+      // NÃO toca `surveyed` nem `dilithiumCharges`: presença é tudo que o
+      // Survey revela. Quantidade continua exclusiva da Send Party.
       return ok()
     }
 
@@ -846,7 +915,7 @@ export function resolvePlayerTurn(
   if (partyRes.completed) {
     events.push({
       step: 5,
-      type: 'landing_party',
+      type: 'landing_party_report',
       amount: partyRes.boost,
       text: partyRes.destroyed
         ? 'Equipe de desembarque perdida em setor hostil.'
@@ -863,6 +932,10 @@ export function resolvePlayerTurn(
     options.onQuadrantEnter?.(state, state.position.quadrant)
     settleShipCell(state)
   }
+
+  // DEPOIS do hook: se a nave trocou de quadrante neste turno, `currentSector`
+  // só reflete o setor novo a partir daqui — checar antes leria o setor velho.
+  updateAlertLevel(state)
 
   return {
     stardate: state.stardate,

@@ -26,7 +26,12 @@ import {
 } from "@/composables/sensorDisplay";
 import { scanConfidence as scanConfidenceOf } from "@/engine/navigation";
 import { isAdjacent, isEnemyType, isStarbaseType } from "@/engine/sector";
-import { STARBASE_TYPE_LABELS, type StarbaseType } from "@/types/game";
+import {
+  STARBASE_TYPE_LABELS,
+  SectorEntityType,
+  type StarbaseType,
+} from "@/types/game";
+import CombatLog from "@/components/widgets/CombatLog.vue";
 
 const { playSound } = useSound();
 
@@ -322,6 +327,32 @@ const sendProbe = () =>
     await gameState.launchProbe({ ...selectedSystem.value });
   });
 
+// ── Ciência: survey de planeta + coluna de leitura de sensor ────────────────
+
+const planetInSector = computed(() =>
+  gameState.currentSector.some((e) => e.type === SectorEntityType.PLANET)
+);
+
+/** Mesma condição de "SRS crítico" que já apaga o display curto alcance. */
+const surveyDisabled = computed(
+  () => !planetInSector.value || srsDark.value || busy.value || presentation.busy
+);
+
+const survey = () =>
+  withTurn(async () => {
+    await gameState.survey();
+  });
+
+/**
+ * View do MESMO log que a aba "Sci. Log" do SituationPanel mostra — não um
+ * estado próprio. Scan, survey, achado da party e relatório da sonda vivem
+ * aqui porque é onde o jogador está olhando quando eles importam; a aba do
+ * Combat Log continua sendo o registro completo.
+ */
+const scienceEntries = computed(() =>
+  gameState.combatLog.filter((entry) => entry.category === "science")
+);
+
 const toggleSrs = () => {
   playSound(gameState.subsystemsOn.srs ? Sound.POWER_DOWN : Sound.POWER_UP);
   gameState.toggleSubsystemOn("srs");
@@ -462,20 +493,6 @@ const toggleLrs = () => {
           @click="sendParty"
         />
       </LcarsRow>
-
-      <!-- O que a base adjacente oferece — visível ANTES de atracar, pra a
-           escolha entre bases de tipos diferentes ser informada. -->
-      <LcarsText
-        v-if="adjacentBaseLabel"
-        id="adjacent-base-hint"
-        :text="`Adjacent: ${adjacentBaseLabel}`"
-        class="text-light"
-        :style="{
-          'font-size': '0.85rem',
-          'text-align': 'center',
-          width: '24rem',
-        }"
-      />
     </LcarsColumn>
 
     <!-- Long-range scanner column -->
@@ -646,6 +663,51 @@ const toggleLrs = () => {
           />
         </LcarsComplexButton>
       </LcarsRow>
+    </LcarsColumn>
+
+    <!-- Science column: o que a estação de ciência reporta -- scan, survey,
+         achado da party e relatório da sonda. Não tinha lugar nenhum antes: a
+         dica de base adjacente vivia espremida no SRS numa fonte de 0.85rem,
+         e o resto só existia como linha perdida no Combat Log (5ª rodada,
+         item 15.9). É VIEW do mesmo log da aba "Sci. Log" -- um registro,
+         dois lugares de leitura. -->
+    <LcarsColumn
+      id="sci-log-pnl"
+      flex="v"
+      :style="{
+        'justify-content': 'center',
+        'align-items': 'flex-start',
+        gap: '1rem',
+      }"
+    >
+      <LcarsTitle
+        version="centered"
+        size="small"
+        text="Science station"
+        color="text-light"
+      />
+
+      <LcarsText
+        v-if="adjacentBaseLabel"
+        id="adjacent-base-hint"
+        :text="`Adjacent: ${adjacentBaseLabel}`"
+        class="text-light"
+        :style="{ 'text-align': 'center', width: '20rem' }"
+      />
+
+      <LcarsRow :style="{ 'justify-content': 'center', width: '20rem' }">
+        <LcarsButton
+          id="survey-btn"
+          version="round"
+          color="tertiary-interactive"
+          label="Survey planet"
+          :disabled="surveyDisabled"
+          :style="{ width: '14rem' }"
+          @click="survey"
+        />
+      </LcarsRow>
+
+      <CombatLog :entries="scienceEntries" />
     </LcarsColumn>
   </LcarsRow>
 </template>

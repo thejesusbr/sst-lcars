@@ -13,7 +13,10 @@
  * campos; o checksum de integridade é calculado só sobre os campos da versão
  * corrente, depois de migrar (capability `save-integrity`).
  */
-export const GAME_SCHEMA_VERSION = 1
+// v2 (`bridge-awareness`): `LogCategory` ganha `science`, `LogReadMarkers`
+// passa a 4 chaves. Save de v1 carrega `logReadMarkers` sem a chave nova —
+// `saveIntegrity.migrateSave` corrige na migração.
+export const GAME_SCHEMA_VERSION = 2
 
 // ── Coordenadas ─────────────────────────────────────────────────────────────
 
@@ -247,7 +250,13 @@ export type AlertLevel = (typeof ALERT_LEVELS)[number]
 
 // ── Combat log ──────────────────────────────────────────────────────────────
 
-export type LogCategory = 'captain' | 'general' | 'engineering'
+/**
+ * `science` divide leitura de sensor do que o capitão decide: scan, survey,
+ * achado da equipe de exploração e relatório da sonda vão pra `science`; hail,
+ * lançar/recolher equipe e lançar sonda ficam em `captain` — a linha é pra
+ * quem a entrada se dirige, não quem a produziu (`bridge-awareness`).
+ */
+export type LogCategory = 'captain' | 'general' | 'engineering' | 'science'
 
 export interface CombatLogEntry {
   stardate: number
@@ -288,8 +297,18 @@ export type TurnEventType =
   | 'breach'
   | 'repair'
   | 'hail'
+  /** Lançamento da sonda — decisão do capitão. */
   | 'probe'
+  /** Relatório da sonda ao chegar — leitura de sensor (`bridge-awareness`). */
+  | 'probe_report'
+  /** Despacho/recolhimento da equipe de desembarque — decisão do capitão. */
   | 'landing_party'
+  /** Achado da equipe (dilítio ou planeta estéril) — leitura de sensor. */
+  | 'landing_party_report'
+  /** Scan de LRS — ação livre, mas o resultado é leitura de sensor. */
+  | 'scan'
+  /** Survey orbital de planeta (`bridge-awareness`). */
+  | 'survey'
   | 'rejection'
 
 /**
@@ -315,7 +334,11 @@ export const TURN_EVENT_CATEGORY: Record<TurnEventType, LogCategory> = {
   repair: 'engineering',
   hail: 'captain',
   probe: 'captain',
+  probe_report: 'science',
   landing_party: 'captain',
+  landing_party_report: 'science',
+  scan: 'science',
+  survey: 'science',
 }
 
 /**
@@ -571,6 +594,13 @@ export interface GameState {
   dockedBaseId: string | null
   /** Aviso de docking hostil só aparece 1x por playthrough. */
   hostileDockWarningShown: boolean
+  /**
+   * Alert 10 do casco já soou nesta passagem por crítico — mesmo padrão do
+   * aviso de docking hostil. Casco não tem equipe designável (só repara em
+   * doca), então o alarme toca 1× ao cruzar em vez de todo turno — rearma
+   * quando o casco recupera e cai de novo (`bridge-awareness`).
+   */
+  hullAlarmArmed: boolean
 
   // Sensores / mapa
   starbases: Starbase[]

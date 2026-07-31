@@ -126,6 +126,7 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
     docked: false,
     dockedBaseId: null,
     hostileDockWarningShown: false,
+    hullAlarmArmed: false,
 
     starbases: world.starbases,
     // A nave obviamente sabe onde está: quadrante inicial já explorado.
@@ -140,7 +141,7 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
 
     alertLevel: 'green',
     combatLog: [],
-    logReadMarkers: { captain: 0, general: 0, engineering: 0 },
+    logReadMarkers: { captain: 0, general: 0, engineering: 0, science: 0 },
 
     tribbleInfestationActive: false,
     tribblePopulation: 0,

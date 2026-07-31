@@ -416,7 +416,7 @@ export function resolveProbeScan(
       dilithiumCharges: 0,
       log: [
         {
-          type: 'probe',
+          type: 'probe_report',
           text: 'Contato perdido com a sonda — nenhum dado recebido.',
         },
       ],
@@ -432,14 +432,14 @@ export function resolveProbeScan(
   // Coordenadas SEMPRE X,Y (col,row) em texto de UI — a chave interna é row,col.
   const xy = `${target.col},${target.row}`
   const log: TurnEventDraft[] = [
-    { type: 'probe', text: `Sonda reporta quadrante ${xy}: KBS ${code}.` },
+    { type: 'probe_report', text: `Sonda reporta quadrante ${xy}: KBS ${code}.` },
   ]
 
   if (q.planet) {
     // Revelar não gasta carga — a sonda só observa.
     q.surveyed = true
     log.push({
-      type: 'probe',
+      type: 'probe_report',
       amount: q.dilithiumCharges,
       text:
         q.dilithiumCharges > 0
