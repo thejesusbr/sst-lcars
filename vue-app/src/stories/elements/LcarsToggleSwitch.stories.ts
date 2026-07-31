@@ -67,13 +67,13 @@ export const Off: Story = {
 /**
  * Pegada base contra `LcarsButton` e `LcarsBlock`.
  *
- * O LCARS organiza um grid uniforme: todo controle numa linha tem que ocupar a
- * mesma altura e a mesma largura base. O toggle estourava a caixa (~220px
- * contra 150px de um botão) porque `.complex-button .text` força
- * `min-width: 7.5rem`, calibrado pros displays numéricos.
+ * O LCARS organiza um grid uniforme, e a base deste projeto é a de
+ * `module.css`: `.block, .button { min-width: 7.5rem; min-height: 3rem }`.
+ * `.complex-button` (root do toggle) não recebe esse override e ficava com os
+ * 150px do `lcars-sdk`, mais largos que a base.
  *
- * As três bordas vermelhas abaixo têm que ter a MESMA altura, e o toggle não
- * pode ser mais largo que o botão.
+ * Na linha de outline vermelho, os três elementos têm que ter a MESMA altura e
+ * a MESMA largura base — nenhum deles leva `width` ou `flex`.
  */
 export const GridAlignment: Story = {
   render: () => ({
