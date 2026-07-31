@@ -307,3 +307,46 @@ describe('engine/damageControl', () => {
     expect(state.subsystems).toEqual(before)
   })
 })
+
+describe('breach — a equipe não abandona o núcleo contido pela metade', () => {
+  it('contenção completa mesmo com a integridade chegando a 100 antes', () => {
+    // O cenário exato da 5ª rodada: 2 equipes no WC, integridade fecha em 100
+    // em 1-2 turnos, e a dispensa automática congelava a contenção com o
+    // relógio andando — morte por radiação com o jogador fazendo tudo certo.
+    const state = createNewGameState(1)
+    state.breach = { active: true, containment: 0, turnsRemaining: 5 }
+    state.subsystems.warpCore = 60
+    for (const id of ['team-1', 'team-2']) {
+      const team = state.teams.find((t) => t.id === id)!
+      team.status = 'working'
+      team.assignedSystem = 'warpCore'
+      team.turnsWorked = 1 // já em posição: contribuem desde o 1º tick
+    }
+
+    let died = false
+    for (let turn = 0; turn < 5 && state.breach.active; turn++) {
+      const res = resolveBreachTurn(state)
+      if (res.expired) died = true
+      resolveDamageControlTurn(state)
+    }
+
+    expect(died).toBe(false)
+    expect(state.breach.active).toBe(false)
+    expect(state.breach.containment).toBe(100)
+  })
+
+  it('contido o breach, a equipe do núcleo é finalmente dispensada', () => {
+    const state = createNewGameState(2)
+    state.breach = { active: false, containment: 100, turnsRemaining: 3 }
+    state.subsystems.warpCore = 100
+    const team = state.teams.find((t) => t.id === 'team-1')!
+    team.status = 'working'
+    team.assignedSystem = 'warpCore'
+    team.turnsWorked = 2
+
+    resolveDamageControlTurn(state)
+
+    expect(team.status).toBe('idle')
+    expect(team.assignedSystem).toBeNull()
+  })
+})

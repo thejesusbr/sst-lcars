@@ -253,6 +253,14 @@ export function resolveDamageControlTurn(
   for (const team of state.teams) {
     if (team.status !== 'working' || !team.assignedSystem) continue
     if (state.subsystems[team.assignedSystem] < 100) continue
+    // Breach ativo: a equipe no Warp Core FICA, mesmo com integridade 100.
+    // A contenção (`breach.containment`) é um medidor SEPARADO da integridade,
+    // e `resolveBreachTurn` ganha contenção via `calculateRepairRate` — que dá
+    // zero sem equipe working. Dispensar aqui congelava a contenção com o
+    // relógio andando: 2 equipes em tier 5 levavam a integridade a 100 em 1-2
+    // turnos, a dispensa esvaziava o núcleo, e a morte por radiação era
+    // garantida MESMO com o jogador fazendo tudo certo (5ª rodada, item 11.4).
+    if (team.assignedSystem === 'warpCore' && state.breach.active) continue
 
     team.assignedSystem = null
     team.status =
