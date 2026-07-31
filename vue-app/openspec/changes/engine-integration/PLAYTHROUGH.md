@@ -115,9 +115,9 @@ integridade 20 em ~12 turnos em vez de 23).
 - [x] 2.2 SRS mostra a nave **e** pelo menos 1 estrela (toda célula da galáxia
       tem ≥1 estrela — setor vazio aqui = hook `onQuadrantEnter` desligado).
 - [x] 2.3 A nave **não** está em cima de nenhuma entidade.
-- [ ] 2.4 Star Chart mostra só o quadrante atual, com moldura branca; o resto vazio
+- [x] 2.4 Star Chart mostra só o quadrante atual, com moldura branca; o resto vazio
       (é o mapa do que foi explorado, não a verdade da galáxia).
-- [ ] 2.5 Recarregar a página (F5): **mesma** galáxia, mesma posição, mesmo
+- [x] 2.5 Recarregar a página (F5): **mesma** galáxia, mesma posição, mesmo
       stardate. Semente persiste.
 - [x] 2.6 "New Game" do ResultScreen gera galáxia **diferente**.
 
@@ -153,11 +153,11 @@ integridade 20 em ~12 turnos em vez de 23).
 
 ## 5. Movimento
 
-- [ ] 5.1 **Impulso:** NavSensing → clicar célula do SRS → "Snd Helm". A nave
+- [x] 5.1 **Impulso:** NavSensing → clicar célula do SRS → "Snd Helm". A nave
       move dentro do setor, 1 turno.
-- [ ] 5.2 Impulso para **curto** ao ter estrela/planeta no caminho reto — não
+- [x] 5.2 Impulso para **curto** ao ter estrela/planeta no caminho reto — não
       atravessa, não é recusado.
-- [ ] 5.3 Inimigos no setor **reposicionam** quando você engaja movimento, e
+- [x] 5.3 Inimigos no setor **reposicionam** quando você engaja movimento, e
       **não** reposicionam num "End Turn".
 - [x] 5.4 **Warp:** Star Chart → clicar quadrante → "Snd to Helm" → Helm engaja.
       Duração = `ceil(distância / warpFactor)` turnos.
@@ -179,7 +179,7 @@ integridade 20 em ~12 turnos em vez de 23).
 - [x] 6.6 Torpedo destrói cruiser em 1 acerto (dano 200–300 vs poder 100–300).
 - [ ] 6.7 Dano no SRS às vezes **perde** o lock no fim do turno.
 - [x] 6.8 Toggle "Photon Tubes" muda o consumo e toca power up/down.
-- [ ] 6.9 Hail: rendição escala com dano (piso 30% intacto, teto 75% em
+- [x] 6.9 Hail: rendição escala com dano (piso 30% intacto, teto 75% em
       farrapos — `hailSurrenderChance`); captura enche a cela; cela cheia
       recusa; roll falho responde com recusa variada no combat log
       (`hail-and-identity`, ver seção 15).
@@ -200,8 +200,8 @@ integridade 20 em ~12 turnos em vez de 23).
 
 - [x] 8.1 "Scan" do LRS revela o bloco 3×3 com código KBS.
 - [x] 8.2 Confiança **decai** a cada turno; células vão esmaecendo, piso 30%.
-- [ ] 8.3 Dano no LRS **acelera** o decaimento.
-- [ ] 8.4 LRS em crítico: "Scan" desabilitado.
+- [x] 8.3 Dano no LRS **acelera** o decaimento.
+- [x] 8.4 LRS em crítico: "Scan" desabilitado.
 - [x] 8.5 Sonda a distância 3 resolve em **4 turnos**; contador mostra `T-n`.
 - [x] 8.6 Sonda revela planeta **e** cargas de dilítio no log.
 - [x] 8.7 Sonda em quadrante hostil às vezes é destruída (40% + 5%/inimigo extra),
@@ -228,7 +228,7 @@ integridade 20 em ~12 turnos em vez de 23).
 - [x] 10.3 Aba do log **pisca** quando chega entrada na categoria que você não
       está lendo.
 - [x] 10.4 Trocar de aba **não** para de piscar. Só rolar até o fim para.
-- [ ] 10.5 Entrada nova **não** arrasta o scroll — a posição de leitura fica onde
+- [x] 10.5 Entrada nova **não** arrasta o scroll — a posição de leitura fica onde
       você deixou.
 
 ## 11. Condições terminais (o núcleo da task 5.5)
@@ -239,14 +239,14 @@ Ordem de prioridade Kobayashi Maru: derrota sempre supera vitória.
 - [x] 11.2 **Explosão do WC** — subir o overload manual pra 20 e passar turnos.
 - [ ] 11.3 **Morte por radiação** — deixar o breach sem equipe designada, 5 turnos.
 - [ ] 11.4 **Breach contido** — designar equipe e chegar a 100% antes do relógio.
-- [ ] 11.5 **Asfixia** — Life Support <40 por 5 turnos sem reparar.
+- [x] 11.5 **Asfixia** — Life Support <40 por 5 turnos sem reparar.
 - [ ] 11.6 **Casco destruído** — baixar escudo e levar dano até `hullIntegrity`
       chegar a 0. Indicador "Hull" no SituationPanel deve piscar antes.
-- [ ] 11.7 **Fim de tempo** — passar do stardate 3630.
+- [x] 11.7 **Fim de tempo** — passar do stardate 3630.
 - [ ] 11.8 **Base atracada destruída** — item 9.4.
 - [x] 11.9 **NÃO existe** fim por energia: rodar com consumo alto por 10+ turnos
       não deve gerar condição terminal nenhuma por si só.
-- [ ] 11.10 Toda condição leva ao ResultScreen com motivo e rating certos.
+- [x] 11.10 Toda condição leva ao ResultScreen com motivo e rating certos.
 
 ## 12. Persistência
 
@@ -269,62 +269,62 @@ Sem número esperado — é pra registrar sensação:
 
 ## 14. Encenação e ritmo (`game-feel-and-pacing`)
 
-- [ ] 14.1 Disparar phaser com inimigo visível: linha pulsante aparece entre a
+- [x] 14.1 Disparar phaser com inimigo visível: linha pulsante aparece entre a
       nave e o alvo antes do dano refletir no painel.
-- [ ] 14.2 Disparar torpedo: asterisco percorre as células até o alvo, não
+- [x] 14.2 Disparar torpedo: asterisco percorre as células até o alvo, não
       salta direto.
-- [ ] 14.3 Turno com contra-ataque inimigo: a MESMA animação (linha) aparece
+- [x] 14.3 Turno com contra-ataque inimigo: a MESMA animação (linha) aparece
       partindo do inimigo — dá pra ver o inimigo agindo, não só ler o log.
-- [ ] 14.4 Absorção de escudo e dano de casco pulsam na própria nave, em
+- [x] 14.4 Absorção de escudo e dano de casco pulsam na própria nave, em
       sequência, depois do feixe que os causou.
-- [ ] 14.5 Turno sem combate (só movimento/reparo) resolve **sem espera** —
+- [x] 14.5 Turno sem combate (só movimento/reparo) resolve **sem espera** —
       nenhuma fila de encenação vazia.
-- [ ] 14.6 Durante a encenação de um turno, nenhum botão que consome turno
+- [x] 14.6 Durante a encenação de um turno, nenhum botão que consome turno
       responde; volta a responder quando a fila termina.
 - [ ] 14.7 SRS/LRS com dano moderado (`d > 0.30`) **piscam**; dano crítico
       apaga o display por completo.
 - [ ] 14.8 LRS com dano moderado ou pior: dígitos do KBS variam sozinhos na
       tela, mas o Star Chart mantém o dado real depois de reparar o sensor.
-- [ ] 14.9 Engajar warp: setor esvazia na hora (fuga limpa), nenhum inimigo
+- [x] 14.9 Engajar warp: setor esvazia na hora (fuga limpa), nenhum inimigo
       alcança a nave durante a viagem.
-- [ ] 14.10 Warp multi-turno resolve sozinho — sem clicar "End Turn" — e o
+- [x] 14.10 Warp multi-turno resolve sozinho — sem clicar "End Turn" — e o
       Helm mostra o efeito visual pela duração certa a cada turno de viagem.
-- [ ] 14.11 Warp 1 na diagonal completa da galáxia dura **~30s**; warp 8 dura
+- [x] 14.11 Warp 1 na diagonal completa da galáxia dura **~30s**; warp 8 dura
       **~3s**. A diferença é perceptível sem cronômetro (calibrar a LUT pelo
       feeling aqui, não é medida final).
-- [ ] 14.12 Nenhuma ação que consome turno é aceita enquanto a nave está em
+- [x] 14.12 Nenhuma ação que consome turno é aceita enquanto a nave está em
       trânsito de warp; ajustes livres (dial, escudo, despacho de CdD)
       continuam funcionando.
 
 ## 15. Hail, base científica e identidade (`hail-and-identity`)
 
-- [ ] 15.1 Com base E inimigo no mesmo setor, o botão Hail não decide
+- [x] 15.1 Com base E inimigo no mesmo setor, o botão Hail não decide
       sozinho — exige selecionar a célula de qual dos dois.
-- [ ] 15.2 Com um só alvo hailável no setor, o botão funciona de qualquer
+- [x] 15.2 Com um só alvo hailável no setor, o botão funciona de qualquer
       célula selecionada (não precisa mais acertar a célula exata do alvo).
-- [ ] 15.3 Hail numa base responde tipo (Drydock/Supply Depot/Science
+- [x] 15.3 Hail numa base responde tipo (Drydock/Supply Depot/Science
       Station), quadrante e nível de pool — dá pra decidir se vale a viagem
       só pelo log.
-- [ ] 15.4 Amassar um inimigo antes de chamar (phaser/torpedo até baixo
+- [x] 15.4 Amassar um inimigo antes de chamar (phaser/torpedo até baixo
       poder) muda perceptivelmente a taxa de rendição, sem tornar captura
       dominante sobre destruição.
-- [ ] 15.5 Hail contra alvo intacto: rendição na taxa de sempre (~30%), sem
+- [x] 15.5 Hail contra alvo intacto: rendição na taxa de sempre (~30%), sem
       surpresa.
-- [ ] 15.6 Roll de rendição falho aparece no combat log como recusa, com
+- [x] 15.6 Roll de rendição falho aparece no combat log como recusa, com
       variação entre tentativas (não a mesma linha sempre).
 - [ ] 15.7 Atracar em base científica com equipes de CdD exaustas: fadiga
       recupera mais rápido que numa doca comum, com as mesmas equipes e o
       mesmo tempo atracado.
-- [ ] 15.8 Base científica segue sem repor torpedo ou casco — só o bônus de
+- [x] 15.8 Base científica segue sem repor torpedo ou casco — só o bônus de
       descanso.
-- [ ] 15.9 O painel do NavSensing mostra qual bônus a base adjacente oferece
+- [x] 15.9 O painel do NavSensing mostra qual bônus a base adjacente oferece
       antes de atracar, não só depois.
-- [ ] 15.10 Captain's Lounge: escolher uma das 7 naves atualiza o ícone no
+- [x] 15.10 Captain's Lounge: escolher uma das 7 naves atualiza o ícone no
       SRS/LRS e sugere o nome da nave; o nome (e o do capitão) é editável por
       cima da sugestão.
-- [ ] 15.11 Nome de nave/capitão escolhidos aparecem no Briefing e no Result
+- [x] 15.11 Nome de nave/capitão escolhidos aparecem no Briefing e no Result
       Screen ao fim da partida.
-- [ ] 15.12 F5 no meio da partida: identidade escolhida volta igual (survive
+- [x] 15.12 F5 no meio da partida: identidade escolhida volta igual (survive
       reload); "New Game" volta aos defaults.
 
 ---
@@ -484,3 +484,31 @@ Itens destravados por esta rodada de implementação:
   o pace deixou de ser instantâneo.
 - Item **13.2** (overload/breach punitivo demais?) segue em aberto — ainda
   sem observação registrada desde a 1ª rodada.
+
+### Anotações da 3ª rodada
+
+2.4. Correto, porém o código KBS não muda após derrotar inimigo no setor, ele devia mudar, já que o SRS escaneia continuamente.
+
+10.0 Alerta vermelho deveria engajar automaticamente ao entrar em setor hostil, náo está.
+
+11.5 Em uma batalha grande, não notei o dano no sistema de suporte de vida. Vamos colocar um indicador cíclico de dano no painel de situação. Vou adicionar o controle manualmente e você resolve a função. Vou reagrupar o mostrador. Quando fizer a análise do documento, discuta a spec do novo mostrador comigo. Também vamos tocar o som de alerta (Alert 10) quando Warp Core ou Life Support (que causam derrota) forem atingidos.
+
+12.2 Os tribbles não apareceram, mesmo depois de editar valores no Pinia (com o plugin Vue) e no localStorage. Pode ser meu procedimento, pode instruir como testar?
+
+13.1 Está curto... Depois de uma batalha difícil, a espera para recuperar dano sempre levou a derrota por tempo. Os cálculos de tempo estão inteiros ou decimais? Podemos assumir que algumas ações demoram uma fração de turno, ou é melhor deixar como está? Sugestões?
+
+13.3 O consumo de fadiga está alto, a equipe repara muito pouco antes de fatigar. Vamos fazer simulações para balancear.
+
+13.4 Sim, é para ser frustrante. Para equilibrar um pouco, podemos acrescentar uma feature: scan ativo também revela reserva de dilítio, como a sonda. Assim o jogador tem a chance de gastar turnos para diminuir incerteza. O que acha?
+
+13.5 Quase bom, vamos aumentar para 4.
+
+14.1 A animação está excelente, porém aparece deslocada em relação à posição dos ícones. Vamos usar cores diferentes, azul para nossa nave, vermelho para klingons, verde para romulanos.
+
+14.2 Idem ao anterior, animação boa, mas deslocada, vamos usar cores diferentes por raça. Outra coisa, seria interessante a animação do escudo estar na mesma cor do indicador de integridade.
+
+14.10 O SRS deve ficar em branco enquanto está em warp e atualizar a informação do destino apenas depois de terminar a animação. Hoje, ele atualiza assim que o warp é engajado, quebrando a surpresa. LRS, permanece como está, atualizando o KBS e a idade da informação quando a animação de warp terminar.
+
+15.4 Muitos dos inimigos danificados se renderam, acho que podemos diminuir o teto da chance. Afinal, são Klingons... Não encontrei nenhum Romulano vagando por aí...
+
+15.9 Apareceu a informação, mas a fonte estava muito pequena. Tive uma ideia, acrescentar uma terceira coluna no painel de navegação, exclusivo para resultados de scan, hail e exploração, funções que seriam logs tradicionais de uma estação de ciência. Sr. Spock, relatório.
