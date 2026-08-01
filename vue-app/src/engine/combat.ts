@@ -531,12 +531,12 @@ export interface CombatTurnResult {
  */
 export function resolveCombatTurn(
   state: GameState,
-  options: { fired?: boolean } = {},
+  options: { firedPhasers?: boolean } = {},
   rng = Math.random,
 ): CombatTurnResult {
   const events: TurnEventDraft[] = []
 
-  if (!options.fired) {
+  if (!options.firedPhasers) {
     passivePhaserCooldown(state)
   }
 

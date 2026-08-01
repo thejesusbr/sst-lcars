@@ -909,7 +909,11 @@ export function resolvePlayerTurn(
   )
   events.push(...stamp(5, navRes.events))
 
-  const combatRes = resolveCombatTurn(state, { fired: outcome.fired }, rng)
+  const combatRes = resolveCombatTurn(
+    state,
+    { firedPhasers: outcome.fired && action.type === 'fire_phasers' },
+    rng,
+  )
   events.push(...stamp(5, combatRes.events))
 
   const autoLoaded = autoLoadTubes(state, rng)

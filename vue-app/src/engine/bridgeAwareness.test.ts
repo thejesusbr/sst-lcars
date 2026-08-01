@@ -193,6 +193,26 @@ describe('bridge-awareness — categoria science vs captain (item 15.9)', () => 
   })
 })
 
+describe('torpedo não esquenta phaser', () => {
+  it('disparar torpedo ainda deixa o phaser resfriar passivamente', () => {
+    const state = createNewGameState(1)
+    state.phaserTemp = 100
+    state.currentSector = [klingon(2, 2)]
+    const target = state.currentSector[0]
+    state.tubes[0].loaded = true
+    state.tubes[0].targetId = target.id
+
+    const res = resolvePlayerTurn(
+      state,
+      { type: 'fire_torpedoes' },
+      () => 0.99,
+    )
+
+    expect(res.rejected).toBe(false)
+    expect(state.phaserTemp).toBeLessThan(100)
+  })
+})
+
 describe('autoload de torpedo — tubo com o toggle ligado carrega sozinho', () => {
   it('tubo vazio com autoLoad carrega ao fim do turno, sem ação do jogador', () => {
     const state = createNewGameState(1)
