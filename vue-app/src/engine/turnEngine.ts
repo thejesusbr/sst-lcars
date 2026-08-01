@@ -616,6 +616,17 @@ function resolveEnemyTurn(
   const events: TurnEventDraft[] = []
   let dockedBaseDestroyed = false
 
+  // Posição ANTES do reposicionamento — a apresentação ancora o feixe aqui,
+  // não no destino. `sectorSnapshot` congela o grid no início do turno e só
+  // troca pra posição final quando a fila drena (usePresentation.ts); um
+  // feixe emitido da posição JÁ movida aparecia na célula futura do inimigo,
+  // que a nave ainda nem viu se mexer — o mesmo defeito de sempre aqui
+  // (comentário prometia "feixe ancora na origem", código lia a posição
+  // depois de `moveHostiles` já ter mutado).
+  const originPositions = new Map(
+    state.currentSector.map((e) => [e.id, { ...e.position }]),
+  )
+
   // Movimento deliberado ANTES do ataque: o inimigo se posiciona (aproxima com
   // energia, evade sem) e ataca da posição nova, mesmo turno — mesma ordem do
   // 1978 (reposicionar, depois atacar). Roda TODO turno agora, não só quando o
@@ -666,10 +677,14 @@ function resolveEnemyTurn(
 
     // Mesma atenuação por distância que o tiro do jogador sofre. Substitui o
     // `power / distânciaEuclidiana` do fonte de 1978: uma régua só pros dois
-    // lados, na mesma tabela de balanceamento.
+    // lados, na mesma tabela de balanceamento. Usa a posição JÁ movida — o
+    // dano é da posição real de onde o inimigo atirou, só a ANIMAÇÃO ancora
+    // na origem (ver `originPositions` acima).
     const dist = chebyshev(state.position.sector, enemy.position)
     const H = Math.floor(power * damageFalloff(dist) * (2 + rng()))
     if (H <= 0) continue
+
+    const firedFrom = originPositions.get(enemy.id) ?? enemy.position
 
     // Nave em movimento é alvo difícil. `cellsMovedThisTurn` do jogador é
     // zerado no início da resolução, então parar nunca esquiva.
@@ -677,7 +692,7 @@ function resolveEnemyTurn(
       events.push({
         type: 'enemy_attack',
         entityId: enemy.id,
-        at: { ...enemy.position },
+        at: { ...firedFrom },
         amount: 0,
         text: 'Ataque inimigo passou de raspão — nave em manobra evasiva.',
       })
@@ -691,7 +706,7 @@ function resolveEnemyTurn(
     events.push({
       type: 'enemy_attack',
       entityId: enemy.id,
-      at: { ...enemy.position },
+      at: { ...firedFrom },
       amount: H,
       text: `Inimigo atacou com ${H} de dano.`,
     })

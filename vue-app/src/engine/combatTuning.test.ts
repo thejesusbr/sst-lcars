@@ -41,6 +41,26 @@ function cena(dist: number, overrides: Partial<SectorEntity> = {}) {
 const attacked = (res: ReturnType<typeof endTurn>) =>
   res.events.some((e) => e.type === 'enemy_attack' && (e.amount ?? 0) > 0)
 
+describe('inimigo que se move e ataca no mesmo turno anima do ponto certo', () => {
+  it('enemy_attack.at é a posição de ORIGEM, não a célula pra onde o inimigo se moveu', () => {
+    const state = cena(5) // longe o bastante pra moveHostiles aproximar de verdade
+    const origin = { ...state.currentSector[0].position }
+
+    const res = endTurn(state, () => 0.99) // nunca esquiva, sempre acerta
+
+    // O inimigo realmente se moveu — senão o teste não prova nada.
+    expect(state.currentSector[0].position).not.toEqual(origin)
+
+    const attack = res.events.find(
+      (e) => e.type === 'enemy_attack' && (e.amount ?? 0) > 0,
+    )
+    expect(attack?.at).toEqual(origin)
+    // E não na posição pra onde o inimigo foi — a animação apareceria
+    // "no futuro", antes de a nave ver o inimigo se mexer.
+    expect(attack?.at).not.toEqual(state.currentSector[0].position)
+  })
+})
+
 describe('combat-tuning — energia do inimigo', () => {
   it('4 tiros esvaziam a energia; o 5º turno segura o fogo', () => {
     const state = cena(2)
