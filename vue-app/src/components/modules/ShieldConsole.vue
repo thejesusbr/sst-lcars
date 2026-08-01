@@ -27,11 +27,12 @@ const gameState = useGameState();
 const { statusColor: semanticStatusColor } = useLcarsColors();
 
 const shieldEnergy = computed(() => gameState.shieldEnergy);
+const shieldsRaised = computed(() => gameState.shieldsRaised);
 const shieldIntegrity = computed(() => gameState.shieldIntegrity);
 const subsystems = computed(() => gameState.subsystems);
 
 const shieldStatus = computed(() =>
-  shieldEnergy.value > 0 && shieldIntegrity.value > 0 ? "UP" : "DOWN"
+  shieldsRaised.value && shieldIntegrity.value > 0 ? "UP" : "DOWN"
 );
 
 // ── Casco ────────────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ const hullTextColor = computed(() =>
   )
 );
 const statusColor = computed(() =>
-  semanticStatusColor(shieldEnergy.value > 0 ? "nominal" : "critical", "fg")
+  semanticStatusColor(shieldsRaised.value ? "nominal" : "critical", "fg")
 );
 
 const bracketColoring = {
@@ -150,7 +151,7 @@ const raiseShields = () => {
       >
         <EnterpriseShieldSvg
           :shield-integrity="shieldIntegrity"
-          :shield-active="shieldEnergy > 0"
+          :shield-active="shieldsRaised"
           :system-integrity="subsystems"
         />
       </DefaultBracket>

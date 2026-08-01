@@ -536,7 +536,20 @@ export interface GameState {
   destinationSector: GridCoord | null
 
   // Energia (VAZÃO — não há estoque; ver `engine/constants.ts`)
+  /**
+   * Potência ALOCADA ao escudo (o dial de `transferToShields`/`FromShields`) —
+   * não é "escudo ligado/desligado". Continua valendo com `shieldsRaised`
+   * false: baixar escudo não zera a alocação, só corta emissão (draw + defesa)
+   * até erguer de novo (`shield-power-model`, separa integridade de alocação).
+   */
   shieldEnergy: number
+  /**
+   * Emissão do defletor ligada/desligada — `raiseShields`/`lowerShields`
+   * mexem SÓ aqui, nunca em `shieldEnergy`. Ligada: `shieldEnergy` drena do
+   * orçamento por turno e absorve dano. Desligada: sem draw, dano vai direto
+   * pro casco, e a regeneração acelera (`shield-power-model`).
+   */
+  shieldsRaised: boolean
   /**
    * Dano acumulado no defletor. `shieldIntegrity` é DERIVADA disto + de
    * `shieldEnergy` pelo engine — nunca setada direto por console/mock

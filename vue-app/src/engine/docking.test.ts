@@ -48,13 +48,16 @@ describe('engine/docking', () => {
     state.torpedoStock = 0
     state.manualOverload = 10
     state.shieldEnergy = 1000
+    state.shieldsRaised = true
 
     const res = dock(state)
     expect(res.docked).toBe(true)
     expect(state.docked).toBe(true)
     expect(state.torpedoStock).toBeGreaterThan(0)
     expect(state.manualOverload).toBe(0)
-    expect(state.shieldEnergy).toBe(0)
+    // Emissão desliga, mas a potência ALOCADA fica guardada (shield-power-model).
+    expect(state.shieldsRaised).toBe(false)
+    expect(state.shieldEnergy).toBe(1000)
   })
 
   it('undock sets docked to false and clears dockedBaseId', () => {

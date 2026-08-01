@@ -80,6 +80,7 @@ export type DockState = Pick<
   | 'dockedBaseId'
   | 'hullIntegrity'
   | 'shieldEnergy'
+  | 'shieldsRaised'
   | 'shieldDamageTaken'
   | 'manualOverload'
   | 'torpedoStock'
@@ -169,9 +170,9 @@ export function dock(state: DockState): DockResult {
   state.dockedBaseId = record?.id ?? entity.id
 
   // Porto seguro: escudos descem (deixam de taxar o orçamento) e o núcleo
-  // esfria. Não há estoque de energia pra "devolver" — baixar o escudo já
-  // libera a vazão que ele consumia.
-  state.shieldEnergy = 0
+  // esfria. Desliga só a EMISSÃO — a alocação (`shieldEnergy`) fica guardada
+  // pra quando erguer de novo no undock (`shield-power-model`).
+  state.shieldsRaised = false
   state.manualOverload = 0
   // A estação repara o que a tripulação não consegue: o dano acumulado no
   // escudo zera aqui. Sem isto, a regeneração em voo (proporcional à energia

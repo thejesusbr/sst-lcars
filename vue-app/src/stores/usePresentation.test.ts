@@ -122,7 +122,7 @@ describe('stores/usePresentation — modo de viagem', () => {
     await gs.moveWarp({ row: 4, col: 1 })
 
     gs.lowerShields()
-    expect(gs.shieldEnergy).toBe(0)
+    expect(gs.shieldsRaised).toBe(false)
     expect(gs.dispatchTeam('team-1', 'phasers')).not.toBe(false)
   })
 

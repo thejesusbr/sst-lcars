@@ -25,6 +25,20 @@ describe('engine/warpCore', () => {
     expect(draw).toBeGreaterThan(0)
   })
 
+  it('shieldsRaised=false zera o draw do escudo sem mexer na alocação (shield-power-model)', () => {
+    const raised = createNewGameState(1)
+    raised.shieldsRaised = true
+    const lowered = createNewGameState(1)
+    lowered.shieldsRaised = false
+    // Mesma alocação (`shieldEnergy`) nos dois — só a emissão difere.
+
+    const drawRaised = subsystemDraw(raised, {})
+    const drawLowered = subsystemDraw(lowered, {})
+
+    expect(drawLowered).toBeLessThan(drawRaised)
+    expect(lowered.shieldEnergy).toBe(raised.shieldEnergy)
+  })
+
   it('autoOverload é linear no excesso absoluto, não percentual do output', () => {
     // 500 de excesso -> ceil(500/150) = 4, independente do output.
     expect(autoOverload(5000, WARP_CORE_OUTPUT)).toBe(4)

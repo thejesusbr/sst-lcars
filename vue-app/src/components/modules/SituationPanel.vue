@@ -45,7 +45,7 @@ const sectorCoords = computed(() => {
 });
 
 const shieldStatus = computed(() =>
-  gameState.shieldEnergy > 0 && gameState.shieldIntegrity > 0 ? "UP" : "DOWN"
+  gameState.shieldsRaised && gameState.shieldIntegrity > 0 ? "UP" : "DOWN"
 );
 
 const warpCoreStatus = computed<"NOM" | "DAM" | "BRC">(() => {

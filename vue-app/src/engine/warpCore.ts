@@ -46,6 +46,7 @@ export type DrawState = Pick<
   | 'boostActive'
   | 'phaserPower'
   | 'shieldEnergy'
+  | 'shieldsRaised'
   | 'tubes'
   | 'subsystemsOn'
   | 'subsystems'
@@ -73,8 +74,13 @@ function impulseDraw(state: DrawState, actions: TurnActions): number {
   return (dial / 100) * ceiling
 }
 
-/** Manter escudo custa todo turno; Shield Control danificado encarece ×(1+d). */
+/**
+ * Manter escudo custa todo turno; Shield Control danificado encarece ×(1+d).
+ * Emissão desligada (`shieldsRaised` false) não taxa nada — a potência
+ * alocada fica guardada, não ativa (`shield-power-model`).
+ */
 function shieldDraw(state: DrawState): number {
+  if (!state.shieldsRaised) return 0
   return state.shieldEnergy * (1 + damageFraction(state.subsystems.shields))
 }
 

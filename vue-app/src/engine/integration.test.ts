@@ -365,6 +365,19 @@ describe('integração: energia é vazão, não estoque', () => {
     expect(state.shieldEnergy).toBeLessThan(2500)
   })
 
+  it('emissão desligada não deflete nada, mas preserva a alocação (shield-power-model)', () => {
+    const state = fixture()
+    state.shieldEnergy = 2500
+    state.shieldsRaised = false
+    state.currentSector = [klingon('k1', { row: 4, col: 5 }, 300)]
+    const hullBefore = state.hullIntegrity
+
+    endTurn(state, () => 0.5)
+
+    expect(state.hullIntegrity).toBeLessThan(hullBefore) // dano foi tudo pro casco
+    expect(state.shieldEnergy).toBe(2500) // alocação intacta, só fora de uso
+  })
+
   it('casco em zero destrói a nave', () => {
     const state = fixture()
     state.hullIntegrity = 0

@@ -189,19 +189,22 @@ describe('stores/useGameState', () => {
     expect(gs.stardate).toBe(stardate)
   })
 
-  it('escudo é nível livre: sem pool de origem, e taxa o orçamento enquanto erguido', () => {
+  it('escudo: raise/lower liga/desliga emissão sem mexer na potência alocada (shield-power-model)', () => {
     const gs = useGameState()
     const stardate = gs.stardate
-
-    gs.raiseShields()
-    expect(gs.stardate).toBe(stardate) // livre, não resolve turno
-    expect(gs.shieldEnergy).toBe(2500) // chega ao teto SEM depender de estoque
-    const budgetUp = gs.energyBudget
+    const allocated = gs.shieldEnergy // potência alocada — dial, não o toggle
 
     gs.lowerShields()
-    expect(gs.shieldEnergy).toBe(0)
-    // Baixar o escudo libera a vazão que ele consumia.
-    expect(gs.energyBudget).toBeGreaterThan(budgetUp)
+    expect(gs.stardate).toBe(stardate) // livre, não resolve turno
+    expect(gs.shieldsRaised).toBe(false)
+    expect(gs.shieldEnergy).toBe(allocated) // alocação preservada, só emissão cai
+    const budgetDown = gs.energyBudget
+
+    gs.raiseShields()
+    expect(gs.shieldsRaised).toBe(true)
+    expect(gs.shieldEnergy).toBe(allocated)
+    // Erguer liga a emissão de novo — volta a taxar o orçamento.
+    expect(gs.energyBudget).toBeLessThan(budgetDown)
   })
 
   it('newGame SUBSTITUI o mapa explorado — nada vaza da partida anterior', async () => {

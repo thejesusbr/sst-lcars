@@ -185,10 +185,10 @@ describe('combat-balance — regeneração de escudo', () => {
     // escudos baixados".
     const baixa = createNewGameState(1)
     baixa.shieldDamageTaken = 500
-    baixa.shieldEnergy = 500
+    baixa.shieldsRaised = false
     const alta = createNewGameState(1)
     alta.shieldDamageTaken = 500
-    alta.shieldEnergy = 2000
+    alta.shieldsRaised = true
 
     regenShields(alta)
     regenShields(baixa)
@@ -220,6 +220,39 @@ describe('combat-balance — regeneração de escudo', () => {
     regenShields(state)
 
     expect(state.shieldDamageTaken).toBe(500)
+  })
+
+  it('2º fator: Warp Core mais saudável regenera escudo mais rápido (shield-power-model)', () => {
+    // Mesma emissão (ambos erguidos), só a saúde do core difere — é o fator
+    // de "potência disponível" que a 6ª rodada pediu, independente do 1º
+    // fator (erguido/baixado) já coberto acima.
+    const saudavel = createNewGameState(1)
+    saudavel.shieldDamageTaken = 500
+    saudavel.shieldsRaised = true
+    const danificado = createNewGameState(1)
+    danificado.shieldDamageTaken = 500
+    danificado.shieldsRaised = true
+    danificado.subsystems.warpCore = 50
+
+    regenShields(saudavel)
+    regenShields(danificado)
+
+    expect(saudavel.shieldDamageTaken).toBeLessThan(danificado.shieldDamageTaken)
+  })
+
+  it('overload manual acelera a regen além do 1º fator (bônus de potência disponível)', () => {
+    const semOverload = createNewGameState(1)
+    semOverload.shieldDamageTaken = 500
+    semOverload.shieldsRaised = true
+    const comOverload = createNewGameState(1)
+    comOverload.shieldDamageTaken = 500
+    comOverload.shieldsRaised = true
+    comOverload.manualOverload = 20
+
+    regenShields(semOverload)
+    regenShields(comOverload)
+
+    expect(comOverload.shieldDamageTaken).toBeLessThan(semOverload.shieldDamageTaken)
   })
 })
 

@@ -465,12 +465,14 @@ export const useGameState = defineStore('gameState', {
       this.setShieldEnergyTo(this.$state.shieldEnergy - amount)
     },
 
+    /** Liga a emissão — não mexe na potência alocada (`shieldEnergy`). */
     raiseShields() {
-      this.setShieldEnergyTo(SHIELD_ENERGY_MAX)
+      this.$state.shieldsRaised = true
     },
 
+    /** Desliga a emissão — a alocação fica guardada pra quando erguer de novo. */
     lowerShields() {
-      this.setShieldEnergyTo(0)
+      this.$state.shieldsRaised = false
     },
 
     /**

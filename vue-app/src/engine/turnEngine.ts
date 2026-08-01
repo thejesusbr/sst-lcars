@@ -21,10 +21,9 @@ import {
   ENEMY_ENERGY_MAX,
   ENEMY_ENERGY_RECHARGE,
   HULL_DAMAGE_DIVISOR,
-  SHIELD_ENERGY_MAX,
   SHIELD_REGEN_FLOOR_FRACTION,
   SHIELD_REGEN_RATE,
-  clamp,
+  WARP_CORE_OUTPUT,
   STARDATE_PER_TURN,
   damageFalloff,
   damageFraction,
@@ -562,22 +561,29 @@ function applyPlayerAction(
  * atracar. Não era regeneração faltando, era dano permanente por construção, e
  * a 4ª rodada pegou ("a regeneração dos escudos está ativa? Não me pareceu").
  *
- * Segurar escudo alto custa vazão todo turno **e** compra recuperação —
+ * Segurar escudo erguido custa vazão todo turno **e** compra recuperação —
  * coerente com energia ser fluxo, não estoque. Shield Control danificado
  * degrada a taxa pelas mesmas faixas de dano do resto do jogo, e em crítico
  * para de vez.
+ *
+ * **Dois fatores, não um** (`shield-power-model`, clarificação da 6ª rodada):
+ * emissão ligada (`shieldsRaised`) compete com a regen pela mesma vazão —
+ * cai pro piso `SHIELD_REGEN_FLOOR_FRACTION`; desligada, regen usa a vazão
+ * inteira. Independente disso, quanto mais potência o Warp Core está
+ * entregando (integridade alta, ou overload manual acima de 100%), mais
+ * sobra pra recuperação — reator saudável cura escudo mais rápido, e
+ * overload deliberado vira bônus de regen além do de output.
  */
 export function regenShields(state: GameState): void {
   if (state.shieldDamageTaken <= 0) return
   if (isCritical(state.subsystems.shields)) return
 
-  // Interpolação linear: 100% da taxa com escudo em 0, `SHIELD_REGEN_FLOOR_FRACTION`
-  // com escudo no teto — invertido do que a energia mantida sugeriria.
-  const energyFraction = state.shieldEnergy / SHIELD_ENERGY_MAX
-  const rateFraction =
-    1 - (1 - SHIELD_REGEN_FLOOR_FRACTION) * clamp(energyFraction, 0, 1)
+  const emissionFraction = state.shieldsRaised ? SHIELD_REGEN_FLOOR_FRACTION : 1
+  const powerFraction =
+    effectiveWarpCoreOutput(state.subsystems.warpCore, state.manualOverload) /
+    WARP_CORE_OUTPUT
   const efficiency = 1 - damageFraction(state.subsystems.shields)
-  const regen = SHIELD_REGEN_RATE * rateFraction * efficiency
+  const regen = SHIELD_REGEN_RATE * emissionFraction * powerFraction * efficiency
   state.shieldDamageTaken = Math.max(0, state.shieldDamageTaken - regen)
 }
 
@@ -735,8 +741,14 @@ function resolveEnemyTurn(
       // Dano no jogador: escudo absorve primeiro, o excedente arrebenta CASCO.
       // Antes o excedente descontava de `mainEnergy` — mas energia é vazão, não
       // estoque, então não havia nada pra drenar. Casco é o sink real.
+      //
+      // Emissão desligada (`shieldsRaised` false) não deflete nada — a
+      // potência alocada (`shieldEnergy`) fica intacta, só fora de uso, pra
+      // não perder a alocação de quem baixou o escudo pra acelerar a regen
+      // (`shield-power-model`).
       damageTaken += H
-      if (state.shieldEnergy >= H) {
+      const available = state.shieldsRaised ? state.shieldEnergy : 0
+      if (available >= H) {
         state.shieldEnergy -= H
         state.shieldDamageTaken += H
         events.push({
@@ -747,9 +759,9 @@ function resolveEnemyTurn(
           text: `Escudos absorveram ${H} de dano.`,
         })
       } else {
-        const remainder = H - state.shieldEnergy
-        state.shieldDamageTaken += state.shieldEnergy
-        state.shieldEnergy = 0
+        const remainder = H - available
+        state.shieldDamageTaken += available
+        if (state.shieldsRaised) state.shieldEnergy = 0
         const hullLoss = remainder / HULL_DAMAGE_DIVISOR
         state.hullIntegrity = Math.max(0, state.hullIntegrity - hullLoss)
         events.push({

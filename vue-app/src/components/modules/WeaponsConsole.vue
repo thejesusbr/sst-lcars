@@ -25,6 +25,7 @@ import {
 } from "@/engine/constants";
 import { getVisibleEnemies } from "@/engine/sector";
 import type { TorpedoTube } from "@/types/game";
+import LcarsIndicator from "../elements/LcarsIndicator.vue";
 
 const { playSound } = useSound();
 const { statusColor } = useLcarsColors();
@@ -470,22 +471,23 @@ const togglePhotons = () => {
       <LcarsComplexButton
         v-for="(tube, i) in tubes"
         :key="i"
-        color="secondary-interactive"
+        color="secondary-static"
         :style="{ width: '100%' }"
       >
         <LcarsCap version="round-left" />
         <LcarsBlock :label="`Tube ${tube.id}`" />
         <LcarsBlock label="Sector to fire" :style="{ width: '2rem' }" />
-        <LcarsText
+        <LcarsIndicator
           :text="targetLabel(tube)"
-          color="text-light"
-          :style="{ width: '2.5rem', 'text-align': 'center' }"
+          decorator="right"
+          color="highlight-interactive"
+          :text-color="'text-light'"
+          :style="{ width: '2.5rem' }"
         />
-        <LcarsBlock version="decorator" :style="{ flex: '1' }" />
         <LcarsButton
           version="round-right"
           color="tertiary-interactive"
-          label="Cycle"
+          label="Cycle Target"
           :style="{ width: '7rem' }"
           :disabled="enemyTargets.length === 0"
           @click="cycleTubeTarget(tube.id)"
@@ -520,7 +522,7 @@ const togglePhotons = () => {
         <LcarsBlock label="Stock" />
         <SolidLevelBar
           version="horizontal"
-          :max="8"
+          :max="12"
           :min="0"
           :color="torpedoStockColor"
           :level="torpedoStock"

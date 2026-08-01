@@ -91,6 +91,7 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
     destinationSector: null,
 
     shieldEnergy: SHIELD_ENERGY_INITIAL,
+    shieldsRaised: true,
     shieldDamageTaken: 0,
     impulsePower: 50,
     phaserPower: PHASER_POWER_MAX / 2,
