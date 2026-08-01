@@ -147,6 +147,17 @@ describe('stores/useGameState', () => {
     expect(gs.energyBudget).toBeLessThan(budgetBefore)
   })
 
+  it('overload manual sobe o Core Output mostrado — o dial não é só risco', () => {
+    const gs = useGameState()
+    expect(gs.energyProduced).toBe(WARP_CORE_OUTPUT)
+
+    gs.setManualOverload(20)
+
+    expect(gs.energyProduced).toBeCloseTo(WARP_CORE_OUTPUT * 1.2, 5)
+    // Orçamento sente o mesmo ganho, consumo intacto.
+    expect(gs.energyBudget).toBeCloseTo(WARP_CORE_OUTPUT * 1.2 - gs.subsystemLoad, 5)
+  })
+
   it('não existe condição terminal de energia', async () => {
     const gs = useGameState()
     // Consumo alto por muitos turnos não mata por esgotamento — o risco é

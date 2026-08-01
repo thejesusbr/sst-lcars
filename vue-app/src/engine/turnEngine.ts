@@ -29,8 +29,8 @@ import {
   damageFalloff,
   damageFraction,
   degradedChance,
+  effectiveWarpCoreOutput,
   isCritical,
-  warpCoreOutput,
 } from '@/engine/constants'
 import {
   acquireWeaponsLock,
@@ -813,14 +813,15 @@ export function resolvePlayerTurn(
       // `warpStress: 0`: função correta alimentada com entrada vazia.
       // Output EFETIVO, não o nominal: core danificado gera menos, então o
       // mesmo consumo passa a estourar o orçamento e a sobrecarga realimenta o
-      // dano. É a espiral.
+      // dano. É a espiral. Inclui o dial de overload MANUAL — sem ele o
+      // orçamento nunca refletia o jogador forçando o core acima do nominal.
       autoOverload: autoOverload(
         subsystemDraw(state, {
           movedUnderImpulse: outcome.movedUnderImpulse,
           firedPhasers: outcome.fired && action.type === 'fire_phasers',
           torpedoesFired: outcome.torpedoesFired,
         }),
-        warpCoreOutput(state.subsystems.warpCore)
+        effectiveWarpCoreOutput(state.subsystems.warpCore, state.manualOverload)
       ),
       warpStress: stress,
       warpCoreIntegrity: state.subsystems.warpCore,

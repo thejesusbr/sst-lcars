@@ -18,12 +18,13 @@ import { useGameState } from "@/stores/useGameState";
 import { usePresentation } from "@/stores/usePresentation";
 import { OVERLOAD_MAX } from "@/engine/constants";
 import type { CombatLogEntry } from "@/types/game";
+import LcarsIndicator from "../elements/LcarsIndicator.vue";
 
 const { playSound } = useSound();
 const gameState = useGameState();
 const presentation = usePresentation();
 
-const { lcarsColors, statusColor } = useLcarsColors();
+const { statusColor } = useLcarsColors();
 
 // ── Leitura do estado real ───────────────────────────────────────────────────
 
@@ -60,7 +61,9 @@ const breachTurnsRemaining = computed(() => gameState.breach.turnsRemaining);
 // silêncio); Hull não tem relógio nenhum e sempre mostra `%` (inventar uma
 // previsão seria um palpite disfarçado de fato).
 const warpCoreText = computed(() =>
-  gameState.breach.active ? `T-${breachTurnsRemaining.value}` : warpCoreStatus.value
+  gameState.breach.active
+    ? `T-${breachTurnsRemaining.value}`
+    : warpCoreStatus.value
 );
 
 // Casco: o que o dano inimigo consome depois que os escudos saturam. Zerar é
@@ -239,19 +242,18 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
         <!-- Coluna de dados A: Energy, Enemies, Torpedoes, Warp Core -->
         <LcarsColumn id="stn-pnl-dsp-a" :style="{ flex: '1' }">
           <!-- Stardate indicator-->
-          <LcarsComplexButton color="secondary-interactive">
+          <LcarsComplexButton color="secondary-static">
             <LcarsCap version="round-left" />
-            <LcarsBlock
-              label="Stardate"
-              :style="{ flex: 'none', width: '5.5rem' }"
-            />
-            <LcarsText
-              id="sdtIndTxt"
-              color="text-light"
+            <LcarsBlock label="Stardate" :style="{ flex: 'none' }" />
+            <LcarsIndicator
+              id="cur-std-ind"
+              color="secondary-interactive"
+              text-color="text-light"
+              decorator="left"
               :text="String(stardate)"
               :style="{ flex: '1' }"
             />
-            <LcarsBlock :style="{ flex: 'none', width: '3rem' }" />
+            <LcarsBlock label="/ stardate limit" :style="{ flex: 'none' }" />
             <LcarsCap version="round-right" />
           </LcarsComplexButton>
           <!-- Energy level indicator -->
@@ -261,8 +263,11 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
               label="Energy Level"
               :style="{ flex: 'none', width: '6.5rem' }"
             />
-            <LcarsText
-              color="text-light"
+            <LcarsIndicator
+              id="eng-lvl-ind"
+              color="primary-interactive"
+              text-color="text-light"
+              decorator="right"
               :text="String(energyLevel)"
               :style="{ flex: '1' }"
             />
@@ -522,20 +527,7 @@ const tabDim = (tab: CombatLogEntry["category"]) =>
               :style="{ filter: tabDim('engineering') }"
               @click="toggleLogTab('engineering')"
             />
-            <!-- 4ª aba: leitura de sensor (scan, survey, achado da party,
-                 relatório da sonda), separada da decisão de comando. Sem
-                 papel `-static` próprio no tema (só existem 3), então usa cor
-                 nomeada direto -- mesmo padrão do resto do app pra cor sem
-                 papel temático dedicado. -->
-            <LcarsButton
-              id="sci-log-tab"
-              label="Sci. Log"
-              color="caribbean-green-bg"
-              :class="tabClass('science')"
-              :style="{ filter: tabDim('science') }"
-              @click="toggleLogTab('science')"
-            />
-            <LcarsCap version="round-right" :color="lcarsColors.primary[4]" />
+            <LcarsCap version="round-right" color="highlight-interactive" />
           </LcarsComplexButton>
           <CombatLog
             :entries="filteredLogEntries"

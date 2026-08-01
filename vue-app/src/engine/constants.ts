@@ -41,6 +41,25 @@ export function warpCoreOutput(warpCoreIntegrity: number): number {
   return WARP_CORE_OUTPUT * (1 - damageFraction(warpCoreIntegrity))
 }
 
+/**
+ * Output efetivo incluindo o dial de overload MANUAL: força o core a entregar
+ * acima do nominal, `manualOverload` é 0-20 e já se comunica como percentual
+ * na UI (presets OFF/5%/10%/15%/20%), então cada unidade é +1% de output.
+ *
+ * Sem isto o dial só custava risco (`effectiveOverload` → tabela de dano) sem
+ * NENHUM ganho visível — jogador nunca via o "Core Output" subir ao ligar
+ * overload, então a mecânica lia como pura penalidade sem motivo. Overload
+ * manual alto reduz a sobrecarga AUTOMÁTICA pro mesmo consumo (mais output
+ * cabe mais draw sem estourar) — é o troca: risco garantido e quantificado
+ * em vez de estouro automático imprevisível.
+ */
+export function effectiveWarpCoreOutput(
+  warpCoreIntegrity: number,
+  manualOverload: number,
+): number {
+  return warpCoreOutput(warpCoreIntegrity) * (1 + manualOverload / 100)
+}
+
 export const SHIELD_ENERGY_MAX = 2500
 export const SHIELD_ENERGY_INITIAL = 1500
 

@@ -35,6 +35,7 @@ const emit = defineEmits<{ (e: "start"): void; (e: "regenerate"): void }>();
       footerBar: 'highlight-interactive',
       footerCapRight: 'secondary-interactive',
     }"
+    style="height: 100dvh"
   >
     <LcarsWrapper
       id="brf-scr"
@@ -54,11 +55,16 @@ const emit = defineEmits<{ (e: "start"): void; (e: "regenerate"): void }>();
         <img
           :src="ufpLogo"
           alt="United Federation of Planets"
-          style="height: 10dvh; width: auto"
+          style="height: 55dvh; width: fit-content; min-width: unset"
         />
         <LcarsTitle
           version="centered"
-          size="large"
+          text="United Federation of Planets - Starfleet Command"
+          color="text-light"
+        />
+        <LcarsTitle
+          version="centered"
+          size="medium"
           text="Mission Briefing"
           color="text-light"
         />

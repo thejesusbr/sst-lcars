@@ -14,6 +14,7 @@ import {
   WARP_CORE_DAMAGE_TABLE,
   WARP_CORE_HOUSE_DRAW,
   WARP_CORE_OUTPUT,
+  effectiveWarpCoreOutput,
   warpCoreOutput,
 } from '@/engine/constants'
 
@@ -109,6 +110,22 @@ describe('engine/warpCore', () => {
     )
     expect(res.damage).toBeGreaterThan(0)
     expect(res.exploded).toBe(true)
+  })
+
+  it('effectiveWarpCoreOutput sobe com o dial de overload manual', () => {
+    // 20 (teto do dial, mesma escala do preset "20%") -> +20% sobre o nominal.
+    expect(effectiveWarpCoreOutput(100, 20)).toBeCloseTo(WARP_CORE_OUTPUT * 1.2, 5)
+    // Sem overload manual, é o mesmo output de sempre — sem regressão no caso comum.
+    expect(effectiveWarpCoreOutput(100, 0)).toBe(warpCoreOutput(100))
+    // O boost combina com o dano: core a 50% ainda ganha o mesmo +20% relativo.
+    expect(effectiveWarpCoreOutput(50, 20)).toBeCloseTo(warpCoreOutput(50) * 1.2, 5)
+  })
+
+  it('overload manual reduz a sobrecarga AUTOMÁTICA pro mesmo consumo — é o troca', () => {
+    const draw = WARP_CORE_OUTPUT + 300 // excesso de 300 sobre o nominal
+    const semOverload = autoOverload(draw, effectiveWarpCoreOutput(100, 0))
+    const comOverload = autoOverload(draw, effectiveWarpCoreOutput(100, 20))
+    expect(comOverload).toBeLessThan(semOverload)
   })
 
   it('startBreach creates an active radiation breach with 5 turns remaining', () => {

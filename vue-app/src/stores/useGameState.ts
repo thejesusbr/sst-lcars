@@ -13,9 +13,9 @@ import {
   SHIELD_ENERGY_MAX,
   clamp,
   computeShieldIntegrity,
+  effectiveWarpCoreOutput,
   isCritical,
   liveKbsCode,
-  warpCoreOutput,
 } from '@/engine/constants'
 import { Sound, useSound } from '@/composables/useSound'
 import { createNewGameState } from '@/engine/newGame'
@@ -106,10 +106,13 @@ export const useGameState = defineStore('gameState', {
     /**
      * Potência que o Warp Core CONSEGUE gerar agora. Cai com o dano no core
      * (`4500 × (1 - d)`), então o mesmo consumo que cabia passa a estourar o
-     * orçamento — dano no core vira espiral de sobrecarga.
+     * orçamento — dano no core vira espiral de sobrecarga. Inclui o dial de
+     * overload MANUAL (`effectiveWarpCoreOutput`): sem isto o "Core Output"
+     * nunca subia ao ligar overload — o dial só custava risco, sem nenhum
+     * ganho visível de forçar o core acima do nominal.
      */
     energyProduced(state): number {
-      return warpCoreOutput(state.subsystems.warpCore)
+      return effectiveWarpCoreOutput(state.subsystems.warpCore, state.manualOverload)
     },
 
     /**
@@ -122,7 +125,10 @@ export const useGameState = defineStore('gameState', {
      * subsistema, não esperar um tanque encher.
      */
     energyBudget(state): number {
-      return warpCoreOutput(state.subsystems.warpCore) - subsystemDraw(state)
+      return (
+        effectiveWarpCoreOutput(state.subsystems.warpCore, state.manualOverload) -
+        subsystemDraw(state)
+      )
     },
 
     /** Contagem por categoria acima do marcador de leitura = aba piscando. */
