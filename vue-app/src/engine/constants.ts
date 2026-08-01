@@ -73,7 +73,9 @@ export const PHASER_TEMP_PER_SHOT = 30
  */
 export const PHASER_POWER_DEFAULT = PHASER_POWER_MAX / 2
 export const TORPEDO_STOCK_MAX = 12
-export const TORPEDO_STOCK_INITIAL = 8
+/** Estoque inicial sorteado entre MIN e MAX (inclusive), não um valor cravado. */
+export const TORPEDO_STOCK_INITIAL_MIN = 7
+export const TORPEDO_STOCK_INITIAL_MAX = 9
 export const TORPEDO_TUBE_COUNT = 3
 /** Dano de torpedo: `200 + random*100`, sem redução por calor (decisão #31). */
 export const TORPEDO_DAMAGE_MIN = 200

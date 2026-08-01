@@ -23,10 +23,11 @@ import {
   PROBES_INITIAL,
   SHIELD_ENERGY_INITIAL,
   STARDATE_INITIAL,
-  TORPEDO_STOCK_INITIAL,
+  TORPEDO_STOCK_INITIAL_MAX,
+  TORPEDO_STOCK_INITIAL_MIN,
   TORPEDO_TUBE_COUNT,
 } from './constants'
-import { randomSeed } from './prng'
+import { mulberry32, randomSeed } from './prng'
 import { generateWorld, kbsCode, materializeSector, quadrantKey } from './worldGen'
 
 const TEAM_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot'] as const
@@ -57,6 +58,13 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
   const world = generateWorld(seed)
   const startKey = quadrantKey(world.position.quadrant)
   const startContent = world.galaxy[startKey]
+
+  // Stream decorrelado do gerador de mundo (seed + 1): estoque inicial de
+  // torpedo é sorteio próprio, não deve depender de nenhum roll de galáxia.
+  const rng = mulberry32(seed + 1)
+  const torpedoStockInitial =
+    TORPEDO_STOCK_INITIAL_MIN +
+    Math.floor(rng() * (TORPEDO_STOCK_INITIAL_MAX - TORPEDO_STOCK_INITIAL_MIN + 1))
 
   return {
     schemaVersion: GAME_SCHEMA_VERSION,
@@ -96,7 +104,7 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
       world.starbases,
     ),
     phaserTemp: PHASER_TEMP_INITIAL,
-    torpedoStock: TORPEDO_STOCK_INITIAL,
+    torpedoStock: torpedoStockInitial,
     tubes: Array.from({ length: TORPEDO_TUBE_COUNT }, (_, i) => ({
       id: i + 1,
       targetId: null,
