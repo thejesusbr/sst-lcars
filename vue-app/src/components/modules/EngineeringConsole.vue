@@ -17,6 +17,7 @@ import { OVERLOAD_MAX, isCritical } from "@/engine/constants";
 import { autoOverload as autoOverloadOf, effectiveOverload } from "@/engine/warpCore";
 import { warpStress } from "@/engine/navigation";
 import {
+  SectorEntityType,
   SUBSYSTEM_KEYS,
   SUBSYSTEM_LABELS,
   type DamageControlTeam,
@@ -142,6 +143,17 @@ const teamStatusLabel = (team: DamageControlTeam) =>
 
 /** Equipe travada na cela nao e despachavel -- a linha inteira fica inerte. */
 const teamLocked = (team: DamageControlTeam) => team.status === "guard";
+
+/**
+ * Numa Drydock o reparo e automatico (drones) -- designar equipe nao acelera
+ * nada, a tripulacao inteira esta de folga (docking-overhaul). O painel avisa
+ * isso em vez de deixar o jogador achar que a mecanica esta quebrada.
+ */
+const drydockRepairing = computed(() => {
+  if (!gameState.docked) return false;
+  const base = gameState.starbases.find((b) => b.id === gameState.dockedBaseId);
+  return base?.type === SectorEntityType.STARBASE_DOCK;
+});
 
 /**
  * Cicla o subsistema atribuido. Despacho e LIVRE (nao consome turno), mas o
@@ -313,6 +325,14 @@ const repairTurn = async () => {
           version="centered"
           size="small"
           text="Damage Control Teams"
+        />
+      </LcarsRow>
+
+      <LcarsRow v-if="drydockRepairing" :style="{ 'justify-content': 'center', 'margin-bottom': '0.5rem' }">
+        <LcarsText
+          text="Drydock: automated drones repairing — team assignment has no effect"
+          color="text-light"
+          :style="{ 'text-align': 'center', 'font-style': 'italic' }"
         />
       </LcarsRow>
 

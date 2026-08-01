@@ -40,13 +40,6 @@ const ALLOWED_UNREACHABLE = new Set<string>([
   // de motivo; nome novo aqui sem justificativa no diff é o que o ratchet
   // existe pra impedir.
 
-  // Taxa de reparo de doca especificada em `docking` ("25 pontos por
-  // subsistema por tick, sem o teto de stacking"), mas o loop usa
-  // `calculateRepairRate` com tier 5 — que só dá 25 com UMA equipe a 100%.
-  // Equipe cansada rende menos, contrariando a spec. É a dívida do item 9.3,
-  // nunca verificado em playthrough.
-  'DOCKED_REPAIR_PER_TICK',
-
   // Helpers de navegação sem consumidor. Não foram removidos junto com os
   // outros porque a tentativa de recorte automático quebrou o arquivo
   // (assinatura multi-linha), e mexer neles à mão no meio da 5ª rodada é

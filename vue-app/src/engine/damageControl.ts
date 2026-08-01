@@ -9,6 +9,7 @@
 import {
   BREACH_REPAIR_PENALTY,
   DILITHIUM_WC_BOOST,
+  DOCKED_REPAIR_PER_TICK,
   DOCKED_TEAM_RECOVERY_PER_TURN,
   HOSTILE_RISK_BASE,
   HOSTILE_RISK_PER_EXTRA_ENEMY,
@@ -24,12 +25,19 @@ import {
   SUBSYSTEM_KEYS,
   type GameState,
   type GridCoord,
+  type StarbaseType,
   type SubsystemKey,
 } from '@/types/game'
 import { getVisibleEnemies, isAdjacent } from '@/engine/sector'
 
 /** Multiplicadores por posição de pilha de equipes no mesmo subsistema. */
 export const STACKING_MULTIPLIERS = [1, 1, 0.5, 0.25, 0.125, 0.0625] as const
+
+/** Tipo da base atracada, ou `undefined` se a nave não está atracada. */
+function dockedBaseType(state: GameState): StarbaseType | undefined {
+  if (!state.docked) return undefined
+  return state.starbases.find((b) => b.id === state.dockedBaseId)?.type
+}
 
 // ── Brig & Guarda ───────────────────────────────────────────────────────────
 
@@ -97,7 +105,9 @@ export function recallTeam(state: GameState, teamId: string): DispatchResult {
   if (team.status === 'guard') return { success: false, reason: 'in_guard' }
   if (team.status === 'away') return { success: false, reason: 'away' }
 
-  const exhausted = team.efficiency <= TEAM_EFFICIENCY_FLOOR
+  const exhausted =
+    team.efficiency <= TEAM_EFFICIENCY_FLOOR &&
+    dockedBaseType(state) !== SectorEntityType.STARBASE_SCIENCE
   team.status = exhausted ? 'cooldown' : 'idle'
   team.assignedSystem = null
   return { success: true }
@@ -109,11 +119,21 @@ export function recallTeam(state: GameState, teamId: string): DispatchResult {
  * Calcula a taxa de reparo por turno para um subsistema específico:
  * `repairPerTurn = 5 * tier * Σ(efficiency_i / 100 * stackMult_i)`
  * onde tier = 5 em doca ou durante breach ativo, ou tier = 3 em espaço normal.
+ *
+ * Numa `STARBASE_DOCK`, isso não roda: drones de reparo automatizado cobrem
+ * `DOCKED_REPAIR_PER_TICK` por subsistema por tick, sem equipe nenhuma —
+ * designar equipe não muda nada (`docking-overhaul`). Numa `STARBASE_SUPPLY`,
+ * suprimento ilimitado remove o teto de stacking: toda posição vale 1.0.
  */
 export function calculateRepairRate(
   state: GameState,
   system: SubsystemKey
 ): number {
+  const baseType = dockedBaseType(state)
+  if (baseType === SectorEntityType.STARBASE_DOCK) {
+    return DOCKED_REPAIR_PER_TICK
+  }
+
   // `turnsWorked >= 1` é o que faz o despacho não render reparo retroativo no
   // próprio turno do despacho: a equipe entra com `turnsWorked: 0`, o contador
   // sobe no FIM da resolução, e ela só passa a contribuir no turno seguinte.
@@ -129,10 +149,11 @@ export function calculateRepairRate(
 
   const tier =
     state.docked || (state.breach.active && system === 'warpCore') ? 5 : 3
+  const unlimitedSupplies = baseType === SectorEntityType.STARBASE_SUPPLY
 
   let sumEfficiency = 0
   assignedTeams.forEach((team, idx) => {
-    const mult = STACKING_MULTIPLIERS[idx] ?? 0.0625
+    const mult = unlimitedSupplies ? 1 : (STACKING_MULTIPLIERS[idx] ?? 0.0625)
     sumEfficiency += (team.efficiency / 100) * mult
   })
 
@@ -146,28 +167,15 @@ export function calculateRepairRate(
 }
 
 /**
- * Taxa de recuperação de fadiga por turno pra equipes idle/cooldown.
- *
- * `DOCKED_TEAM_RECOVERY_PER_TURN` existia como constante desde a
- * `engine-integration`, mas nenhum chamador a lia — mesma classe de bug já
- * vista aqui (função/constante certa, nunca ligada): o dobro de recuperação em
- * qualquer atracagem nunca aconteceu de fato. `STARBASE_SCIENCE` aplica um
- * multiplicador ADICIONAL sobre o dobro — sem a base, não há o que multiplicar.
- *
- * **Fora de escopo aqui**: a spec de docking também pede que equipes
- * `working` sejam tratadas como idle enquanto atracadas (toda a tripulação de
- * folga), o que exigiria reformular `calculateRepairRate` pro reparo tier-5
- * parar de depender de equipe designada (spec `docking`, "Station-assisted
- * repair rate" — a mesma dívida do item 9.3, ainda não verificado, do
- * `PLAYTHROUGH.md` da `engine-integration`). Esta função cobre só o que
- * `hail-and-identity` pediu: o multiplicador da base científica sobre a
- * recuperação de quem já está idle/cooldown.
+ * Taxa de recuperação de fadiga por turno pra equipes de folga (idle,
+ * cooldown, e — numa `STARBASE_DOCK` — também as `working`, ver
+ * `resolveDamageControlTurn`). `STARBASE_SCIENCE` aplica um multiplicador
+ * ADICIONAL sobre o dobro da doca (`docking-overhaul`, `hail-and-identity`).
  */
 function teamRecoveryRate(state: GameState): number {
   if (!state.docked) return TEAM_RECOVERY_PER_TURN
-  const dockedBase = state.starbases.find((b) => b.id === state.dockedBaseId)
   const rate = DOCKED_TEAM_RECOVERY_PER_TURN
-  return dockedBase?.type === SectorEntityType.STARBASE_SCIENCE
+  return dockedBaseType(state) === SectorEntityType.STARBASE_SCIENCE
     ? rate * STARBASE_SCIENCE_RECOVERY_MULTIPLIER
     : rate
 }
@@ -249,6 +257,15 @@ export function resolveDamageControlTurn(
   // ficava "trabalhando" num sistema intacto, acumulando fadiga a troco de
   // nada — e o jogador só descobria olhando a tabela. Exausta vai pra
   // `cooldown`, o resto volta ao pool na hora.
+  const baseType = dockedBaseType(state)
+  // Science station: sem oficina, sem teto de stacking removido — só a
+  // trava de cooldown cai. Piso de eficiência dispensa direto pro pool.
+  const cooldownExempt = baseType === SectorEntityType.STARBASE_SCIENCE
+  // Drydock: drones consertam, a tripulação INTEIRA está de folga — mesmo
+  // quem está "working" descansa em vez de acumular fadiga (docking-overhaul,
+  // fecha a dívida "working tratada como idle" do BACKLOG.md).
+  const allOnShoreLeave = baseType === SectorEntityType.STARBASE_DOCK
+
   const released: string[] = []
   for (const team of state.teams) {
     if (team.status !== 'working' || !team.assignedSystem) continue
@@ -264,25 +281,31 @@ export function resolveDamageControlTurn(
 
     team.assignedSystem = null
     team.status =
-      team.efficiency <= TEAM_EFFICIENCY_FLOOR ? 'cooldown' : 'idle'
+      team.efficiency <= TEAM_EFFICIENCY_FLOOR && !cooldownExempt
+        ? 'cooldown'
+        : 'idle'
     released.push(team.id)
   }
 
   // Atualização de fadiga e recuperação das equipes
   const recoveryRate = teamRecoveryRate(state)
   for (const team of state.teams) {
-    if (team.status === 'working') {
+    if (team.status === 'working' && !allOnShoreLeave) {
       team.turnsWorked++
       const rawEff = Math.round(
         100 * Math.pow(0.5, team.turnsWorked / TEAM_FATIGUE_HALFLIFE),
       )
       team.efficiency = Math.max(TEAM_EFFICIENCY_FLOOR, rawEff)
-    } else if (team.status === 'idle' || team.status === 'cooldown') {
+    } else if (
+      team.status === 'idle' ||
+      team.status === 'cooldown' ||
+      (team.status === 'working' && allOnShoreLeave)
+    ) {
       if (team.turnsWorked > 0) {
         team.turnsWorked = Math.max(0, team.turnsWorked - 1)
       }
       team.efficiency = Math.min(100, team.efficiency + recoveryRate)
-      if (team.status === 'cooldown' && team.efficiency >= 50) {
+      if (team.status === 'cooldown' && (team.efficiency >= 50 || cooldownExempt)) {
         team.status = 'idle'
       }
     }

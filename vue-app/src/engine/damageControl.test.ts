@@ -10,7 +10,8 @@ import {
   syncBrigGuard,
 } from '@/engine/damageControl'
 import { createNewGameState } from '@/engine/newGame'
-import { SectorEntityType } from '@/types/game'
+import { SectorEntityType, type StarbaseType } from '@/types/game'
+import { TEAM_EFFICIENCY_FLOOR } from '@/engine/constants'
 
 
 /**
@@ -348,5 +349,130 @@ describe('breach — a equipe não abandona o núcleo contido pela metade', () =
 
     expect(team.status).toBe('idle')
     expect(team.assignedSystem).toBeNull()
+  })
+})
+
+// ── docking-overhaul: Drydock (drones), Depot (sem teto), Science (sem cooldown) ──
+
+function dockedFixture(baseType: StarbaseType, seed = 1) {
+  const state = fixture(seed)
+  state.docked = true
+  state.dockedBaseId = 'b-1'
+  state.starbases = [
+    {
+      id: 'b-1',
+      type: baseType,
+      quadrant: { row: 4, col: 4 },
+      sector: { row: 4, col: 4 },
+      resourcePool: 500,
+      destroyed: false,
+    },
+  ]
+  return state
+}
+
+describe('docking-overhaul — Drydock repara com drones', () => {
+  it('repara 25/subsistema sem NENHUMA equipe designada', () => {
+    const state = dockedFixture(SectorEntityType.STARBASE_DOCK)
+    state.subsystems.shields = 50
+
+    const res = resolveDamageControlTurn(state)
+
+    expect(res.repairs['shields']).toBe(25)
+    expect(state.subsystems.shields).toBe(75)
+  })
+
+  it('designar equipe não muda a taxa — ainda 25', () => {
+    const state = dockedFixture(SectorEntityType.STARBASE_DOCK)
+    state.subsystems.shields = 50
+    state.teams[0].status = 'working'
+    state.teams[0].assignedSystem = 'shields'
+    state.teams[0].efficiency = 100
+    state.teams[0].turnsWorked = 1
+
+    const rate = calculateRepairRate(state, 'shields')
+
+    expect(rate).toBe(25)
+  })
+
+  it('equipe working na drydock descansa (+16%/turno) em vez de acumular fadiga', () => {
+    const state = dockedFixture(SectorEntityType.STARBASE_DOCK)
+    state.subsystems.shields = 50 // não bate 100 neste turno, equipe segue "working"
+    const team = state.teams[0]
+    team.status = 'working'
+    team.assignedSystem = 'shields'
+    team.efficiency = 60
+    team.turnsWorked = 1
+
+    resolveDamageControlTurn(state)
+
+    expect(team.efficiency).toBe(76) // +16, mesma taxa de quem está de folga
+    expect(team.status).toBe('working')
+  })
+})
+
+describe('docking-overhaul — Depot remove o teto de stacking', () => {
+  it('4 equipes no mesmo sistema rendem 4× em depot, sem penalidade posicional', () => {
+    const state = dockedFixture(SectorEntityType.STARBASE_SUPPLY)
+    for (const team of state.teams.slice(0, 4)) {
+      team.status = 'working'
+      team.assignedSystem = 'shields'
+      team.efficiency = 100
+      team.turnsWorked = 1
+    }
+
+    // Tier 5 (atracado) * 4 equipes a 100%, todas em multiplicador 1.0:
+    // 5 * 5 * 4 = 100
+    const rate = calculateRepairRate(state, 'shields')
+    expect(rate).toBe(100)
+  })
+
+  it('as mesmas 4 equipes em espaço aberto sofrem o teto de stacking', () => {
+    const state = fixture()
+    for (const team of state.teams.slice(0, 4)) {
+      team.status = 'working'
+      team.assignedSystem = 'shields'
+      team.efficiency = 100
+      team.turnsWorked = 1
+    }
+
+    // Tier 3, mult [1,1,0.5,0.25]: 5*3*(1+1+0.5+0.25) = 15*2.75 = 41.25
+    const rate = calculateRepairRate(state, 'shields')
+    expect(rate).toBeCloseTo(41.25, 5)
+  })
+})
+
+describe('docking-overhaul — Science station tira o cooldown', () => {
+  it('equipe no piso de eficiência fica despachável direto, sem esperar 50%', () => {
+    const state = dockedFixture(SectorEntityType.STARBASE_SCIENCE)
+    const team = state.teams[0]
+    team.status = 'working'
+    team.efficiency = TEAM_EFFICIENCY_FLOOR
+
+    const res = recallTeam(state, team.id)
+
+    expect(res.success).toBe(true)
+    expect(team.status).toBe('idle')
+    const dispatch = dispatchTeam(state, team.id, 'shields')
+    expect(dispatch.success).toBe(true)
+  })
+
+  it('undock restaura a trava normal de cooldown', () => {
+    const state = dockedFixture(SectorEntityType.STARBASE_SCIENCE)
+    const team = state.teams[0]
+    team.status = 'working'
+    team.efficiency = TEAM_EFFICIENCY_FLOOR
+    recallTeam(state, team.id)
+    expect(team.status).toBe('idle')
+
+    state.docked = false
+    state.dockedBaseId = null
+    team.status = 'working'
+    team.efficiency = TEAM_EFFICIENCY_FLOOR
+    const res = recallTeam(state, team.id)
+
+    expect(res.success).toBe(true)
+    expect(team.status).toBe('cooldown')
+    expect(dispatchTeam(state, team.id, 'shields').success).toBe(false)
   })
 })

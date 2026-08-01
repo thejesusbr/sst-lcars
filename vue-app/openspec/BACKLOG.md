@@ -196,13 +196,10 @@ um componente tres arquivos longe e custou 4 tentativas pra achar.
 
 ### Limpeza da lista de exceções do `reachability.test.ts`
 
-O ratchet contra integração oca nasceu com 6 exceções, todas dívida herdada:
+O ratchet contra integração oca nasceu com 6 exceções, todas dívida herdada.
+`DOCKED_REPAIR_PER_TICK` foi resolvida e removida pela `docking-overhaul`
+(31/07): a Drydock agora repara por drones, sem ler equipe nenhuma. Restam 5:
 
-- **`DOCKED_REPAIR_PER_TICK`** — a spec de `docking` diz "25 pontos por
-  subsistema por tick, **sem** o teto de stacking da CdD", mas o loop usa
-  `calculateRepairRate` com tier 5, que só dá 25 com UMA equipe a 100% de
-  eficiência. Equipe cansada rende menos, contrariando a spec. Mesma família da
-  dívida do item 9.3 logo abaixo, e nunca verificado em playthrough.
 - **`undockSector`, `effectiveImpulseMax`, `markManyExplored`,
   `nearestKnownStarbase`, `canEngageBoost`** — helpers de navegação sem
   consumidor. `undockSector` é o mais irônico: implementava exatamente o
@@ -216,16 +213,3 @@ Removê-los é seguro mas exige recorte à mão — a tentativa automática queb
 rodada de playthrough.
 
 **Origem:** primeira execução do `reachability.test.ts`, 31/07.
-
-### Equipes `working` tratadas como idle durante atracagem
-
-A spec de `docking` pede que **todas** as 6 equipes sejam tratadas como idle
-enquanto atracadas (tripulação de folga), recuperando fadiga em dobro. Hoje só
-quem já está `idle`/`cooldown` recupera; equipe designada continua acumulando
-fadiga no berço.
-
-Consertar exige reformular `calculateRepairRate` pro reparo tier-5 de doca parar
-de depender de equipe designada — o reparo assistido é da estação, não da
-tripulação.
-
-**Origem:** `hail-and-identity`, item 9.3 do playthrough (nunca verificado).

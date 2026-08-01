@@ -179,6 +179,8 @@ distância do canto do scanner.
 
       - Tudo funcionou, mas um esclarecimento. Ao docar em uma Drydock, não é necessário alocar equipe para reparo, todos os sistemas são reparados automaticamente. Os bônus são para efeito de turnos em reparo, apenas. Afinal, o ponto de atracar em uma base para reparos é usar as oficinas automatizadas cheias de drones de reparo brilhantes e não usar suas equipes de reparo de emergência. Elas saem em licença e descansam enquanto os robôs consertam a nave, recuperando fadiga a ritmo mais alto. Logicamente, nos depots e science stations, tais oficinas não estão disponíveis, então nesses casos, sim, os reparos terão de ser feitos pela próprias equipes, exigindo que o jogador as ative, porém ganhando bônus diferentes: depots tem suprimentos, então as penalidades por stacking não se aplicam, podemos alocar mais de duas equipes para acelerar os consertos. Science stations tem instalações de recreação e informação, a fadiga recupera mais rápido e sem cooldown. Assim, todas as estações terão mecänicas diferenciadas por tipo.
 
+      - **Implementado pela `docking-overhaul`:** Drydock repara todo subsistema a 25/tick por drone, equipe designada não muda nada e TODA a tripulação (mesmo quem está `working`) descansa em dobro; Depot mantém o reparo por equipe mas sem teto de stacking (toda posição vale 1.0); Science tira a trava de cooldown (piso de eficiência despacha na hora). Reteste na 6ª rodada.
+
 - [ ] 9.4 Pool da base zerado → base destruída → se você estiver atracado,
       **fim de jogo** (`destroyed_with_base`).
 
@@ -224,6 +226,11 @@ distância do canto do scanner.
 - [ ] 15.7 Atracar em base científica com equipes de CdD exaustas: fadiga
       recupera mais rápido que numa doca comum, com as mesmas equipes e o mesmo
       tempo atracado.
+
+      - **Implementado pela `docking-overhaul`:** além da recuperação mais
+        rápida, uma equipe no piso (20%) volta direto ao pool despachável, sem
+        esperar chegar a 50% (trava de cooldown não se aplica na science
+        station). Reteste na 6ª rodada.
 
 ---
 
@@ -293,7 +300,7 @@ distância do canto do scanner.
 | 26.4 som atropelado | disparo migra pra fila de apresentação | `round-5-fixes` |
 | 24.1 briefing fixo | frota + stardates reais na tela | `round-5-fixes` |
 | 25.1 nave "estacionada" | ícone some enquanto atracada | `round-5-fixes` |
-| 9.3 modelo por tipo de base | drones / sem stacking / sem cooldown | `docking-overhaul` |
+| 9.3 modelo por tipo de base | drones / sem stacking / sem cooldown | `docking-overhaul` ✅ |
 | 23.8 inimigo coberto passivo | refinamento de IA | `BACKLOG.md` |
 
 **Fechadas de tabela pela `docking-overhaul`:** a dívida
