@@ -91,6 +91,23 @@ export const ENEMY_TYPES = [
 export type EnemyType = (typeof ENEMY_TYPES)[number]
 
 /**
+ * Cor de facção pro overlay de combate (`turn-presentation`, `enemy-species`):
+ * um feixe cravado numa cor só ficava ilegível assim que mais de um atacante
+ * disparava no mesmo turno. Variável de TEMA (`colors.css`), não hex — a regra
+ * de todo o app é que cor pertence ao tema, não ao TypeScript.
+ */
+export const ENEMY_FACTION_COLOR: Record<EnemyType, string> = {
+  klingon_cruiser: 'var(--faction-klingon)',
+  klingon_d7: 'var(--faction-klingon)',
+  romulan_warbird: 'var(--faction-romulan)',
+  romulan_scout: 'var(--faction-romulan)',
+  cloaked_raider: 'var(--faction-raider)',
+}
+
+/** Cor de facção do jogador — sempre azul, independente do tema. */
+export const PLAYER_FACTION_COLOR = 'var(--faction-player)'
+
+/**
  * Entidade dentro do setor atual. `id` é estável: atribuído na criação e nunca
  * reaproveitado nem reatribuído, independente da posição no array — nenhum
  * código referencia entidade por índice (capability `combat`, "Stable entity

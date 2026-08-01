@@ -8,7 +8,8 @@ import {
 } from '@/engine/combat'
 import { getVisibleEnemies } from '@/engine/sector'
 import { createNewGameState } from '@/engine/newGame'
-import { SectorEntityType } from '@/types/game'
+import { ENEMY_TYPES, SectorEntityType, type EnemyType } from '@/types/game'
+import { HAIL_SURRENDER_BAND } from '@/engine/constants'
 
 describe('engine/combat', () => {
   it('identifies visible enemies correctly and excludes cloaked raiders', () => {
@@ -57,7 +58,7 @@ describe('engine/combat', () => {
     state.currentSector = [
       { id: 'k1', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
     ]
-    const res = hailTarget(state, 'k1', () => 0.1)
+    const res = hailTarget(state, 'k1', () => 0.01)
     expect(res.success).toBe(true)
     expect(res.status).toBe('surrender')
     expect(state.brig.count).toBe(1)
@@ -102,6 +103,62 @@ describe('engine/combat', () => {
     ]
     // ...mas o MESMO roll rende o alvo em farrapos, porque a chance subiu.
     expect(hailTarget(state, 'crippled', () => 0.31).status).toBe('surrender')
+  })
+
+  // ── enemy-species: rendição por espécie ───────────────────────────────────
+
+  it('Klingon intacto ~10%, em farrapos ~35%; raider 30%/70%', () => {
+    const state = createNewGameState(1)
+
+    state.currentSector = [
+      { id: 'k1', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
+    ]
+    expect(hailTarget(state, 'k1', () => 0.09).status).toBe('surrender')
+    state.currentSector = [
+      { id: 'k1', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
+    ]
+    expect(hailTarget(state, 'k1', () => 0.11).status).toBe('rejected')
+
+    state.currentSector = [
+      { id: 'k2', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 0 },
+    ]
+    expect(hailTarget(state, 'k2', () => 0.34).status).toBe('surrender')
+    state.currentSector = [
+      { id: 'k2', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 0 },
+    ]
+    expect(hailTarget(state, 'k2', () => 0.36).status).toBe('rejected')
+
+    state.currentSector = [
+      { id: 'r1', type: SectorEntityType.CLOAKED_RAIDER, position: { row: 1, col: 1 }, enemyPower: 200 },
+    ]
+    expect(hailTarget(state, 'r1', () => 0.29).status).toBe('surrender')
+    state.currentSector = [
+      { id: 'r2', type: SectorEntityType.CLOAKED_RAIDER, position: { row: 1, col: 1 }, enemyPower: 0 },
+    ]
+    expect(hailTarget(state, 'r2', () => 0.69).status).toBe('surrender')
+  })
+
+  it('um raider em farrapos rende MUITO mais que um Klingon na mesma fração de poder', () => {
+    const mesmaFracao = (type: EnemyType) => {
+      const state = createNewGameState(1)
+      state.currentSector = [
+        { id: 'x', type, position: { row: 1, col: 1 }, enemyPower: 20 }, // 90% de dano
+      ]
+      // Roll fixo entre o teto do Klingon (0.35) e o do raider (0.70): só o
+      // raider rende.
+      return hailTarget(state, 'x', () => 0.5).status
+    }
+    expect(mesmaFracao(SectorEntityType.KLINGON_CRUISER)).toBe('rejected')
+    expect(mesmaFracao(SectorEntityType.CLOAKED_RAIDER)).toBe('surrender')
+  })
+
+  it('todo membro de ENEMY_TYPES tem piso/teto na tabela — sem fallback', () => {
+    for (const type of ENEMY_TYPES) {
+      expect(HAIL_SURRENDER_BAND[type]).toBeDefined()
+      const [floor, ceiling] = HAIL_SURRENDER_BAND[type]
+      expect(floor).toBeGreaterThan(0)
+      expect(ceiling).toBeGreaterThan(floor)
+    }
   })
 
   it('a failed surrender roll answers back with a refusal line', () => {

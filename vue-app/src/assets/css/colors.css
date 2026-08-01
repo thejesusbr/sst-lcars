@@ -135,6 +135,17 @@
   --status-damaged-alert: var(--red-damask);
   --status-critical: var(--warning);
 
+  /* Cor de facção do overlay de combate (`enemy-species`) -- SLOTS dedicados,
+     não alias de --alert/--role-* (que o Red Alert já repinta): um feixe
+     "vermelho Klingon" preso a --alert sumiria no fundo assim que o alerta
+     vermelho pintasse tudo de vermelho. Default aqui cobre os 7 temas sem
+     que nenhum precise sobrescrever; um tema pode redefinir estes 4 slots se
+     quiser contraste melhor sob o próprio `.red-alert`. */
+  --faction-player: var(--dodger-soft);
+  --faction-klingon: var(--chestnut-rose);
+  --faction-romulan: var(--caribbean-green);
+  --faction-raider: var(--lavender-purple);
+
   /* Cores novas sem correspondente proximo no set acima -- só as que os
      temas da imagem de referencia (Okudagrams Color Complete Set v4.1,
      lcarsmania.com) realmente precisaram. Ver SST_LCARS_SPECS.md secao 13.3. */

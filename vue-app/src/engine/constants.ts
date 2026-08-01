@@ -149,6 +149,39 @@ export const ENEMY_SHIELD_BAND: Record<string, readonly [number, number]> = {
 }
 
 /**
+ * Peso de sorteio por tipo de inimigo, somando 1.0 (`enemy-species`).
+ *
+ * `materializeSector` cravava `KLINGON_CRUISER` pra todo mundo — os outros 4
+ * tipos existiam na union, no set de ícones e na tabela de recusa de hail por
+ * espécie (`hailRefusals.ts`), e nunca nasceram numa partida sequer. Constantes
+ * de playtest.
+ */
+export const ENEMY_TYPE_WEIGHTS: Record<string, number> = {
+  klingon_cruiser: 0.35,
+  klingon_d7: 0.2,
+  romulan_warbird: 0.15,
+  romulan_scout: 0.2,
+  cloaked_raider: 0.1,
+}
+
+/**
+ * Faixa de poder inicial por tipo, como multiplicador de `ENEMY_BASE_POWER`,
+ * substituindo o `0.5 + random` único que todo inimigo usava. Sem isto o tipo
+ * seria decoração pura — mesma ameaça atrás de 5 sprites diferentes.
+ *
+ * `klingon_cruiser` mantém a faixa que TODO inimigo já usava, de propósito: o
+ * encontro médio não muda de uma vez só no dia em que os outros 4 tipos
+ * nascem.
+ */
+export const ENEMY_POWER_BAND: Record<string, readonly [number, number]> = {
+  klingon_cruiser: [0.5, 1.5],
+  klingon_d7: [1.2, 2.0],
+  romulan_warbird: [1.2, 2.0],
+  romulan_scout: [0.3, 0.8],
+  cloaked_raider: [0.8, 1.4],
+}
+
+/**
  * Dano de phaser por unidade de potência comprometida.
  *
  * Antes o dano era ~igual à potência: um tiro padrão de 1500 entregava
@@ -213,15 +246,28 @@ export const SHIELD_REGEN_RATE = 50
 /** Fração da taxa máxima que ainda se aplica com `shieldEnergy` no teto. */
 export const SHIELD_REGEN_FLOOR_FRACTION = 0.4
 
-/** Chance de rendição ao dar Hail num inimigo intacto — o PISO da escala (decisão #23). */
-export const HAIL_SURRENDER_CHANCE = 0.3
 /**
- * Teto da escala de rendição: chance quando o alvo está reduzido a 0 de poder
- * (o instante antes de morrer). Constante de playtest — o freio real contra
- * captura virar dominante sobre destruição é a cela de 4 lugares e a equipe de
- * CdD travada em `guard` (hail-and-identity design.md decisão 3, risco 1).
+ * Piso/teto de rendição ao Hail, por espécie (`enemy-species`), substituindo o
+ * par único `HAIL_SURRENDER_CHANCE`/`_MAX` que valia pra todo mundo. Piso =
+ * chance com o alvo intacto; teto = chance a 0 de poder (o instante antes de
+ * morrer).
+ *
+ * Multiplicador sobre o par global preservaria a RAZÃO piso/teto entre
+ * espécies — e é justamente a razão que precisa variar: Klingon tem faixa
+ * estreita (quase não importa quanto apanhe, cultura de "hoje é um bom dia
+ * para morrer"), raider tem faixa larga e alta (é pirata, dobra fácil). Tabela
+ * direta diz isso; multiplicador não conseguiria. Constantes de playtest — o
+ * freio real contra captura virar dominante sobre destruição é a cela de 4
+ * lugares e a equipe de CdD travada em `guard` (hail-and-identity design.md
+ * decisão 3, risco 1), inalterado aqui.
  */
-export const HAIL_SURRENDER_CHANCE_MAX = 0.75
+export const HAIL_SURRENDER_BAND: Record<string, readonly [number, number]> = {
+  klingon_cruiser: [0.1, 0.35],
+  klingon_d7: [0.1, 0.35],
+  romulan_warbird: [0.15, 0.45],
+  romulan_scout: [0.15, 0.45],
+  cloaked_raider: [0.3, 0.7],
+}
 /** Chance de um prisioneiro revelar posição de frota, 1x por captura. */
 export const INTERROGATION_CHANCE = 0.5
 /** Estresse de cloak por turno, na mesma escala 0-20 do overload. */
@@ -479,13 +525,13 @@ export function damageFraction(integrity: number): number {
  * intacto até o dano real alcançar o nominal, o que é aceitável: o efeito é só
  * atrasar o início da escala, nunca invertê-la.
  *
- * Alvo intacto (`enemyPower >= ENEMY_BASE_POWER`) rende no piso
- * `HAIL_SURRENDER_CHANCE`; caindo a 0 de poder, no teto
- * `HAIL_SURRENDER_CHANCE_MAX`.
+ * Alvo intacto (`enemyPower >= ENEMY_BASE_POWER`) rende no piso da SUA espécie;
+ * caindo a 0 de poder, no teto dela (`HAIL_SURRENDER_BAND`, `enemy-species`).
  */
-export function hailSurrenderChance(enemyPower: number): number {
+export function hailSurrenderChance(enemyPower: number, enemyType: string): number {
   const damaged = clamp(1 - enemyPower / ENEMY_BASE_POWER, 0, 1)
-  return HAIL_SURRENDER_CHANCE + (HAIL_SURRENDER_CHANCE_MAX - HAIL_SURRENDER_CHANCE) * damaged
+  const [floor, ceiling] = HAIL_SURRENDER_BAND[enemyType] ?? [0.3, 0.75]
+  return floor + (ceiling - floor) * damaged
 }
 
 /** `true` quando o subsistema está paralisado/forçado a estado seguro. */

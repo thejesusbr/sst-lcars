@@ -611,7 +611,7 @@ export function hailTarget(
       return { success: false, status: 'full_brig' }
     }
 
-    if (rng() < hailSurrenderChance(target.enemyPower ?? 0)) {
+    if (rng() < hailSurrenderChance(target.enemyPower ?? 0, target.type)) {
       // `captured` ja soma em `klingonsCaptured` -- nao somar aqui de novo.
       removeEnemyFromSector(state, target.id, 'captured')
       state.brig.count = Math.min(state.brig.capacity, state.brig.count + 1)

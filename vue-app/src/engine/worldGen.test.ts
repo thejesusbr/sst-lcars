@@ -7,7 +7,10 @@ import {
   quadrantKey,
   GRID_MAX,
 } from './worldGen'
-import { SectorEntityType, type QuadrantContent } from '@/types/game'
+import { ENEMY_TYPES, SectorEntityType, type QuadrantContent } from '@/types/game'
+import { ENEMY_BASE_POWER, ENEMY_POWER_BAND } from './constants'
+
+const isEnemy = (t: string) => (ENEMY_TYPES as readonly string[]).includes(t)
 
 const world = (seed: number) => generateWorld(seed)
 
@@ -169,7 +172,9 @@ describe('materialização de setor', () => {
       starbases,
     )
     const count = (t: string) => ents.filter((e) => e.type === t).length
-    expect(count(SectorEntityType.KLINGON_CRUISER)).toBe(2)
+    // `enemy-species`: os 2 inimigos podem ser qualquer um dos 5 tipos, o
+    // sorteio ponderado não crava mais tudo em KLINGON_CRUISER.
+    expect(ents.filter((e) => isEnemy(e.type)).length).toBe(2)
     expect(count(SectorEntityType.STAR)).toBe(5)
     expect(
       ents.filter((e) => e.type.startsWith('starbase')).length,
@@ -194,20 +199,19 @@ describe('materialização de setor', () => {
       { row: 2, col: 2 },
       9,
     )
-    expect(
-      ents.filter((e) => e.type === SectorEntityType.KLINGON_CRUISER),
-    ).toHaveLength(1)
+    expect(ents.filter((e) => isEnemy(e.type))).toHaveLength(1)
   })
 
-  it('inimigos nascem com enemyPower na faixa 100-300', () => {
+  it('inimigos nascem com enemyPower dentro da faixa da PRÓPRIA espécie', () => {
     const ents = materializeSector(
       content({ klingons: 3 }),
       { row: 2, col: 2 },
       4,
     )
-    for (const e of ents.filter((x) => x.enemyPower !== undefined)) {
-      expect(e.enemyPower!).toBeGreaterThanOrEqual(100)
-      expect(e.enemyPower!).toBeLessThanOrEqual(300)
+    for (const e of ents.filter((x) => isEnemy(x.type))) {
+      const [lo, hi] = ENEMY_POWER_BAND[e.type] ?? [0.5, 1.5]
+      expect(e.enemyPower!).toBeGreaterThanOrEqual(ENEMY_BASE_POWER * lo)
+      expect(e.enemyPower!).toBeLessThanOrEqual(ENEMY_BASE_POWER * hi)
     }
   })
 
@@ -248,6 +252,74 @@ describe('materialização de setor', () => {
     const b = materializeSector(args[0], args[1], 2)
     expect(a.map((e) => e.id)).toEqual(b.map((e) => e.id))
     expect(new Set(a.map((e) => e.id)).size).toBe(a.length)
+  })
+})
+
+describe('enemy-species — os 5 tipos nascem de verdade', () => {
+  const content = (over: Partial<QuadrantContent> = {}): QuadrantContent => ({
+    klingons: 3,
+    baseIds: [],
+    stars: 5,
+    planet: false,
+    dilithiumCharges: 0,
+    surveyed: false,
+    clearedEnemies: 0,
+    ...over,
+  })
+
+  it('os 5 tipos aparecem numa amostra grande, nas proporções tabeladas', () => {
+    const counts: Record<string, number> = Object.fromEntries(
+      ENEMY_TYPES.map((t) => [t, 0]),
+    )
+    let total = 0
+    for (let seed = 1; seed <= 300; seed++) {
+      const ents = materializeSector(content(), { row: 2, col: 2 }, seed)
+      for (const e of ents.filter((x) => isEnemy(x.type))) {
+        counts[e.type]++
+        total++
+      }
+    }
+    // Todos os 5 apareceram — nenhum ficou em 0.
+    for (const t of ENEMY_TYPES) expect(counts[t]).toBeGreaterThan(0)
+
+    // Peso tabelado: klingon_cruiser 35%, klingon_d7 20%, romulan_warbird 15%,
+    // romulan_scout 20%, cloaked_raider 10%. Margem generosa (amostra finita).
+    expect(counts[SectorEntityType.KLINGON_CRUISER] / total).toBeGreaterThan(0.25)
+    expect(counts[SectorEntityType.KLINGON_CRUISER] / total).toBeLessThan(0.45)
+    expect(counts[SectorEntityType.CLOAKED_RAIDER] / total).toBeLessThan(0.18)
+  })
+
+  it('mesma semente reproduz os mesmos tipos, nas mesmas células', () => {
+    const a = materializeSector(content(), { row: 3, col: 3 }, 555)
+    const b = materializeSector(content(), { row: 3, col: 3 }, 555)
+    expect(a.map((e) => ({ type: e.type, position: e.position }))).toEqual(
+      b.map((e) => ({ type: e.type, position: e.position })),
+    )
+  })
+
+  it('CLOAKED_RAIDER sempre materializa cloacado', () => {
+    let found = false
+    for (let seed = 1; seed <= 300; seed++) {
+      const ents = materializeSector(content(), { row: 2, col: 2 }, seed)
+      for (const e of ents.filter(
+        (x) => x.type === SectorEntityType.CLOAKED_RAIDER,
+      )) {
+        found = true
+        expect(e.cloaked).toBe(true)
+      }
+    }
+    expect(found).toBe(true)
+  })
+
+  it('scout nasce numa faixa de poder estritamente mais fraca que o warbird', () => {
+    const [scoutLo, scoutHi] = ENEMY_POWER_BAND[SectorEntityType.ROMULAN_SCOUT]
+    const [warbirdLo] = ENEMY_POWER_BAND[SectorEntityType.ROMULAN_WARBIRD]
+    expect(scoutHi).toBeLessThanOrEqual(warbirdLo)
+    expect(scoutLo).toBeLessThan(warbirdLo)
+  })
+
+  it('a faixa do cruiser é a mesma que todo inimigo usava antes (0.5–1.5)', () => {
+    expect(ENEMY_POWER_BAND[SectorEntityType.KLINGON_CRUISER]).toEqual([0.5, 1.5])
   })
 })
 

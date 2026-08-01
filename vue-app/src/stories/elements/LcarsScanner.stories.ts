@@ -69,3 +69,76 @@ export const CustomLabels: Story = {
     coordsColor: 'golden-tanoi-fg',
   },
 }
+
+// ── enemy-species: overlay de combate colorido por facção ──────────────────
+// Um `ScannerOverlay` só mostra 1 feixe por vez; 4 stories, 1 por facção, é o
+// jeito de conferir as 4 cores (e o contraste sob tema/red-alert) lado a lado
+// no Storybook em vez de depender só do playthrough ao vivo.
+
+export const OverlayPlayerBeam: Story = {
+  args: {
+    version: 'short',
+    width: 8,
+    height: 8,
+    gridData: mockGridData,
+    overlay: {
+      kind: 'beam',
+      from: { row: 3, col: 4 },
+      to: { row: 1, col: 2 },
+      durationMs: 3000,
+      key: 'player',
+      color: 'var(--faction-player)',
+    },
+  },
+}
+
+export const OverlayKlingonBeam: Story = {
+  args: {
+    version: 'short',
+    width: 8,
+    height: 8,
+    gridData: mockGridData,
+    overlay: {
+      kind: 'beam',
+      from: { row: 1, col: 2 },
+      to: { row: 3, col: 4 },
+      durationMs: 3000,
+      key: 'klingon',
+      color: 'var(--faction-klingon)',
+    },
+  },
+}
+
+export const OverlayRomulanBeam: Story = {
+  args: {
+    version: 'short',
+    width: 8,
+    height: 8,
+    gridData: mockGridData,
+    overlay: {
+      kind: 'beam',
+      from: { row: 5, col: 6 },
+      to: { row: 3, col: 4 },
+      durationMs: 3000,
+      key: 'romulan',
+      color: 'var(--faction-romulan)',
+    },
+  },
+}
+
+export const OverlayRaiderBeam: Story = {
+  args: {
+    version: 'short',
+    width: 8,
+    height: 8,
+    gridData: mockGridData,
+    overlay: {
+      kind: 'beam',
+      from: { row: 6, col: 5 },
+      to: { row: 3, col: 4 },
+      durationMs: 3000,
+      key: 'raider',
+      color: 'var(--faction-raider)',
+    },
+  },
+}

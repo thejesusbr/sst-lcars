@@ -10,6 +10,7 @@
  */
 
 import {
+  ENEMY_TYPES,
   SectorEntityType,
   STARBASE_TYPES,
   type GalaxyMap,
@@ -23,12 +24,28 @@ import {
   liveKbsCode,
   ENEMY_BASE_POWER,
   ENEMY_ENERGY_MAX,
+  ENEMY_POWER_BAND,
   ENEMY_SHIELD_BAND,
+  ENEMY_TYPE_WEIGHTS,
   missionDurationFor,
   STARBASE_POOL_CAPACITY,
   STARDATE_INITIAL,
 } from './constants'
 import { mulberry32 } from './prng'
+
+/**
+ * Sorteio ponderado do tipo de inimigo (`ENEMY_TYPE_WEIGHTS`, `enemy-species`).
+ * Peso fixo, não região — território é pendência futura (`openspec/BACKLOG.md`).
+ */
+function pickEnemyType(rng: () => number): (typeof ENEMY_TYPES)[number] {
+  const roll = rng()
+  let acc = 0
+  for (const type of ENEMY_TYPES) {
+    acc += ENEMY_TYPE_WEIGHTS[type] ?? 0
+    if (roll < acc) return type
+  }
+  return ENEMY_TYPES[ENEMY_TYPES.length - 1]
+}
 
 export const GRID_MIN = 1
 export const GRID_MAX = 8
@@ -287,17 +304,22 @@ export function materializeSector(
 
   const liveEnemies = Math.max(0, content.klingons - content.clearedEnemies)
   for (let i = 0; i < liveEnemies; i++) {
-    const type = SectorEntityType.KLINGON_CRUISER
-    // Escudo absorve antes do poder. Faixa por tipo — até a `enemy-species`
-    // entrar, só a do cruiser se manifesta, porque só ele nasce.
-    const [lo, hi] = ENEMY_SHIELD_BAND[type] ?? [0.5, 1.0]
+    const type = pickEnemyType(rng)
+    // Escudo e poder absorvem/atacam por faixa própria do tipo (`enemy-species`).
+    const [shieldLo, shieldHi] = ENEMY_SHIELD_BAND[type] ?? [0.5, 1.0]
+    const [powerLo, powerHi] = ENEMY_POWER_BAND[type] ?? [0.5, 1.5]
     entities.push({
       id: `${qk}-k-${i}`,
       type,
       position: freeCell(),
-      enemyPower: ENEMY_BASE_POWER * (0.5 + rng()),
-      enemyShield: ENEMY_BASE_POWER * (lo + rng() * (hi - lo)),
+      enemyPower: ENEMY_BASE_POWER * (powerLo + rng() * (powerHi - powerLo)),
+      enemyShield: ENEMY_BASE_POWER * (shieldLo + rng() * (shieldHi - shieldLo)),
       enemyEnergy: ENEMY_ENERGY_MAX,
+      // Único tipo cujo peso também compra uma habilidade: nasce cloacado,
+      // sujeito às mesmas regras de estresse/cooldown de todo Cloaked Raider.
+      ...(type === SectorEntityType.CLOAKED_RAIDER
+        ? { cloaked: true, cloakStress: 0 }
+        : {}),
     })
   }
 
