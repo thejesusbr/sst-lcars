@@ -6,6 +6,7 @@ import LcarsTitle from "@/components/elements/LcarsTitle.vue";
 import LcarsText from "@/components/elements/LcarsText.vue";
 import LcarsButton from "@/components/elements/LcarsButton.vue";
 import DefaultBarFrame from "../widgets/DefaultBarFrame.vue";
+import ufpLogo from "@/assets/logos/ufp-logo.png";
 
 withDefaults(
   defineProps<{
@@ -50,6 +51,11 @@ const emit = defineEmits<{ (e: "start"): void; (e: "regenerate"): void }>();
         flex="v"
         :style="{ 'align-items': 'center', gap: '1.5rem', width: '32rem' }"
       >
+        <img
+          :src="ufpLogo"
+          alt="United Federation of Planets"
+          style="height: 10dvh; width: auto"
+        />
         <LcarsTitle
           version="centered"
           size="large"
