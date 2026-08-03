@@ -16,7 +16,7 @@
 
 import { defineStore } from 'pinia'
 import { TURN_EVENT_PRESENT_MS, warpAnimationMs } from '@/engine/constants'
-import type { GridCoord, SectorEntity, TurnEvent, TurnEventType } from '@/types/game'
+import type { AlertLevel, GridCoord, SectorEntity, TurnEvent, TurnEventType } from '@/types/game'
 import { useGameState } from '@/stores/useGameState'
 import { HULL_HIT_SOUNDS, Sound, useSound } from '@/composables/useSound'
 
@@ -79,6 +79,14 @@ export const usePresentation = defineStore('presentation', {
      * posição viva pra ler), e era o grid que discordava.
      */
     sectorSnapshot: null as SectorSnapshot | null,
+    /**
+     * Nível de alerta congelado no início do turno, mesma vida do
+     * `sectorSnapshot` — a engine já aplica o alerta novo na ETAPA 5, mas
+     * mostrar isso antes de a fila drenar é spoiler: o corpo vira
+     * `.red-alert` e o som toca antes de o jogador ver o SRS atualizar
+     * (usuário, 22.1: "o alerta se liga antes da atualização do SRS").
+     */
+    alertLevelSnapshot: null as AlertLevel | null,
   }),
 
   getters: {
@@ -98,6 +106,17 @@ export const usePresentation = defineStore('presentation', {
       if (state.sectorSnapshot) return state.sectorSnapshot
       const game = useGameState()
       return { entities: game.currentSector, ship: game.position.sector }
+    },
+
+    /**
+     * Nível de alerta a MOSTRAR — congelado enquanto a fila drena ou a nave
+     * viaja, senão vira live assim que resolve (`sectorView` acima é o mesmo
+     * padrão). Console lê isto pro corpo/tema/som, NUNCA `gameState.alertLevel`
+     * direto — só o toggle manual (`redAlert` em `SituationPanel`) escreve no
+     * estado vivo, ler é sempre por aqui.
+     */
+    alertLevelView(state): AlertLevel {
+      return state.alertLevelSnapshot ?? useGameState().alertLevel
     },
 
     /**
@@ -127,6 +146,9 @@ export const usePresentation = defineStore('presentation', {
         entities: game.currentSector.map((e) => ({ ...e })),
         ship: { ...game.position.sector },
       }
+      // Alerta ANTES da resolução — o mesmo "antes" que o sectorSnapshot
+      // guarda, pra revelar os dois juntos quando a fila drenar (22.1).
+      this.alertLevelSnapshot = game.alertLevel
     },
 
     /**
@@ -138,6 +160,7 @@ export const usePresentation = defineStore('presentation', {
     settle() {
       if (this.presenting || this.travelling) return
       this.sectorSnapshot = null
+      this.alertLevelSnapshot = null
     },
 
     /** Enfileira os eventos encenáveis de um turno resolvido. */
@@ -257,6 +280,7 @@ export const usePresentation = defineStore('presentation', {
       this.current = null
       this.endTravel()
       this.sectorSnapshot = null
+      this.alertLevelSnapshot = null
     },
   },
 })

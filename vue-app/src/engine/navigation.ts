@@ -11,6 +11,7 @@
 import type {
   GameState,
   GridCoord,
+  QuadrantContent,
   QuadrantMap,
   Starbase,
   TurnEventDraft,
@@ -390,6 +391,25 @@ export interface ProbeScanResult {
   log: TurnEventDraft[]
 }
 
+function pluralPt(count: number, singular: string, plural: string): string {
+  return count === 1 ? `1 ${singular}` : `${count} ${plural}`
+}
+
+/**
+ * Descreve um quadrante em PROSA, não no código KBS cru — usuário: trocar
+ * "KBS 123" por "x naves inimigas, uma base estelar e y estrelas"
+ * (`round-6-polish`, obs. geral do relatório da sonda). Conta direto dos
+ * campos de `content`, não reparseia o código — mesmos números que
+ * `liveKbsCode` computa (baixas e Cloaked Raider já descontados).
+ */
+function describeQuadrantContent(q: QuadrantContent): string {
+  const enemies = Math.max(0, q.klingons - q.clearedEnemies - (q.cloakedRaiders ?? 0))
+  const naves = pluralPt(enemies, 'nave inimiga', 'naves inimigas')
+  const bases = pluralPt(q.baseIds.length, 'base estelar', 'bases estelares')
+  const estrelas = pluralPt(q.stars, 'estrela', 'estrelas')
+  return `${naves}, ${bases} e ${estrelas}`
+}
+
 /**
  * Resolve o scan de uma sonda que chegou ao alvo.
  *
@@ -432,7 +452,10 @@ export function resolveProbeScan(
   // Coordenadas SEMPRE X,Y (col,row) em texto de UI — a chave interna é row,col.
   const xy = `${target.col},${target.row}`
   const log: TurnEventDraft[] = [
-    { type: 'probe_report', text: `Sonda reporta quadrante ${xy}: KBS ${code}.` },
+    {
+      type: 'probe_report',
+      text: `Sonda reporta quadrante ${xy}: ${describeQuadrantContent(q)}.`,
+    },
   ]
 
   if (q.planet) {

@@ -21,8 +21,10 @@ import { useQuadrantCells } from "@/composables/useQuadrantCells";
 import {
   PHASER_POWER_MAX,
   PHASER_TEMP_MAX,
+  damageFraction,
   isCritical,
 } from "@/engine/constants";
+import { SENSOR_MODERATE_DAMAGE } from "@/composables/sensorDisplay";
 import { getVisibleEnemies } from "@/engine/sector";
 import type { TorpedoTube } from "@/types/game";
 import LcarsIndicator from "../elements/LcarsIndicator.vue";
@@ -125,8 +127,21 @@ const targetLabel = (tube: TorpedoTube) => {
   return target ? `${target.position.col},${target.position.row}` : "—";
 };
 
+// Degradação do DISPLAY por dano no SRS — mesma regra do NavSensingConsole
+// (`sensorDisplay.ts`), que só existia lá: "o SRS da aba de navegação
+// funcionou completamente, mas o da aba de armamentos não" (round-6-polish,
+// 14.7).
+const srsBlinking = computed(
+  () =>
+    damageFraction(gameState.subsystems.srs) > SENSOR_MODERATE_DAMAGE &&
+    !isCritical(gameState.subsystems.srs)
+);
+/** Em crítico o display apaga por completo — nem a própria nave aparece. */
+const srsDark = computed(() => isCritical(gameState.subsystems.srs));
+
 // Grid do setor com o numero do tubo sobreposto no alvo dele.
 const scannerGrid = computed(() => {
+  if (srsDark.value) return {};
   // Mesma fonte do SRS do NavSensing: os dois desenham o MESMO setor, então
   // ler estados diferentes os faria divergir no meio da encenação.
   const view = presentation.sectorView;
@@ -427,14 +442,16 @@ const togglePhotons = () => {
           :style="{ height: '21rem', width: '24rem' }"
           :coloring="bracketColoring"
         >
-          <LcarsScanner
-            version="short"
-            :width="8"
-            :height="8"
-            :grid-data="scannerGrid"
-            :overlay="combatOverlay"
-            @cell-click="handleScannerCellClick"
-          />
+          <div :class="{ 'sensor-blink': srsBlinking }">
+            <LcarsScanner
+              version="short"
+              :width="8"
+              :height="8"
+              :grid-data="scannerGrid"
+              :overlay="combatOverlay"
+              @cell-click="handleScannerCellClick"
+            />
+          </div>
         </DefaultBracket>
         <LcarsColumn>
           <LcarsRow>
@@ -624,3 +641,32 @@ const togglePhotons = () => {
     </LcarsColumn>
   </LcarsRow>
 </template>
+
+<style scoped>
+/* Dano MODERADO no sensor: o display pisca. Mesma regra do
+   NavSensingConsole (round-6-polish, 14.7) — é equipamento falhando, distinto
+   do esmaecimento por confiança. */
+.sensor-blink {
+  animation: sensor-flicker 1.1s steps(1, end) infinite;
+}
+
+@keyframes sensor-flicker {
+  0%,
+  62%,
+  74%,
+  100% {
+    opacity: 1;
+  }
+  66%,
+  70% {
+    opacity: 0.18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sensor-blink {
+    animation: none;
+    opacity: 0.65;
+  }
+}
+</style>

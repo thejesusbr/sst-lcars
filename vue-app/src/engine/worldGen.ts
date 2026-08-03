@@ -122,6 +122,36 @@ export function kbsCode(content: QuadrantContent): string {
   return liveKbsCode(content)
 }
 
+/**
+ * Quantos dos `klingons` de um quadrante nascem Cloaked Raider — decidido
+ * agora (geração eager) via materialização de PREVIEW, pra `liveKbsCode`
+ * saber quanto esconder do dígito K sem esperar a visita real
+ * (`cloak-and-alert`, 20.7).
+ *
+ * A preview usa a MESMA semente e as MESMAS regras de `materializeSector`
+ * (`content.klingons`/`clearedEnemies` são as únicas entradas que o laço de
+ * inimigo lê antes de tocar em base/planeta/estrela), então bate byte a byte
+ * com o que a materialização REAL vai sortear quando o jogador chegar —
+ * mesmo truque que `pickStartPosition` já usa pra prever ocupação.
+ */
+function countCloakedRaiders(klingons: number, quadrant: GridCoord, seed: number): number {
+  if (klingons === 0) return 0
+  const preview = materializeSector(
+    {
+      klingons,
+      baseIds: [],
+      stars: 0,
+      planet: false,
+      dilithiumCharges: 0,
+      surveyed: false,
+      clearedEnemies: 0,
+    },
+    quadrant,
+    seed,
+  )
+  return preview.filter((e) => e.type === SectorEntityType.CLOAKED_RAIDER).length
+}
+
 // ── Geração da galáxia ──────────────────────────────────────────────────────
 
 export interface GeneratedWorld {
@@ -167,6 +197,7 @@ export function generateWorld(seed: number): GeneratedWorld {
         dilithiumCharges,
         surveyed: false,
         clearedEnemies: 0,
+        cloakedRaiders: countCloakedRaiders(klingons, { row, col }, seed),
       }
       galaxy[`${row},${col}`] = content
 
@@ -387,4 +418,48 @@ export function materializeSector(
   }
 
   return entities
+}
+
+/**
+ * Cloaked Raider tenta se aproximar da nave sem ser visto, pra atacar com
+ * máxima efetividade quando decloacar — revisão do usuário (20.7):
+ * "Quando a nave entra em um setor com Raider cloacado, ele tenta se
+ * aproximar da nave sem ser visto". Reposiciona pra ADJACENTE à nave
+ * (`damageFalloff(1) = 1.0`, o teto da tabela) em vez de onde `freeCell()`
+ * sorteou na materialização — mesma busca por vizinha livre do `undock`
+ * (`docking.ts`), pra nunca empilhar em cima de outra entidade.
+ *
+ * Chamado pelo hook `onQuadrantEnter` (`useGameState.ts`), DEPOIS de
+ * `materializeSector` — não dentro dela, porque `pickStartPosition` também
+ * chama `materializeSector` pra PREVER ocupação, e a nave "entrando" ali é só
+ * previsão, não um evento real que mereça a aproximação furtiva.
+ */
+export function approachCloakedRaiders(
+  entities: SectorEntity[],
+  shipSector: GridCoord,
+  rng: () => number,
+): void {
+  const raiders = entities.filter(
+    (e) => e.type === SectorEntityType.CLOAKED_RAIDER && e.cloaked,
+  )
+  if (raiders.length === 0) return
+
+  const taken = new Set(entities.map((e) => cellKey(e.position)))
+  for (const raider of raiders) {
+    taken.delete(cellKey(raider.position))
+    const candidates: GridCoord[] = []
+    for (let dRow = -1; dRow <= 1; dRow++) {
+      for (let dCol = -1; dCol <= 1; dCol++) {
+        if (dRow === 0 && dCol === 0) continue
+        const cell = { row: shipSector.row + dRow, col: shipSector.col + dCol }
+        if (cell.row < GRID_MIN || cell.row > GRID_MAX) continue
+        if (cell.col < GRID_MIN || cell.col > GRID_MAX) continue
+        if (!taken.has(cellKey(cell))) candidates.push(cell)
+      }
+    }
+    if (candidates.length > 0) {
+      raider.position = candidates[Math.floor(rng() * candidates.length)]
+    }
+    taken.add(cellKey(raider.position))
+  }
 }

@@ -1,13 +1,19 @@
 import { describe, it, expect } from 'vitest'
 
 import {
+  approachCloakedRaiders,
   generateWorld,
   kbsCode,
   materializeSector,
   quadrantKey,
   GRID_MAX,
 } from './worldGen'
-import { ENEMY_TYPES, SectorEntityType, type QuadrantContent } from '@/types/game'
+import {
+  ENEMY_TYPES,
+  SectorEntityType,
+  type QuadrantContent,
+  type SectorEntity,
+} from '@/types/game'
 import { ENEMY_BASE_POWER, ENEMY_POWER_BAND } from './constants'
 
 const isEnemy = (t: string) => (ENEMY_TYPES as readonly string[]).includes(t)
@@ -320,6 +326,94 @@ describe('enemy-species — os 5 tipos nascem de verdade', () => {
 
   it('a faixa do cruiser é a mesma que todo inimigo usava antes (0.5–1.5)', () => {
     expect(ENEMY_POWER_BAND[SectorEntityType.KLINGON_CRUISER]).toEqual([0.5, 1.5])
+  })
+})
+
+describe('cloak-and-alert — raider não vaza no LRS (20.7)', () => {
+  it('content.cloakedRaiders bate com o que a materialização REAL sorteia', () => {
+    // countCloakedRaiders (preview) tem que consumir o MESMO stream de RNG
+    // que a materialização de verdade vai usar depois — mesmo truque que
+    // pickStartPosition já usa pra prever ocupação.
+    for (let seed = 1; seed <= 40; seed++) {
+      const w = world(seed)
+      for (const [key, content] of Object.entries(w.galaxy)) {
+        if (content.klingons === 0) continue
+        const [row, col] = key.split(',').map(Number)
+        const real = materializeSector(content, { row, col }, seed, w.starbases)
+        const realCloaked = real.filter(
+          (e) => e.type === SectorEntityType.CLOAKED_RAIDER,
+        ).length
+        expect(content.cloakedRaiders).toBe(realCloaked)
+      }
+    }
+  })
+
+  it('setor só com raider cloacado mostra K=0 no dígito vivo (parece seguro)', () => {
+    // Procura um seed/quadrante com klingons===cloakedRaiders (só raider) pra
+    // provar o caso extremo do achado: "setores que aparecem como seguros no
+    // LRS podem conter um Raider".
+    let found = false
+    for (let seed = 1; seed <= 200 && !found; seed++) {
+      const w = world(seed)
+      for (const content of Object.values(w.galaxy)) {
+        if (content.klingons > 0 && content.klingons === content.cloakedRaiders) {
+          expect(kbsCode(content)[0]).toBe('0')
+          found = true
+          break
+        }
+      }
+    }
+    expect(found).toBe(true)
+  })
+})
+
+describe('cloak-and-alert — Cloaked Raider se aproxima ao entrar no setor (20.7)', () => {
+  it('reposiciona o raider pra ADJACENTE à nave', () => {
+    const raider: SectorEntity = {
+      id: 'r1',
+      type: SectorEntityType.CLOAKED_RAIDER,
+      position: { row: 8, col: 8 },
+      cloaked: true,
+      cloakStress: 0,
+      enemyPower: 100,
+    }
+    const ship = { row: 1, col: 1 }
+    approachCloakedRaiders([raider], ship, () => 0.4)
+
+    const dist = Math.max(
+      Math.abs(raider.position.row - ship.row),
+      Math.abs(raider.position.col - ship.col),
+    )
+    expect(dist).toBe(1)
+  })
+
+  it('não mexe em inimigo NÃO cloacado', () => {
+    const cruiser: SectorEntity = {
+      id: 'k1',
+      type: SectorEntityType.KLINGON_CRUISER,
+      position: { row: 8, col: 8 },
+      enemyPower: 100,
+    }
+    approachCloakedRaiders([cruiser], { row: 1, col: 1 }, () => 0.5)
+    expect(cruiser.position).toEqual({ row: 8, col: 8 })
+  })
+
+  it('não sobrepõe entidade já ocupando a célula adjacente', () => {
+    const raider: SectorEntity = {
+      id: 'r1',
+      type: SectorEntityType.CLOAKED_RAIDER,
+      position: { row: 8, col: 8 },
+      cloaked: true,
+      cloakStress: 0,
+      enemyPower: 100,
+    }
+    const star: SectorEntity = {
+      id: 's1',
+      type: SectorEntityType.STAR,
+      position: { row: 1, col: 2 },
+    }
+    approachCloakedRaiders([raider, star], { row: 1, col: 1 }, () => 0)
+    expect(raider.position).not.toEqual(star.position)
   })
 })
 

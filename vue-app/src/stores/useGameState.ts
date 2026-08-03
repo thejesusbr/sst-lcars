@@ -45,7 +45,7 @@ import {
 } from '@/engine/damageControl'
 import { dock as engineDock, undock as engineUndock, canDock } from '@/engine/docking'
 import { cycleTorpedoTarget, requestTubeLoad } from '@/engine/combat'
-import { materializeSector } from '@/engine/worldGen'
+import { approachCloakedRaiders, materializeSector } from '@/engine/worldGen'
 import { lrsNeighborhood, scanConfidence } from '@/engine/navigation'
 import { usePresentation } from '@/stores/usePresentation'
 
@@ -84,6 +84,10 @@ const quadrantEnterHook: TurnOptions['onQuadrantEnter'] = (state, quadrant) => {
     state.seed,
     state.starbases,
   )
+  // Cloaked Raider se aproxima sem ser visto ao entrar no setor
+  // (`cloak-and-alert`, 20.7) — DEPOIS de materializar, nunca dentro (ver
+  // doc de `approachCloakedRaiders`).
+  approachCloakedRaiders(state.currentSector, state.position.sector, Math.random)
 }
 
 export const useGameState = defineStore('gameState', {

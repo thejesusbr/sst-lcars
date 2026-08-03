@@ -163,3 +163,43 @@ describe('combat-pressure — revezamento de ataque inimigo', () => {
     expect(attackers.size).toBe(3)
   })
 })
+
+describe('cloak-and-alert — subir de alerta prepara a nave (22.1)', () => {
+  it('red alert levanta escudo e liga as armas (se estivessem desligadas)', () => {
+    const state = createNewGameState(1)
+    state.shieldsRaised = false
+    state.subsystemsOn.photons = false
+    state.currentSector = [
+      {
+        id: 'k1',
+        type: 'klingon_cruiser',
+        position: { row: 1, col: 1 },
+        enemyPower: 100,
+        enemyEnergy: ENEMY_ENERGY_MAX,
+        cloaked: false,
+      },
+    ]
+
+    endTurn(state, () => 0.5)
+
+    expect(state.alertLevel).toBe('red')
+    expect(state.shieldsRaised).toBe(true)
+    expect(state.subsystemsOn.photons).toBe(true)
+  })
+
+  it('yellow alert só levanta escudo — não liga as armas', () => {
+    const state = createNewGameState(1)
+    state.position.quadrant = { row: 4, col: 4 }
+    state.shieldsRaised = false
+    state.subsystemsOn.photons = false
+    state.currentSector = [] // sem hostil VISÍVEL no setor atual
+    // Vizinhança CONHECIDA com hostil — dígito K > 0 já escaneado antes.
+    state.exploredQuadrants['5,4'] = { code: '104', age: 0 }
+
+    endTurn(state, () => 0.5)
+
+    expect(state.alertLevel).toBe('yellow')
+    expect(state.shieldsRaised).toBe(true)
+    expect(state.subsystemsOn.photons).toBe(false)
+  })
+})

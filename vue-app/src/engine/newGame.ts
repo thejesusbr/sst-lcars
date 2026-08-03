@@ -115,6 +115,7 @@ export function createNewGameState(seed: number = randomSeed()): GameState {
     weaponsLocked: false,
     klingonsDestroyed: 0,
     klingonsCaptured: 0,
+    capturedByType: {},
     torpedoesUsed: 0,
 
     brig: { count: 0, capacity: BRIG_CAPACITY },

@@ -67,6 +67,17 @@ describe('engine/combat', () => {
     expect(state.currentSector.length).toBe(0)
   })
 
+  it('captura grava a espécie em capturedByType — rating por espécie precisa saber quem (round-6-polish)', () => {
+    const state = createNewGameState(1)
+    state.currentSector = [
+      { id: 'k1', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
+    ]
+    hailTarget(state, 'k1', () => 0.01)
+
+    expect(state.klingonsCaptured).toBe(1)
+    expect(state.capturedByType).toEqual({ klingon_cruiser: 1 })
+  })
+
   // ── hail-and-identity: alcance, resposta de base, rendição escalada ────────
 
   it('hailTarget reaches a base by id alone — no cell/distance check', () => {
@@ -101,38 +112,40 @@ describe('engine/combat', () => {
     state.currentSector = [
       { id: 'intact', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
     ]
-    // Piso: 0.30. Um roll logo acima do piso falha pro alvo intacto...
-    expect(hailTarget(state, 'intact', () => 0.31).status).toBe('rejected')
+    // Piso: 0.05 (round-6-polish, 20.4). Um roll acima do piso falha pro
+    // alvo intacto...
+    expect(hailTarget(state, 'intact', () => 0.2).status).toBe('rejected')
 
     state.currentSector = [
       { id: 'crippled', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 20 },
     ]
-    // ...mas o MESMO roll rende o alvo em farrapos, porque a chance subiu.
-    expect(hailTarget(state, 'crippled', () => 0.31).status).toBe('surrender')
+    // ...mas o MESMO roll rende o alvo em farrapos (chance 0.275 a 90% de
+    // dano), porque a chance subiu.
+    expect(hailTarget(state, 'crippled', () => 0.2).status).toBe('surrender')
   })
 
   // ── enemy-species: rendição por espécie ───────────────────────────────────
 
-  it('Klingon intacto ~10%, em farrapos ~35%; raider 30%/70%', () => {
+  it('Klingon intacto ~5%, em farrapos ~30% (round-6-polish, 20.4); raider 30%/70%', () => {
     const state = createNewGameState(1)
 
     state.currentSector = [
       { id: 'k1', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
     ]
-    expect(hailTarget(state, 'k1', () => 0.09).status).toBe('surrender')
+    expect(hailTarget(state, 'k1', () => 0.04).status).toBe('surrender')
     state.currentSector = [
       { id: 'k1', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 200 },
     ]
-    expect(hailTarget(state, 'k1', () => 0.11).status).toBe('rejected')
+    expect(hailTarget(state, 'k1', () => 0.06).status).toBe('rejected')
 
     state.currentSector = [
       { id: 'k2', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 0 },
     ]
-    expect(hailTarget(state, 'k2', () => 0.34).status).toBe('surrender')
+    expect(hailTarget(state, 'k2', () => 0.29).status).toBe('surrender')
     state.currentSector = [
       { id: 'k2', type: SectorEntityType.KLINGON_CRUISER, position: { row: 1, col: 1 }, enemyPower: 0 },
     ]
-    expect(hailTarget(state, 'k2', () => 0.36).status).toBe('rejected')
+    expect(hailTarget(state, 'k2', () => 0.31).status).toBe('rejected')
 
     state.currentSector = [
       { id: 'r1', type: SectorEntityType.CLOAKED_RAIDER, position: { row: 1, col: 1 }, enemyPower: 200 },
@@ -150,8 +163,8 @@ describe('engine/combat', () => {
       state.currentSector = [
         { id: 'x', type, position: { row: 1, col: 1 }, enemyPower: 20 }, // 90% de dano
       ]
-      // Roll fixo entre o teto do Klingon (0.35) e o do raider (0.70): só o
-      // raider rende.
+      // Roll fixo entre o teto do Klingon (0.30, round-6-polish) e o do
+      // raider (0.70): só o raider rende.
       return hailTarget(state, 'x', () => 0.5).status
     }
     expect(mesmaFracao(SectorEntityType.KLINGON_CRUISER)).toBe('rejected')

@@ -14,6 +14,7 @@ import {
   HOSTILE_RISK_BASE,
   HOSTILE_RISK_PER_EXTRA_ENEMY,
   LANDING_PARTY_TURNS,
+  STARBASE_SCIENCE_FATIGUE_FLOOR,
   STARBASE_SCIENCE_RECOVERY_MULTIPLIER,
   TEAM_EFFICIENCY_FLOOR,
   TEAM_FATIGUE_HALFLIFE,
@@ -261,6 +262,10 @@ export function resolveDamageControlTurn(
   // Science station: sem oficina, sem teto de stacking removido — só a
   // trava de cooldown cai. Piso de eficiência dispensa direto pro pool.
   const cooldownExempt = baseType === SectorEntityType.STARBASE_SCIENCE
+  // Piso de fadiga sobe pra 50 numa Science Station (`round-6-polish`, 29.5)
+  // — "sempre há recreação e boas camas". Cooldown já não prendia a equipe
+  // ali; isto é o piso de eficiência em si.
+  const fatigueFloor = cooldownExempt ? STARBASE_SCIENCE_FATIGUE_FLOOR : TEAM_EFFICIENCY_FLOOR
   // Drydock: drones consertam, a tripulação INTEIRA está de folga — mesmo
   // quem está "working" descansa em vez de acumular fadiga (docking-overhaul,
   // fecha a dívida "working tratada como idle" do BACKLOG.md).
@@ -295,7 +300,7 @@ export function resolveDamageControlTurn(
       const rawEff = Math.round(
         100 * Math.pow(0.5, team.turnsWorked / TEAM_FATIGUE_HALFLIFE),
       )
-      team.efficiency = Math.max(TEAM_EFFICIENCY_FLOOR, rawEff)
+      team.efficiency = Math.max(fatigueFloor, rawEff)
     } else if (
       team.status === 'idle' ||
       team.status === 'cooldown' ||

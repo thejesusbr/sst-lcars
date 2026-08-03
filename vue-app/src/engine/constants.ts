@@ -293,10 +293,16 @@ export const SHIELD_REGEN_FLOOR_FRACTION = 0.4
  * freio real contra captura virar dominante sobre destruição é a cela de 4
  * lugares e a equipe de CdD travada em `guard` (hail-and-identity design.md
  * decisão 3, risco 1), inalterado aqui.
+ *
+ * Klingon −5pp (`round-6-polish`, 20.4): usuário jogou e achou Klingon
+ * rendendo com frequência parecida demais com as outras espécies — "raramente
+ * se rende" era a intenção original, e o rating de captura por espécie
+ * (`CAPTURED_RATING_WEIGHT`) compensa quem consegue render um mesmo assim.
+ * Só Klingon muda; Romulano/raider ficam como estavam.
  */
 export const HAIL_SURRENDER_BAND: Record<string, readonly [number, number]> = {
-  klingon_cruiser: [0.1, 0.35],
-  klingon_d7: [0.1, 0.35],
+  klingon_cruiser: [0.05, 0.3],
+  klingon_d7: [0.05, 0.3],
   romulan_warbird: [0.15, 0.45],
   romulan_scout: [0.15, 0.45],
   cloaked_raider: [0.3, 0.7],
@@ -493,6 +499,14 @@ export const DOCKED_TEAM_RECOVERY_PER_TURN = 16
  * científica virar parada obrigatória se o bônus for alto demais.
  */
 export const STARBASE_SCIENCE_RECOVERY_MULTIPLIER = 1.5
+/**
+ * Piso de fadiga numa `STARBASE_SCIENCE`, substituindo `TEAM_EFFICIENCY_FLOOR`
+ * (20) só ali (`round-6-polish`, 29.5). Usuário: "sempre há recreação e boas
+ * camas... nunca caem abaixo de 50%". Cooldown já não prendia a equipe ali
+ * (`cooldownExempt` em `resolveDamageControlTurn`) — isto é o piso de
+ * eficiência em si, que faltava subir.
+ */
+export const STARBASE_SCIENCE_FATIGUE_FLOOR = 50
 
 /**
  * Vida/escudo próprios da base, escala PRÓPRIA — não a da nave nem o
@@ -526,8 +540,21 @@ export const STARBASE_TORPEDO_REPLENISH: Record<string, number> = {
 
 // ── Rating / easter egg ─────────────────────────────────────────────────────
 
-/** Capturar pesa mais que destruir — captura também rende inteligência. */
-export const CAPTURED_RATING_WEIGHT = 1.5
+/**
+ * Capturar pesa mais que destruir — captura também rende inteligência. Peso
+ * POR ESPÉCIE (`round-6-polish`, 20.4): Klingon quase não se rende
+ * (`HAIL_SURRENDER_BAND` reduzida), então quem consegue vale mais — 1.75× em
+ * vez do 1.5× que já valia (e continua valendo) pras outras 3 espécies.
+ */
+export const CAPTURED_RATING_WEIGHT: Record<string, number> = {
+  klingon_cruiser: 1.75,
+  klingon_d7: 1.75,
+  romulan_warbird: 1.5,
+  romulan_scout: 1.5,
+  cloaked_raider: 1.5,
+}
+/** Peso pra espécie fora da tabela — não deveria acontecer, mas sem crash. */
+export const CAPTURED_RATING_WEIGHT_DEFAULT = 1.5
 export const DESTROYED_RATING_WEIGHT = 1
 /** Teto de ícones renderizados; a população interna cresce sem limite. */
 export const TRIBBLE_RENDER_CAP = 200
@@ -692,7 +719,10 @@ export function kbsCode(parts: {
 
 /**
  * Código KBS **vivo** de um quadrante: o dígito K desconta os inimigos já
- * destruídos ali.
+ * destruídos ali E os Cloaked Raiders ainda cloacados (`cloak-and-alert`,
+ * 20.7) — "não aparece nos sensores (LRS e SRS) enquanto cloacado" também
+ * vale pro código persistido, não só pro scanner ao vivo (`getVisibleEnemies`
+ * já filtrava certo; este dígito é que vazava).
  *
  * ÚNICO produtor de código pro jogador. Antes eram cinco, montando
  * `{ klingons: content.klingons, ... }` na mão — SRS do quadrante atual,
@@ -709,9 +739,13 @@ export function liveKbsCode(content: {
   clearedEnemies: number
   baseIds: string[]
   stars: number
+  cloakedRaiders?: number
 }): string {
   return kbsCode({
-    klingons: Math.max(0, content.klingons - content.clearedEnemies),
+    klingons: Math.max(
+      0,
+      content.klingons - content.clearedEnemies - (content.cloakedRaiders ?? 0),
+    ),
     bases: content.baseIds.length,
     stars: content.stars,
   })

@@ -495,4 +495,35 @@ describe('docking-overhaul — Science station tira o cooldown', () => {
     expect(team.status).toBe('cooldown')
     expect(dispatchTeam(state, team.id, 'shields').success).toBe(false)
   })
+
+  it('piso de fadiga sobe pra 50% — equipe working nunca cai abaixo (round-6-polish, 29.5)', () => {
+    // Usuário: "sempre há recreação e boas camas... nunca caem abaixo de 50%".
+    // 30 turnos trabalhados (HALFLIFE=6) dá eff bruta ~3% — bem abaixo dos
+    // dois pisos, então o teste prova qual piso realmente prevalece.
+    const state = dockedFixture(SectorEntityType.STARBASE_SCIENCE)
+    const team = state.teams[0]
+    team.status = 'working'
+    team.assignedSystem = 'shields'
+    team.turnsWorked = 29
+    state.subsystems.shields = 50 // longe de 100: não libera a equipe nesta chamada
+
+    resolveDamageControlTurn(state)
+
+    expect(team.efficiency).toBe(50)
+  })
+
+  it('fora de uma Science station, o piso continua 20% (comparação)', () => {
+    // Não pode ser Drydock: lá a tripulação INTEIRA está de folga e "working"
+    // nem fadiga (`allOnShoreLeave`) — o comparativo justo é sem base nenhuma.
+    const state = fixture()
+    const team = state.teams[0]
+    team.status = 'working'
+    team.assignedSystem = 'shields'
+    team.turnsWorked = 29
+    state.subsystems.shields = 50
+
+    resolveDamageControlTurn(state)
+
+    expect(team.efficiency).toBe(TEAM_EFFICIENCY_FLOOR)
+  })
 })

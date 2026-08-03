@@ -685,6 +685,9 @@ function removeEnemyFromSector(
   enemyId: string,
   reason: 'destroyed' | 'captured',
 ): void {
+  // Tipo LIDO antes do filtro tirar a entidade — `capturedByType` (rating por
+  // espécie, `round-6-polish`) precisa saber QUEM foi capturado.
+  const type = state.currentSector.find((e) => e.id === enemyId)?.type
   state.currentSector = state.currentSector.filter((e) => e.id !== enemyId)
   state.enemiesLeft = Math.max(0, state.enemiesLeft - 1)
 
@@ -707,8 +710,12 @@ function removeEnemyFromSector(
     }
   }
 
-  if (reason === 'captured') state.klingonsCaptured++
-  else state.klingonsDestroyed++
+  if (reason === 'captured') {
+    state.klingonsCaptured++
+    if (type) state.capturedByType[type] = (state.capturedByType[type] ?? 0) + 1
+  } else {
+    state.klingonsDestroyed++
+  }
 
   for (const tube of state.tubes) {
     if (tube.targetId === enemyId) {

@@ -224,6 +224,10 @@ const ALERT_RANK: Record<GameState['alertLevel'], number> = {
  * garante isso por construção aqui: só escreve se o nível calculado for MAIS
  * urgente que o atual, então limpar o setor ou se afastar de vizinhança
  * hostil não reverte o toggle que o jogador não tocou.
+ *
+ * Subir de nível também prepara a nave (usuário, 22.1): `red` levanta escudo
+ * E liga as armas se estivessem desligadas; `yellow` só levanta escudo — sem
+ * gastar energia com arma antes de o hostil aparecer de verdade no setor.
  */
 function updateAlertLevel(state: GameState): void {
   let level: 'yellow' | 'red' | null = null
@@ -240,6 +244,8 @@ function updateAlertLevel(state: GameState): void {
 
   if (level && ALERT_RANK[level] > ALERT_RANK[state.alertLevel]) {
     state.alertLevel = level
+    state.shieldsRaised = true
+    if (level === 'red') state.subsystemsOn.photons = true
   }
 }
 

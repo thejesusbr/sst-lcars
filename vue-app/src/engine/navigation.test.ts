@@ -449,6 +449,35 @@ describe('resolveProbeScan', () => {
     expect(s.exploredQuadrants['3,3']).toEqual({ code: '215', age: 0 })
   })
 
+  it('relatório é PROSA, não o dígito KBS cru (round-6-polish)', () => {
+    const s = stateWith({ klingons: 2, baseIds: ['b1'], stars: 5 })
+    const r = resolveProbeScan(s, { row: 3, col: 3 }, false)
+    const text = r.log.map((e) => e.text).join(' ')
+
+    expect(text).toContain('2 naves inimigas')
+    expect(text).toContain('1 base estelar')
+    expect(text).toContain('5 estrelas')
+    expect(text).not.toMatch(/KBS/)
+  })
+
+  it('prosa singular/zero: 1 nave, nenhuma base, 1 estrela', () => {
+    const s = stateWith({ klingons: 1, baseIds: [], stars: 1 })
+    const r = resolveProbeScan(s, { row: 3, col: 3 }, false)
+    const text = r.log.map((e) => e.text).join(' ')
+
+    expect(text).toContain('1 nave inimiga,')
+    expect(text).toContain('0 bases estelares')
+    expect(text).toContain('1 estrela.')
+  })
+
+  it('prosa desconta Cloaked Raider — bate com o dígito K vivo', () => {
+    const s = stateWith({ klingons: 2, cloakedRaiders: 1 })
+    const r = resolveProbeScan(s, { row: 3, col: 3 }, false)
+    const text = r.log.map((e) => e.text).join(' ')
+
+    expect(text).toContain('1 nave inimiga,')
+  })
+
   it('revela planeta COM dilítium e reporta no log', () => {
     const s = stateWith({ planet: true, dilithiumCharges: 2 })
     const r = resolveProbeScan(s, { row: 3, col: 3 }, false)

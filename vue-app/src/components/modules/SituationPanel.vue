@@ -124,17 +124,23 @@ const warpCoreColor = computed(() => {
 // O toggle escreve no estado e o estado dirige a classe do body — não um `ref`
 // local. Bidirecional de verdade: o engine também pode subir o nível (entrar em
 // quadrante hostil) e o painel reflete sem o jogador tocar em nada.
+//
+// Leitura por `presentation.alertLevelView`, NUNCA `gameState.alertLevel`
+// direto: o engine já aplica o alerta novo na ETAPA 5 da resolução, mas
+// mostrar isso antes de a fila de apresentação drenar entregava o combate
+// antes do SRS atualizar na tela (spoiler, 22.1). Escrita continua no estado
+// vivo — o toggle MANUAL não passa pela fila, não tem o que atrasar.
 const redAlert = computed({
-  get: () => gameState.alertLevel === "red",
+  get: () => presentation.alertLevelView === "red",
   set: (value) => gameState.setAlertLevel(value ? "red" : "green"),
 });
 
 // Texto mostra o NÍVEL, não um booleano: `yellow` é estado válido desde já,
 // só não tem tema próprio (design.md decisão 7).
-const alertLabel = computed(() => gameState.alertLevel.toUpperCase());
+const alertLabel = computed(() => presentation.alertLevelView.toUpperCase());
 
 watch(
-  () => gameState.alertLevel,
+  () => presentation.alertLevelView,
   (level) => {
     // A camada de tema é binária por construção: só `red` tem tratamento.
     document.body.classList.toggle("red-alert", level === "red");

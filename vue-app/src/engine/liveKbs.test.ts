@@ -34,6 +34,17 @@ describe('engine/constants — liveKbsCode', () => {
   it('conta bases pelo tamanho de baseIds', () => {
     expect(liveKbsCode({ ...quadrante(2, 1), baseIds: ['b1', 'b2'] })).toBe('124')
   })
+
+  it('desconta Cloaked Raider ainda cloacado do dígito K (cloak-and-alert, 20.7)', () => {
+    // "não aparece nos sensores enquanto cloacado" vale pro código
+    // persistido também — um setor só com raider tem que parecer seguro.
+    expect(liveKbsCode({ ...quadrante(1, 0), cloakedRaiders: 1 })).toBe('004')
+    expect(liveKbsCode({ ...quadrante(3, 1), cloakedRaiders: 1 })).toBe('104')
+  })
+
+  it('sem cloakedRaiders declarado, comporta-se como antes (default 0)', () => {
+    expect(liveKbsCode(quadrante(3, 0))).toBe(liveKbsCode({ ...quadrante(3, 0), cloakedRaiders: 0 }))
+  })
 })
 
 describe('KBS vivo — produtores concordam', () => {

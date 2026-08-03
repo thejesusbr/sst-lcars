@@ -37,7 +37,7 @@ describe('engine/endGame', () => {
     expect(checkTerminalConditions(state)).toBeNull()
   })
 
-  it('calculateCommanderRating weights captured klingons at 1.5x vs destroyed', () => {
+  it('calculateCommanderRating weights captured (1.5x) higher than destroyed', () => {
     const stateA = createNewGameState(1)
     stateA.klingonsDestroyed = 2
     stateA.klingonsCaptured = 0
@@ -45,10 +45,21 @@ describe('engine/endGame', () => {
     const stateB = createNewGameState(1)
     stateB.klingonsDestroyed = 0
     stateB.klingonsCaptured = 2
+    stateB.capturedByType = { romulan_warbird: 2 }
 
     const ratingA = calculateCommanderRating(stateA)
     const ratingB = calculateCommanderRating(stateB)
     expect(ratingB).toBeGreaterThan(ratingA)
+  })
+
+  it('captura de Klingon pesa mais que captura de outra espécie (round-6-polish, 20.4)', () => {
+    const klingon = createNewGameState(1)
+    klingon.capturedByType = { klingon_cruiser: 2 }
+
+    const romulan = createNewGameState(1)
+    romulan.capturedByType = { romulan_warbird: 2 }
+
+    expect(calculateCommanderRating(klingon)).toBeGreaterThan(calculateCommanderRating(romulan))
   })
 
   it('evaluateEndGame sets state.mode to result and populates state.result when terminal', () => {

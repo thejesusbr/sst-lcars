@@ -484,6 +484,16 @@ export interface QuadrantContent {
   surveyed: boolean
   /** Entidades já destruídas aqui, pra não reaparecerem ao reentrar. */
   clearedEnemies: number
+  /**
+   * Quantos dos `klingons` acima nascem como Cloaked Raider — decidido na
+   * geração (`generateWorld`, materialização de PREVIEW com a mesma semente,
+   * então bate com o que a materialização real vai sortear). `liveKbsCode`
+   * subtrai isto do dígito K: um setor só com raider cloacado tem que
+   * "parecer seguro" no LRS/Star Chart, não entregar a presença dele
+   * (`cloak-and-alert`, 20.7 — "não aparece nos sensores enquanto cloacado").
+   * Opcional pra não obrigar todo fixture de teste a declarar 0.
+   */
+  cloakedRaiders?: number
 }
 
 /** Grid 8x8 da galáxia, chave `"row,col"`. Gerado 1× por New Game. */
@@ -607,6 +617,13 @@ export interface GameState {
   weaponsLocked: boolean
   klingonsDestroyed: number
   klingonsCaptured: number
+  /**
+   * Capturas por espécie (`enemy.type`) — `CAPTURED_RATING_WEIGHT` pesa
+   * diferente por espécie, então o rating precisa saber QUEM foi capturado,
+   * não só quantos (`round-6-polish`, 20.4). `klingonsCaptured` continua o
+   * total agregado, inalterado.
+   */
+  capturedByType: Partial<Record<string, number>>
   torpedoesUsed: number
 
   // Cela de prisioneiros

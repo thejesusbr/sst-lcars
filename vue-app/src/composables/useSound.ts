@@ -90,7 +90,12 @@ const maxDuration: Partial<Record<SoundKey, number>> = {
   // depois — era exatamente o atropelo relatado na 5ª rodada, item 26.4:
   // disparo e explosão em cima um do outro. O corte é folgado o bastante pra
   // não soar truncado, curto o bastante pra não empilhar com o próximo evento.
-  [Sound.PHASER]: 1200,
+  //
+  // Phaser subiu de 1200 pra 1800 (`round-6-polish`, 28.1 — "a duração do
+  // phaser está muito curta"): ainda cabe em menos de 3 eventos (< 3×650) sem
+  // reabrir o atropelo, e o revezamento de ataque (`combat-pressure`) reduz
+  // quantos eventos de combate se empilham por turno, sobrando mais espaço.
+  [Sound.PHASER]: 1800,
   [Sound.TORPEDO]: 1200,
   [Sound.SHIELD_SIZZLE]: 1200,
   [Sound.HULL_HIT_1]: 1200,

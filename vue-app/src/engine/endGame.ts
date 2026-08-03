@@ -8,6 +8,7 @@
 import type { EndGameReason, EndGameResult, GameState } from '@/types/game'
 import {
   CAPTURED_RATING_WEIGHT,
+  CAPTURED_RATING_WEIGHT_DEFAULT,
   DESTROYED_RATING_WEIGHT,
 } from '@/engine/constants'
 
@@ -99,7 +100,8 @@ export function checkTerminalConditions(
 /**
  * Calcula o rating de Comandante ao fim de jogo.
  * - Klingons destruídos: 10 pts cada
- * - Klingons capturados: 15 pts cada (peso 1.5x)
+ * - Capturados: 15 pts cada, peso POR ESPÉCIE (`CAPTURED_RATING_WEIGHT`,
+ *   `round-6-polish`) — Klingon 1.75×, resto 1.5×
  * - Bônus de tempo restante: (stardateLimit - currentStardate) * 2
  * - Bases perdidas: -100 pts cada
  * - Torpedos consumidos: -1 pt cada
@@ -108,7 +110,13 @@ export function calculateCommanderRating(state: GameState): number {
   // Pelos CONSTANTES, nao 10/15 cravados: os dois existiam e ninguem os lia,
   // entao mexer neles nao mudava nada (`reachability.test.ts` pegou).
   const destroyedScore = state.klingonsDestroyed * 10 * DESTROYED_RATING_WEIGHT
-  const capturedScore = Math.floor(state.klingonsCaptured * 10 * CAPTURED_RATING_WEIGHT)
+  const capturedScore = Math.floor(
+    Object.entries(state.capturedByType).reduce(
+      (sum, [type, count]) =>
+        sum + (count ?? 0) * 10 * (CAPTURED_RATING_WEIGHT[type] ?? CAPTURED_RATING_WEIGHT_DEFAULT),
+      0,
+    ),
+  )
   const timeRemaining = Math.max(0, state.stardateLimit - state.stardate)
   const timeScore = Math.floor(timeRemaining * 2)
   const starbasesDestroyed = state.starbases.filter((b) => b.destroyed).length

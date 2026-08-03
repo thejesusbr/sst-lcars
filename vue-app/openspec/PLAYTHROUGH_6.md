@@ -270,14 +270,14 @@ Análise medida em 01/08. Números na tabela vieram de simulação contra a engi
 | 27.6 Base destruída fácil demais | **Aplicado.** `hullIntegrity`/`shieldPoints` próprios da base (escala própria, não a da nave nem `resourcePool`, que virou só moeda de resupply). `applyStarbaseDamage` espelha o split escudo/casco da nave com constantes de base (`STARBASE_HULL_DAMAGE_DIVISOR`) | `starbase-resilience` |
 | 27.6 Estoque de torpedo com reposição | **Aplicado.** `torpedoStock`/`torpedoCapacity` por base: Drydock `12+rng(6-12)` @1/turno, Supply `12+rng(18-24)` @2/turno (`STARBASE_TORPEDO_RANGE`/`_REPLENISH`). Resupply à nave agora também limitado pelo estoque PRÓPRIO da base, não só pelo pool | `starbase-resilience` |
 | 27.6 Chamado de socorro | **Aplicado** (`applyStarbaseDamage`/`broadcastBaseSOS`). Qualquer base sob ataque soa SOS exceto a atracada (`dmg.sos`); revela quadrante em `exploredQuadrants`+`lrsScan` direto, mesmo padrão do datalink de sonda. `TurnEventType 'sos'` declarado. Sem caminho que dispare de verdade ainda — IA não ataca base independente; testado direto via `applyStarbaseDamage` | `starbase-resilience` |
-| 20.7 Raider vaza no LRS | `getVisibleEnemies` filtra `cloaked` certo, mas `liveKbsCode` conta `content.klingons` cru — o dígito K entrega o raider. Filtrar + aproximação furtiva ao entrar no setor | `cloak-and-alert` |
-| 22.1 Alerta dá spoiler | Engine aplica no lugar certo (ETAPA 5); o vazamento é de **apresentação** — UI reativa acende antes de a fila de animação drenar | `cloak-and-alert` |
-| 22.1 Alerta sobe escudo/armas | `red` sobe escudos + liga armas; `yellow` sobe escudos só | `cloak-and-alert` |
-| 20.4 Rendição Klingon | Banda 10–35% → **5–30%** (−5pp); peso de captura vira **por espécie**: Klingon 1.75×, resto continua 1.5× | `round-6-polish` |
-| 29.5 Science: fadiga | Equipes saem do cooldown sozinhas e nunca caem abaixo de 50% | `round-6-polish` |
-| 14.7 SRS do Weapons não degrada | `srsBlinking`/`srsDark` + `.sensor-blink` só existem no `NavSensingConsole`; `WeaponsConsole` lê `isCritical` e não aplica nada | `round-6-polish` |
-| 28.1 Som do phaser curto | Ajustar duração | `round-6-polish` |
-| Obs. geral: relatório da sonda | Trocar código KBS cru por prosa ("x naves inimigas, uma base estelar e y estrelas") | `round-6-polish` |
+| 20.7 Raider vaza no LRS | **Aplicado.** `content.cloakedRaiders` (preview determinístico de `materializeSector` na geração, mesmo truque do `pickStartPosition`) — `liveKbsCode` desconta do dígito K. Raider também se aproxima da nave sem ser visto ao entrar no setor (`approachCloakedRaiders`, reposiciona adjacente) | `cloak-and-alert` |
+| 22.1 Alerta dá spoiler | **Aplicado.** `usePresentation.alertLevelView` congela o nível no início do turno (mesmo padrão do `sectorSnapshot`) — `SituationPanel` lê daí, não de `gameState.alertLevel` direto | `cloak-and-alert` |
+| 22.1 Alerta sobe escudo/armas | **Aplicado.** `updateAlertLevel`: `red` levanta escudo E liga `subsystemsOn.photons`; `yellow` só levanta escudo | `cloak-and-alert` |
+| 20.4 Rendição Klingon | **Aplicado.** Banda 10–35% → **5–30%** (−5pp, só Klingon). `CAPTURED_RATING_WEIGHT` vira `Record` por espécie (Klingon 1.75×, resto 1.5×) — novo campo `capturedByType` grava QUEM foi capturado, já que `klingonsCaptured` era só um total agregado | `round-6-polish` |
+| 29.5 Science: fadiga | **Aplicado.** `STARBASE_SCIENCE_FATIGUE_FLOOR=50` substitui o piso global (20) só ali — sair do cooldown sozinho já existia (`cooldownExempt`), faltava o piso de eficiência em si | `round-6-polish` |
+| 14.7 SRS do Weapons não degrada | **Aplicado.** `WeaponsConsole` ganhou `srsBlinking`/`srsDark` + `.sensor-blink`, mesma regra do `NavSensingConsole` (`sensorDisplay.ts`) | `round-6-polish` |
+| 28.1 Som do phaser curto | **Aplicado.** `maxDuration[Sound.PHASER]` 1200→1800ms (ainda < 3×`TURN_EVENT_PRESENT_MS`, sem reabrir o atropelo da 5ª rodada) | `round-6-polish` |
+| Obs. geral: relatório da sonda | **Aplicado.** `describeQuadrantContent` (navigation.ts) — prosa com plural/singular, descontando Cloaked Raider igual ao dígito K vivo | `round-6-polish` |
 
 ### Ordem de aplicação
 

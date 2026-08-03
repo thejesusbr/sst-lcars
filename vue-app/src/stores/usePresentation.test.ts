@@ -273,6 +273,29 @@ describe('stores/usePresentation — snapshot do setor', () => {
     expect(pres.sectorView?.ship).toEqual({ row: 4, col: 4 })
   })
 
+  it('enquanto a fila drena, o alerta mostrado é o de ANTES do turno (cloak-and-alert, 22.1)', async () => {
+    // Achado do usuário: "o alerta se liga antes da atualização do SRS" —
+    // subir de green pra red no engine não pode aparecer na tela até a
+    // apresentação (SRS, tiro etc.) terminar de desenhar.
+    const gs = useGameState()
+    const pres = usePresentation()
+    gs.$state.alertLevel = 'green'
+    gs.$state.currentSector = [klingon('k1', 5, 5)]
+
+    pres.captureSector()
+    // O engine "resolve": alerta sobe.
+    gs.$state.alertLevel = 'red'
+    pres.enqueue([
+      { step: 1, type: 'player_phasers', entityId: 'k1', at: { row: 5, col: 5 }, text: 'a' },
+    ])
+
+    expect(pres.alertLevelView).toBe('green')
+
+    await advance(TURN_EVENT_PRESENT_MS * 2)
+    expect(pres.presenting).toBe(false)
+    expect(pres.alertLevelView).toBe('red')
+  })
+
   it('turno sem nada encenável assenta na hora', () => {
     const gs = useGameState()
     const pres = usePresentation()
