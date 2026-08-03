@@ -166,8 +166,8 @@ export const useGameState = defineStore('gameState', {
   },
 
   actions: {
-    /** Reinicia tudo pras constantes iniciais e sela com novo checksum. */
-    async newGame() {
+    /** Reinicia tudo pras constantes iniciais. */
+    newGame() {
       // Object.assign, NÃO $patch: $patch faz MERGE de objetos aninhados, então
       // Records como `exploredQuadrants`/`lrsScan` acumulavam as chaves da
       // partida anterior (persistida no localStorage) — o Star Chart nascia com
@@ -175,7 +175,6 @@ export const useGameState = defineStore('gameState', {
       // por inteiro.
       Object.assign(this.$state, createNewGameState())
       usePresentation().cancel()
-      await commitTurnChecksum(this.$state)
     },
 
     /** Dispara ação que consome 1 turno no motor principal e atualiza o checksum. */
@@ -195,8 +194,6 @@ export const useGameState = defineStore('gameState', {
         onQuadrantEnter: quadrantEnterHook,
       })
       this.recordTurn(res)
-      // Recusa não mudou nada: não precisa reselar o save.
-      if (!res.rejected) await commitTurnChecksum(this.$state)
       return res
     },
 
@@ -210,7 +207,6 @@ export const useGameState = defineStore('gameState', {
         onQuadrantEnter: quadrantEnterHook,
       })
       this.recordTurn(res)
-      await commitTurnChecksum(this.$state)
       return res
     },
 
@@ -225,7 +221,6 @@ export const useGameState = defineStore('gameState', {
         onQuadrantEnter: quadrantEnterHook,
       })
       this.recordTurn(res.lastResult)
-      await commitTurnChecksum(this.$state)
       return res
     },
 
@@ -239,7 +234,6 @@ export const useGameState = defineStore('gameState', {
         onQuadrantEnter: quadrantEnterHook,
       })
       this.recordTurn(res)
-      await commitTurnChecksum(this.$state)
       return res
     },
 
@@ -391,7 +385,7 @@ export const useGameState = defineStore('gameState', {
       engineUndock(this.$state)
     },
 
-    /** Verificação do selo SHA-256 após reload (detecta adulteração e carrega estado). */
+    /** Verificação do selo de integridade após reload (detecta adulteração e carrega estado). */
     async checkSaveIntegrity(raw: unknown): Promise<void> {
       // Sem payload gravado não há o que verificar. Sem esta guarda, um primeiro
       // boot cairia no `migrateSave(null, defaults)` e sobrescreveria a galáxia
@@ -587,9 +581,10 @@ export const useGameState = defineStore('gameState', {
      *
      * O payload vem do `localStorage` **cru**, não de `store.$state`. Passar o
      * estado vivo faria o objeto hasheado compartilhar as referências aninhadas
-     * (`subsystems`, `teams`, `galaxy`) com a store reativa, e uma mutação
-     * durante o `await crypto.subtle.digest` mudaria o que está sendo hasheado.
-     * O texto cru é imune por construção.
+     * (`subsystems`, `teams`, `galaxy`) com a store reativa — o hash em si é
+     * síncrono, então não há janela de mutação NO MEIO do cálculo, mas nada
+     * garante que outra parte do boot não mexa nessas referências entre o
+     * parse e o uso. O texto cru é imune por construção, sem depender disso.
      *
      * `afterHydrate` e não antes: patchear antes da hidratação seria desfeito
      * pelo próprio plugin no instante seguinte.
@@ -601,10 +596,34 @@ export const useGameState = defineStore('gameState', {
         raw = text ? JSON.parse(text) : null
       } catch {
         // localStorage bloqueado ou JSON corrompido: sem baseline, sem
-        // comparação. O próximo fim de turno regrava o selo.
+        // comparação. A próxima mutação regrava o selo (`installIntegrityReseal`).
         return
       }
       void (ctx.store as ReturnType<typeof useGameState>).checkSaveIntegrity(raw)
     },
   },
 })
+
+/**
+ * Fecha o gap do `save-integrity-fix`: antes só os 4 caminhos de turno
+ * reselavam o checksum, e as ~23 ações livres da store (`raiseShields`,
+ * `setPhaserPower`, `dispatchTeam`, `markLogRead`...) mutavam `GameState`
+ * sem reselar — o selo acusava jogo normal como adulteração (achado por
+ * medição direta, ver `hollow-integration-pattern`).
+ *
+ * `$subscribe` (flush síncrono por padrão) dispara depois de QUALQUER
+ * mutação do `$state`, sem precisar listar cada ação — 1 escuta cobre as 4 +
+ * as ~23. Chamar 1 vez por instância de store (`main.ts`, no boot); chamar de
+ * novo por componente duplicaria a escuta.
+ */
+export function installIntegrityReseal(store: ReturnType<typeof useGameState>): void {
+  store.$subscribe(
+    (_mutation, state) => {
+      void commitTurnChecksum(state)
+    },
+    // `flush: 'sync'` — o padrão do Pinia é bufferizado (`pre`, via nextTick);
+    // sem isto, `checkSaveIntegrity` rodando logo após uma ação livre correria
+    // antes do reselo, e um teste (ou o load seguinte) veria o selo velho.
+    { flush: 'sync' },
+  )
+}

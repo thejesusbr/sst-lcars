@@ -92,21 +92,31 @@ function canonicalPayload(state: GameState): string {
   return JSON.stringify(hashedFields(state).map((key) => state[key]))
 }
 
-/** SHA-256 hex de `INTEGRITY_SALT + payload canônico`. */
-export async function computeChecksum(state: GameState): Promise<string> {
-  const bytes = new TextEncoder().encode(INTEGRITY_SALT + canonicalPayload(state))
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
+/**
+ * FNV-1a 32-bit, síncrono — não `crypto.subtle.digest`. Não é enfraquecer
+ * segurança nenhuma (não existe segurança real aqui, ver topo do arquivo); é
+ * o que permite chamar isto depois de QUALQUER mutação (`save-integrity-fix`)
+ * sem risco de dois digests resolverem fora de ordem: sem `await` de verdade
+ * no meio, não há como uma chamada mais nova terminar antes de uma mais
+ * velha e sobrescrever o hash certo com um velho.
+ */
+export function computeChecksum(state: GameState): string {
+  const payload = INTEGRITY_SALT + canonicalPayload(state)
+  let hash = 0x811c9dc5
+  for (let i = 0; i < payload.length; i++) {
+    hash ^= payload.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
 /**
- * Recalcula e grava o checksum. Chamada UMA vez por turno resolvido (fim de
- * cada resolução do `turnEngine`, inclusive cada tick do loop de docking) e em
- * mais lugar nenhum: `crypto.subtle.digest` é assíncrono, então disparar isto
- * em mutação arbitrária deixaria dois digests resolverem fora de ordem e
- * gravarem um hash velho por cima de um novo — falso positivo sem trapaça.
+ * Recalcula e grava o checksum. Antes só era chamada nos 4 caminhos de turno
+ * porque o hash era assíncrono (`crypto.subtle`); agora que é síncrono, é
+ * seguro chamar depois de QUALQUER mutação — é o que `installIntegrityReseal`
+ * (`stores/useGameState.ts`) faz via `$subscribe`, fechando o gap das ~23
+ * ações livres que antes deixavam o selo desatualizado (ver
+ * `hollow-integration-pattern`).
  */
 export async function commitTurnChecksum(
   state: GameState,
@@ -139,9 +149,10 @@ function readRecord(storage: IntegrityStorage): ChecksumRecord | null {
  * de combate ou qualquer pista na UI.
  *
  * Sem checksum gravado, ou gravado em outra versão de schema, não compara nada
- * (o próximo fim de turno regrava a baseline) — senão um save honesto de antes
- * de um patch que adicione/remova campo levaria Tribbles pela atualização do
- * jogo, não por trapaça. Não grava nada: escrita é só em fronteira de turno.
+ * (a próxima mutação regrava a baseline, via `installIntegrityReseal`) — senão
+ * um save honesto de antes de um patch que adicione/remova campo levaria
+ * Tribbles pela atualização do jogo, não por trapaça. Esta função não grava
+ * nada — só o `$subscribe` grava, e só depois da hidratação.
  */
 export async function verifySaveIntegrity(
   raw: unknown,

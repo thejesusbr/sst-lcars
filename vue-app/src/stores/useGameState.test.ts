@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useGameState } from '@/stores/useGameState'
+import { installIntegrityReseal, useGameState } from '@/stores/useGameState'
 import { WARP_CORE_OUTPUT } from '@/engine/constants'
 
 /**
@@ -361,6 +361,7 @@ describe('stores/useGameState — selo de integridade', () => {
     const storage = fakeStorage()
     vi.stubGlobal('localStorage', storage)
     const gs = useGameState()
+    installIntegrityReseal(gs)
 
     // Um turno resolvido grava o selo sobre o estado atual.
     await gs.executeEndTurn()
@@ -376,6 +377,7 @@ describe('stores/useGameState — selo de integridade', () => {
     const storage = fakeStorage()
     vi.stubGlobal('localStorage', storage)
     const gs = useGameState()
+    installIntegrityReseal(gs)
 
     await gs.executeEndTurn()
     const adulterado = JSON.parse(JSON.stringify(gs.$state))
@@ -401,5 +403,23 @@ describe('stores/useGameState — selo de integridade', () => {
     // galáxia NOVA, gerada aqui só pra servir de default.
     expect(JSON.stringify(gs.galaxy)).toBe(galaxiaAntes)
     expect(gs.tribbleInfestationActive).toBe(false)
+  })
+
+  it('save-integrity-fix: ação livre (sem turno) resela o checksum, sem falso positivo', async () => {
+    const storage = fakeStorage()
+    vi.stubGlobal('localStorage', storage)
+    const gs = useGameState()
+    installIntegrityReseal(gs)
+
+    // Bug medido na 6ª rodada: só os 4 caminhos de turno reselavam — uma ação
+    // livre como esta deixava o selo desatualizado e a próxima carga acusava
+    // jogo normal como adulteração. Nenhum turno é resolvido aqui, de propósito.
+    gs.setPhaserPower(80)
+    const honesto = JSON.parse(JSON.stringify(gs.$state))
+
+    await gs.checkSaveIntegrity(honesto)
+    expect(gs.tribbleInfestationActive).toBe(false)
+
+    vi.unstubAllGlobals()
   })
 })

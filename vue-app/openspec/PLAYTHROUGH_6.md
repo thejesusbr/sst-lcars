@@ -261,7 +261,7 @@ Análise medida em 01/08. Números na tabela vieram de simulação contra a engi
 
 | Achado | Tratamento | Onde |
 | ------ | ---------- | ---- |
-| **Tribbles sem trapaça** (obs. geral) | Selo só é regravado nos 4 caminhos de turno; ~23 ações livres (`raiseShields`, `setPhaserPower`, `dispatchTeam`, `markLogRead`, `scanLongRange`…) mutam estado persistido sem reselar → falso positivo garantido ao recarregar. Provado com 3 casos + controle. | `save-integrity-fix` |
+| **Tribbles sem trapaça** (obs. geral) | **Aplicado.** Hash virou síncrono (FNV-1a, não SHA-256 — não muda a segurança, que já era zero por design) e o selo passou a reselar via `store.$subscribe({flush:'sync'})`, 1 escuta cobrindo os 4 caminhos de turno + as ~23 ações livres de uma vez. Registrado no boot (`main.ts`), não em cada ação. | `save-integrity-fix` |
 | 27.7 Escudo: integridade × potência alocada | **Aplicado.** Novo campo `shieldsRaised` separa emissão (liga/desliga) de `shieldEnergy` (potência alocada, sobrevive ao toggle). Regen com 2 fatores: emissão (raised→piso 40%, baixado→cheia) × potência disponível (`effectiveWarpCoreOutput`/nominal — core saudável e overload aceleram regen) | `shield-power-model` |
 | 23.15 Shield Control crítico para regen | Já existia (`isCritical` já parava a regen antes desta mudança) — confirmado, não precisou de código novo | `shield-power-model` |
 | 13.6 3 inimigos = escudo zerado no turno 1 | Medido: 6000 de rajada vs 1500 de escudo. **Escalonar ataque** (revezamento entre hostis do setor) em vez de somar linear | `combat-pressure` |

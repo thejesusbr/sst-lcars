@@ -2,21 +2,24 @@
 
 ## Purpose
 
-Selo de integridade do save (SHA-256) e o easter egg de Tribbles. **Não é
-anti-cheat** — ver o aviso no topo de `engine/saveIntegrity.ts`.
+Selo de integridade do save (hash síncrono determinístico) e o easter egg de
+Tribbles. **Não é anti-cheat** — ver o aviso no topo de `engine/saveIntegrity.ts`.
 
 ## Requirements
 
 ### Requirement: Integrity checksum, not real anti-cheat
-The system SHALL compute a SHA-256 digest (via `crypto.subtle`) over the serialized
+The system SHALL compute a deterministic, synchronous hash digest over the serialized
 `GameState` plus a fixed constant string, storing it alongside the save. This SHALL be
 documented in code comments as a client-side integrity marker only — it MUST NOT be
 represented anywhere (UI, code comments, or docs) as real anti-cheat protection, since
-any client-embedded key is readable by the player.
+any client-embedded key is readable by the player. The hash function MUST be
+synchronous (no `crypto.subtle` or other async primitive): resealing after every
+mutation (see below) requires writes to complete in the same order mutations
+happened, which a genuinely async digest cannot guarantee.
 
 #### Scenario: Checksum recomputed on load
 - **WHEN** the game loads a persisted `GameState`
-- **THEN** the engine recomputes the SHA-256 digest and compares it against the
+- **THEN** the engine recomputes the digest and compares it against the
   stored one
 
 ### Requirement: Checksum stored separately from the hashed payload
@@ -44,21 +47,23 @@ cause a mismatch for a save that was never tampered with.
   recomputed/compared, and no false `tribbleInfestationActive` is triggered purely
   from the version difference
 
-### Requirement: Checksum recomputed and written only at turn boundaries
-The stored checksum SHALL be recomputed and persisted exactly once per resolved turn
-(at the end of each `turnEngine` resolution, including each individual tick of a
-docking repair loop) — never on every fine-grained `GameState` mutation. Since
-`crypto.subtle.digest` is asynchronous, recomputing on arbitrary mutations could let
-two overlapping digests resolve out of order and persist a stale checksum over a
-newer one, self-triggering a false-positive tamper detection with no actual
-tampering involved. Turn resolution is already sequential/atomic by construction, so
-anchoring the checksum write there avoids the race entirely rather than requiring an
-explicit debounce/lock.
+### Requirement: Checksum resealed after every state mutation
+The stored checksum SHALL be recomputed and persisted after every `GameState`
+mutation, not only at turn resolution boundaries (`save-integrity-fix`). Earlier the
+seal was written only at the end of each `turnEngine` resolution; the game's ~20+
+"free actions" (`raiseShields`, `setPhaserPower`, `dispatchTeam`, `markLogRead`,
+`scanLongRange`, `toggleTubeAutoLoad`, and others that mutate persisted state outside
+a turn resolution) left the seal stale, so the very next load falsely flagged normal
+play as tampering. The reseal SHALL be wired through a single subscription to the
+store's state (covering every writer at once) rather than an explicit call added to
+each individual action, so that a new free action added later is covered
+automatically instead of silently reproducing the same gap.
 
-#### Scenario: UI-only changes before a turn resolves do not trigger a checksum write
-- **WHEN** the player adjusts sliders/selections in a console without yet resolving a
-  turn
-- **THEN** no checksum recompute or write happens until a turn actually resolves
+#### Scenario: A free action (no turn resolved) reseals the checksum
+- **WHEN** the player performs a free action such as raising shields or setting
+  phaser power, without resolving a turn
+- **THEN** the checksum is recomputed and persisted immediately, and the next load
+  of that save does not flag `tribbleInfestationActive`
 
 #### Scenario: Each docking-loop tick writes its own checksum
 - **WHEN** a docking repair loop runs for multiple ticks

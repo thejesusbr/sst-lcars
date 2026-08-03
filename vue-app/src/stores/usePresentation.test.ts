@@ -18,9 +18,9 @@ import type { SectorEntity } from '@/types/game'
 
 /**
  * Avança os timers em fatias, deixando os `await` internos resolverem entre
- * elas. Um turno de viagem termina em `await commitTurnChecksum` (SHA-256 via
- * `crypto.subtle`), e o timer seguinte só é agendado depois dessa promessa —
- * um único salto de `N × LUT` para no primeiro turno.
+ * elas — o timer seguinte só é agendado depois da promessa de
+ * `executeEndTurn` resolver, então um único salto de `N × LUT` para no
+ * primeiro turno.
  */
 async function advance(ms: number) {
   const step = 250

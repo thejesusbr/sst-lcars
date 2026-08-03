@@ -13,7 +13,7 @@ import { createNewGameState } from '@/engine/newGame'
 import { GAME_SCHEMA_VERSION } from '@/types/game'
 
 describe('engine/saveIntegrity & tribbleInfestation', () => {
-  it('computeChecksum computes SHA-256 hash string for state', async () => {
+  it('computeChecksum computes a deterministic hash string for state', async () => {
     const state = createNewGameState(1)
     const hash = await computeChecksum(state)
     expect(typeof hash).toBe('string')
