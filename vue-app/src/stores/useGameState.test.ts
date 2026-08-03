@@ -189,6 +189,21 @@ describe('stores/useGameState', () => {
     expect(gs.stardate).toBe(stardate)
   })
 
+  it('combat-pressure: carregar tubo é livre, pronto só no turno seguinte', () => {
+    const gs = useGameState()
+    const stardate = gs.stardate
+    const tubeId = gs.tubes[0].id
+
+    const res = gs.loadTube(tubeId)
+
+    expect(res.success).toBe(true)
+    expect(gs.stardate).toBe(stardate) // livre — 3 tubos não custam 3 turnos
+    expect(gs.tubes[0].loaded).toBe(false) // ainda não: só na resolução seguinte
+
+    gs.executeEndTurn()
+    expect(gs.tubes[0].loaded).toBe(true)
+  })
+
   it('escudo: raise/lower liga/desliga emissão sem mexer na potência alocada (shield-power-model)', () => {
     const gs = useGameState()
     const stardate = gs.stardate

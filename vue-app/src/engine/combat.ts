@@ -314,31 +314,60 @@ export function fireTorpedoes(
   }
 }
 
-/** Carrega um tubo de torpedo (custa 1 turno). */
-export function loadTube(
+/**
+ * Requisita carregamento de um tubo — ação LIVRE (não custa turno), como
+ * `dispatchTeam`. Marca `loadPending`; quem completa é `resolvePendingTubeLoads`,
+ * no fim da resolução do turno em curso — pronto pro turno seguinte.
+ *
+ * Antes disparar isto custava 1 turno inteiro parado (`load_tube` no
+ * `turnEngine`): 3 tubos = 3 turnos sem atirar, e uma salva de 3 turnos levava
+ * 3× o escudo de dano que o mesmo tempo atirando phaser causaria (achado
+ * medido na 6ª rodada, item 30.1) — a mecânica era uma armadilha, não só lenta.
+ */
+export function requestTubeLoad(
   state: GameState,
   tubeId: number,
   rng = Math.random
-): { success: boolean; turnSpent: boolean; reason?: string } {
+): { success: boolean; reason?: string } {
   if (isCritical(state.subsystems.photons)) {
-    return { success: false, turnSpent: false, reason: 'critical_damage' }
+    return { success: false, reason: 'critical_damage' }
   }
   const tube = state.tubes.find((t) => t.id === tubeId)
-  if (!tube) return { success: false, turnSpent: false, reason: 'invalid_tube' }
-  if (tube.loaded) return { success: false, turnSpent: false, reason: 'already_loaded' }
+  if (!tube) return { success: false, reason: 'invalid_tube' }
+  if (tube.loaded || tube.loadPending) return { success: false, reason: 'already_loaded' }
   if (state.torpedoStock <= 0) {
-    return { success: false, turnSpent: false, reason: 'out_of_stock' }
+    return { success: false, reason: 'out_of_stock' }
   }
 
-  // Falha probabilística a partir de dano moderado
+  // Falha probabilística a partir de dano moderado. Sem custo de turno pra
+  // errar também: a falha só significa "tenta nesse tubo de novo".
   const failChance = degradedChance(state.subsystems.photons)
   if (failChance > 0 && rng() * 100 < failChance) {
-    return { success: false, turnSpent: true, reason: 'failed_load' }
+    return { success: false, reason: 'failed_load' }
   }
 
-  tube.loaded = true
+  tube.loadPending = true
   state.torpedoStock = Math.max(0, state.torpedoStock - 1)
-  return { success: true, turnSpent: true }
+  return { success: true }
+}
+
+/**
+ * Completa toda requisição de carregamento pendente — chamada 1x por
+ * resolução de turno (`turnEngine`, etapa 5), logo depois de `autoLoadTubes`.
+ * Cobre os dois caminhos: um pedido manual feito ANTES desta resolução
+ * (pronto agora, pro turno seguinte) e um autoload que `autoLoadTubes` acabou
+ * de marcar nesta mesma chamada (completa na hora, mesmo comportamento de
+ * sempre — autoload nunca teve custo de turno pro jogador).
+ */
+export function resolvePendingTubeLoads(state: GameState): { tubeId: number }[] {
+  const completed: { tubeId: number }[] = []
+  for (const tube of state.tubes) {
+    if (!tube.loadPending) continue
+    tube.loaded = true
+    tube.loadPending = false
+    completed.push({ tubeId: tube.id })
+  }
+  return completed
 }
 
 /** Descarrega um tubo de torpedo de volta ao estoque (custa 1 turno). */
@@ -365,9 +394,11 @@ export function unloadTube(
 }
 
 /**
- * Autoload: tubo com o toggle ligado carrega sozinho no fim do turno, sem
- * gastar a ação do jogador — mesmas regras de falha/estoque/dano do `loadTube`
- * manual, só que disparado pelo motor em vez de uma ação declarada.
+ * Autoload: tubo com o toggle ligado pede carregamento sozinho, sem gastar a
+ * ação do jogador — mesmas regras de falha/estoque/dano de `requestTubeLoad`,
+ * só que disparado pelo motor. `resolvePendingTubeLoads`, chamada logo depois
+ * na mesma resolução (`turnEngine`), completa o pedido na hora — autoload
+ * nunca teve o atraso de 1 turno que o pedido manual agora tem.
  */
 export function autoLoadTubes(
   state: GameState,
@@ -375,8 +406,8 @@ export function autoLoadTubes(
 ): { tubeId: number }[] {
   const loaded: { tubeId: number }[] = []
   for (const tube of state.tubes) {
-    if (!tube.autoLoad || tube.loaded) continue
-    const res = loadTube(state, tube.id, rng)
+    if (!tube.autoLoad || tube.loaded || tube.loadPending) continue
+    const res = requestTubeLoad(state, tube.id, rng)
     if (res.success) loaded.push({ tubeId: tube.id })
   }
   return loaded

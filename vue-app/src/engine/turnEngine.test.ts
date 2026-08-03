@@ -52,7 +52,7 @@ describe('engine/turnEngine', () => {
     expect(skipRes.completedTurns).toBe(1)
   })
 
-  it('dockAndRepairTurn redirects enemy attacks to docked base resource pool', () => {
+  it('dockAndRepairTurn redirects enemy attacks to the docked base own hull/shield (starbase-resilience)', () => {
     const state = createNewGameState(1)
     const base: Starbase = {
       id: 'sb1',
@@ -60,6 +60,10 @@ describe('engine/turnEngine', () => {
       quadrant: { row: 4, col: 4 },
       sector: { row: 4, col: 4 },
       resourcePool: 500,
+      hullIntegrity: 100,
+      shieldPoints: 1500,
+      torpedoStock: 12,
+      torpedoCapacity: 12,
       destroyed: false,
     }
     state.starbases = [base]
@@ -76,10 +80,14 @@ describe('engine/turnEngine', () => {
     }
     state.currentSector = [enemy]
     const initialShields = state.shieldEnergy
+    // Pool de resupply é moeda de dock(), não vida da base — não deve mudar
+    // quando a base absorve dano de combate (`starbase-resilience`).
+    const poolBefore = base.resourcePool
 
     const res = dockAndRepairTurn(state, () => 0.5)
     expect(state.shieldEnergy).toBe(initialShields)
-    expect(base.resourcePool).toBeLessThan(500)
+    expect(base.resourcePool).toBe(poolBefore)
+    expect(base.shieldPoints).toBeLessThan(1500)
     expect(res.damageTaken).toBe(0)
   })
 
@@ -112,5 +120,46 @@ describe('engine/turnEngine', () => {
     // antes de qualquer evento de etapa posterior.
     const steps = res.events.map((e) => e.step)
     expect(steps).toEqual([...steps].sort((a, b) => a - b))
+  })
+})
+
+describe('combat-pressure — revezamento de ataque inimigo', () => {
+  const trio = (): SectorEntity[] =>
+    (['k1', 'k2', 'k3'] as const).map((id, i) => ({
+      id,
+      type: 'klingon_cruiser',
+      position: { row: 1, col: 1 + i },
+      enemyPower: 200,
+      enemyEnergy: ENEMY_ENERGY_MAX,
+      cloaked: false,
+    }))
+
+  it('3 hostis no setor: só 1 ataca por turno, não soma linear', () => {
+    // Achado medido na 6ª rodada: 3 inimigos disparando juntos zeravam o
+    // escudo (2500) já no turno 1 contra ~6000 de rajada combinada.
+    const state = createNewGameState(1)
+    state.position.sector = { row: 1, col: 5 }
+    state.currentSector = trio()
+
+    const res = endTurn(state, () => 0.5)
+    const attacks = res.events.filter((e) => e.type === 'enemy_attack' && e.amount)
+    expect(attacks.length).toBe(1)
+  })
+
+  it('revezamento cicla entre os 3 hostis ao longo dos turnos', () => {
+    const state = createNewGameState(1)
+    state.position.sector = { row: 1, col: 5 }
+    state.currentSector = trio()
+
+    const attackers = new Set<string>()
+    for (let i = 0; i < 3; i++) {
+      const res = endTurn(state, () => 0.5)
+      const hit = res.events.find((e) => e.type === 'enemy_attack' && e.amount)
+      if (hit?.entityId) attackers.add(hit.entityId)
+      // Energia plena de novo, pra descartar "sem energia" como causa de não
+      // atacar — o que decide é só o revezamento.
+      for (const e of state.currentSector) e.enemyEnergy = ENEMY_ENERGY_MAX
+    }
+    expect(attackers.size).toBe(3)
   })
 })

@@ -389,6 +389,10 @@ describe('destino: base mais próxima e undock', () => {
     quadrant: { row, col },
     sector: { row: 4, col: 4 },
     resourcePool: 500,
+    hullIntegrity: 100,
+    shieldPoints: 1500,
+    torpedoStock: 12,
+    torpedoCapacity: 12,
     destroyed: false,
   })
 

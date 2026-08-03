@@ -13,10 +13,13 @@
 
 import {
   HULL_INTEGRITY_MAX,
+  STARBASE_HULL_DAMAGE_DIVISOR,
   STARBASE_POOL_CAPACITY,
   STARBASE_POOL_REGEN,
+  STARBASE_TORPEDO_REPLENISH,
   TORPEDO_STOCK_MAX,
   clamp,
+  liveKbsCode,
 } from '@/engine/constants'
 import {
   SectorEntityType,
@@ -180,10 +183,20 @@ export function dock(state: DockState): DockResult {
   // nunca sai.
   state.shieldDamageTaken = 0
 
-  const { torpedoes, hull: hullRepair, spent } = resupply(state, baseType, pool)
+  const { torpedoes, hull: hullRepair, spent } = resupply(
+    state,
+    baseType,
+    pool,
+    record?.torpedoStock ?? 0,
+  )
   state.torpedoStock += torpedoes
   state.hullIntegrity = clamp(state.hullIntegrity + hullRepair, 0, HULL_INTEGRITY_MAX)
-  if (record) record.resourcePool = clamp(pool - spent, 0, STARBASE_POOL_CAPACITY)
+  if (record) {
+    record.resourcePool = clamp(pool - spent, 0, STARBASE_POOL_CAPACITY)
+    // Estoque PRÓPRIO da base — sacado aqui, reposto por turno
+    // (`regenStarbasePools`, `starbase-resilience`).
+    record.torpedoStock = Math.max(0, record.torpedoStock - torpedoes)
+  }
 
   // Entrega de prisioneiros: qualquer tipo de base, de graça, e a equipe de
   // guarda volta pro pool no mesmo instante (decisão #24). Sem crédito extra
@@ -219,19 +232,29 @@ export function dock(state: DockState): DockResult {
 }
 
 /**
- * Resupply instantâneo por tipo de base, limitado pelo pool: `DOCK` repõe
- * torpedos E casco, `SUPPLY` só torpedos, `SCIENCE` nada (só confirmação de
- * suporte vital). Pool insuficiente entrega proporcionalmente menos.
+ * Resupply instantâneo por tipo de base, limitado pelo pool E pelo estoque de
+ * torpedo PRÓPRIO da base: `DOCK` repõe torpedos E casco, `SUPPLY` só
+ * torpedos, `SCIENCE` nada (só confirmação de suporte vital). Pool ou estoque
+ * insuficiente entrega proporcionalmente menos.
+ *
+ * Antes só o pool limitava — a base "tinha" torpedo infinito contanto que o
+ * pool cobrisse o custo. Com estoque próprio (`starbase-resilience`, item
+ * 27.6), uma base espremida por resupplies repetidos pode ficar sem torpedo
+ * pra dar mesmo com pool cheio.
  */
 function resupply(
   state: DockState,
   baseType: StarbaseType,
   pool: number,
+  baseTorpedoStock: number,
 ): { torpedoes: number; hull: number; spent: number } {
   const none = { torpedoes: 0, hull: 0, spent: 0 }
   if (baseType === SectorEntityType.STARBASE_SCIENCE) return none
 
-  const wantedTorpedoes = Math.max(0, TORPEDO_STOCK_MAX - state.torpedoStock)
+  const wantedTorpedoes = Math.min(
+    Math.max(0, TORPEDO_STOCK_MAX - state.torpedoStock),
+    Math.max(0, baseTorpedoStock),
+  )
   // Só a doca reforma casco; depósito de suprimentos só repõe torpedo.
   const wantedHull =
     baseType === SectorEntityType.STARBASE_DOCK
@@ -305,8 +328,10 @@ export function undock(
 }
 
 /**
- * Regen de pool por turno: `+10` em toda base viva, exceto a que está sendo
- * sacada por um loop de docking ativo. Chamado pelo `turnEngine`.
+ * Regen de pool E de estoque de torpedo por turno, em toda base viva, exceto
+ * a que está sendo sacada por um loop de docking ativo. Chamado pelo
+ * `turnEngine`. Torpedo repõe até `torpedoCapacity` PRÓPRIO da base — nunca
+ * acima do que ela nasceu com (`starbase-resilience`, item 27.6).
  */
 export function regenStarbasePools(bases: Starbase[], activeBaseId: string | null = null): void {
   for (const base of bases) {
@@ -316,5 +341,72 @@ export function regenStarbasePools(bases: Starbase[], activeBaseId: string | nul
       0,
       STARBASE_POOL_CAPACITY,
     )
+    const replenish = STARBASE_TORPEDO_REPLENISH[base.type] ?? 0
+    if (replenish > 0) {
+      base.torpedoStock = clamp(base.torpedoStock + replenish, 0, base.torpedoCapacity)
+    }
   }
+}
+
+/** Resultado de um golpe absorvido pela base — espelha o par escudo/casco da nave. */
+export interface StarbaseDamageResult {
+  shieldAbsorbed: number
+  hullLoss: number
+  destroyed: boolean
+  /**
+   * `true` quando a base atingida NÃO é a que a nave está atracada — dispara
+   * SOS. A que a nave está atracada nunca soa SOS: somos a única nave aliada
+   * da galáxia, não faz sentido pedir socorro a si mesma.
+   */
+  sos: boolean
+}
+
+/** Fatia lida/mutada pelo broadcast de SOS. */
+type SosState = Pick<GameState, 'galaxy' | 'exploredQuadrants' | 'lrsScan'>
+
+/**
+ * Aplica dano a uma base: escudo absorve primeiro (não regenera), o excedente
+ * vira perda de hull na escala PRÓPRIA da base — mesmo split hull/escudo da
+ * nave, só que com constantes de base (`STARBASE_HULL_DAMAGE_DIVISOR`), não
+ * as da nave (`starbase-resilience`, item 27.6: "pool de 500 é hull E
+ * almoxarifado ao mesmo tempo").
+ *
+ * Único caminho hoje é o dano redirecionado à base ATRACADA
+ * (`turnEngine.resolveEnemyTurn`), que por definição nunca soa SOS. A função
+ * já cobre o caso de uma base diferente ser atingida — pronta pro dia em que
+ * a IA passar a atacar base independente da nave (ainda não ataca, 03/08).
+ */
+export function applyStarbaseDamage(
+  state: SosState & Pick<GameState, 'dockedBaseId'>,
+  base: Starbase,
+  amount: number,
+): StarbaseDamageResult {
+  const shieldAbsorbed = Math.min(base.shieldPoints, amount)
+  base.shieldPoints -= shieldAbsorbed
+  const remainder = amount - shieldAbsorbed
+  const hullLoss = remainder / STARBASE_HULL_DAMAGE_DIVISOR
+  base.hullIntegrity = Math.max(0, base.hullIntegrity - hullLoss)
+  const destroyed = base.hullIntegrity <= 0
+  if (destroyed) base.destroyed = true
+
+  const sos = base.id !== state.dockedBaseId
+  if (sos) broadcastBaseSOS(state, base)
+
+  return { shieldAbsorbed, hullLoss, destroyed, sos }
+}
+
+/**
+ * SOS de base sob ataque: informação CONFIÁVEL — a própria base reporta sua
+ * posição, então atualiza LRS e Star Chart DIRETO, mesmo padrão do datalink
+ * de sonda (`navigation.resolveProbeScan`: "a sonda alimenta o LRS também,
+ * não só o Star Chart"). `cellKey` (não `quadrantKey` de `worldGen`, que
+ * criaria import entre irmãos) — mesmo formato `"row,col"`, domínio-agnóstico.
+ */
+function broadcastBaseSOS(state: SosState, base: Starbase): void {
+  const key = cellKey(base.quadrant)
+  const content = state.galaxy[key]
+  if (!content) return
+  const code = liveKbsCode(content)
+  state.exploredQuadrants[key] = { code, age: 0 }
+  state.lrsScan[key] = { code, age: 0 }
 }

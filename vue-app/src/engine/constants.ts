@@ -132,6 +132,20 @@ export const ENEMY_ATTACK_COST = 25
 export const ENEMY_ENERGY_RECHARGE = 15
 
 /**
+ * Quantos hostis do setor têm permissão de tentar atacar no MESMO turno —
+ * revezamento entre eles, não soma linear (`combat-pressure`).
+ *
+ * 3 inimigos disparando simultâneos zeravam o escudo (2500) já no turno 1
+ * contra ~6000 de rajada combinada, sem chance de reagir ou regenerar entre
+ * hits (6ª rodada, item 13.6). Com 1 atacante por turno (índice rotativo),
+ * cada inimigo elegível ainda ataca em média 1x a cada N turnos — o DPS de
+ * longo prazo não muda, só o pico simultâneo desaparece. Usuário rejeitou
+ * mexer em escudo/regen da nave ou dano por tiro pra resolver isto: o duelo
+ * 1v1 já está calibrado ("muito bom, tático") e não deve mudar de tabela.
+ */
+export const ENEMY_ATTACKERS_PER_TURN = 1
+
+/**
  * Células que o inimigo se move por turno, reagindo ao que viu no turno
  * ANTERIOR — não teleporte pra célula aleatória. Contra os 8 do jogador em
  * impulso máximo, fugir abre pelo menos 5 células por turno.
@@ -479,6 +493,36 @@ export const DOCKED_TEAM_RECOVERY_PER_TURN = 16
  * científica virar parada obrigatória se o bônus for alto demais.
  */
 export const STARBASE_SCIENCE_RECOVERY_MULTIPLIER = 1.5
+
+/**
+ * Vida/escudo próprios da base, escala PRÓPRIA — não a da nave nem o
+ * `resourcePool` (`starbase-resilience`, 6ª rodada item 27.6). Antes o pool de
+ * resupply fazia dupla função como "hull" também: uma base atracada morria em
+ * 1 turno de combate (mediana, n=200 simulações) contra D7, porque 500 de
+ * pool era hull E almoxarifado ao mesmo tempo.
+ */
+export const STARBASE_HULL_MAX = 100
+/** Absorve dano bruto ANTES do hull. Não regenera — mesma assimetria do inimigo. */
+export const STARBASE_SHIELD_INITIAL = 1500
+/** Mesma conversão dano-que-passou-o-escudo → perda de hull do casco da nave, escala própria da base. */
+export const STARBASE_HULL_DAMAGE_DIVISOR = 20
+
+/**
+ * Estoque de torpedo por tipo de base: `STARBASE_TORPEDO_BASE + rng(min-max)`
+ * no nascimento, vira o teto de replenish também — a base nunca reabastece
+ * ACIMA do que nasceu com. Só Drydock/Supply têm entrada (Science não arma
+ * nada, mesma exclusão do resupply de torpedo pra nave).
+ */
+export const STARBASE_TORPEDO_BASE = 12
+export const STARBASE_TORPEDO_RANGE: Record<string, readonly [number, number]> = {
+  starbase_dock: [6, 12],
+  starbase_supply: [18, 24],
+}
+/** Reposição por turno, por tipo — Depot resupre torpedo mais rápido que Drydock. */
+export const STARBASE_TORPEDO_REPLENISH: Record<string, number> = {
+  starbase_dock: 1,
+  starbase_supply: 2,
+}
 
 // ── Rating / easter egg ─────────────────────────────────────────────────────
 

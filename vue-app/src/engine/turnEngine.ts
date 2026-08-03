@@ -18,6 +18,7 @@ import { STARBASE_TYPE_LABELS, SUBSYSTEM_KEYS, SectorEntityType } from '@/types/
 import {
   CRITICAL_INTEGRITY,
   ENEMY_ATTACK_COST,
+  ENEMY_ATTACKERS_PER_TURN,
   ENEMY_ENERGY_MAX,
   ENEMY_ENERGY_RECHARGE,
   HULL_DAMAGE_DIVISOR,
@@ -37,9 +38,9 @@ import {
   firePhasers,
   fireTorpedoes,
   hailTarget,
-  loadTube,
   moveHostiles,
   resolveCombatTurn,
+  resolvePendingTubeLoads,
   tickCloakStress,
   unloadTube,
   evasionChance,
@@ -54,7 +55,7 @@ import {
 } from '@/engine/sector'
 import { autoOverload, resolveWarpCoreTurn, startBreach, subsystemDraw } from '@/engine/warpCore'
 import { evaluateEndGame } from '@/engine/endGame'
-import { regenStarbasePools } from '@/engine/docking'
+import { applyStarbaseDamage, regenStarbasePools } from '@/engine/docking'
 import {
   resolveBreachTurn,
   resolveDamageControlTurn,
@@ -79,7 +80,6 @@ import {
 export type PlayerActionType =
   | 'fire_phasers'
   | 'fire_torpedoes'
-  | 'load_tube'
   | 'unload_tube'
   | 'hail'
   | 'lock_weapons'
@@ -334,22 +334,9 @@ function applyPlayerAction(
       return ok({ fired: true, torpedoesFired: res.shotsFired })
     }
 
-    // Carregar/descarregar custa 1 turno. `turnSpent` é o que decide, NÃO
-    // `success`: falha por dano moderado (`failed_load`) gasta o turno — é a
-    // penalidade da mecânica, não uma recusa.
-    case 'load_tube': {
-      if (action.tubeId === undefined) return reject('Tubo não informado.')
-      const res = loadTube(state, action.tubeId, rng)
-      if (!res.turnSpent) return reject(`Carregamento: ${res.reason}`)
-      events.push({
-        type: 'tube_ops',
-        text: res.success
-          ? `Tubo ${action.tubeId} carregado.`
-          : `Falha no carregamento do tubo ${action.tubeId} — turno perdido.`,
-      })
-      return ok()
-    }
-
+    // `load_tube` saiu daqui: carregar virou ação LIVRE (`requestTubeLoad`,
+    // store `loadTube`), não passa mais por `dispatchPlayerAction` — só
+    // descarregar continua custando turno (`combat-pressure`, decisão 30.1).
     case 'unload_tube': {
       if (action.tubeId === undefined) return reject('Tubo não informado.')
       const res = unloadTube(state, action.tubeId, rng)
@@ -647,6 +634,23 @@ function resolveEnemyTurn(
   // Todo hostil do setor participa — cloacado e sem energia não atacam, mas
   // ainda recarregam (turno ocioso é o que devolve energia).
   const hostiles = state.currentSector.filter((e) => isEnemyType(e.type))
+
+  // Revezamento (`combat-pressure`): só quem está na vez tenta atacar; os
+  // demais recarregam, como se tivessem escolhido não atirar. Rotação
+  // calculada só sobre quem PODERIA atacar (poder>0, não cloacado) — senão o
+  // turno de ataque desperdiçaria a vez com um raider cloacado, que nunca
+  // dispara mesmo. Índice deriva de `stardate` (nenhum campo novo no estado):
+  // monotônico e já incrementa 1x por turno resolvido.
+  const activeHostiles = hostiles.filter((e) => (e.enemyPower ?? 0) > 0 && !e.cloaked)
+  const rotationStart =
+    activeHostiles.length > 0 ? Math.floor(state.stardate) % activeHostiles.length : 0
+  const attackers = new Set(
+    Array.from(
+      { length: Math.min(ENEMY_ATTACKERS_PER_TURN, activeHostiles.length) },
+      (_, i) => activeHostiles[(rotationStart + i) % activeHostiles.length],
+    ),
+  )
+
   for (const enemy of hostiles) {
     const power = enemy.enemyPower ?? 0
     const energy = enemy.enemyEnergy ?? 0
@@ -657,6 +661,10 @@ function resolveEnemyTurn(
     if (power <= 0) continue
     // Cloacado não ataca (mecânica do Cloaked Raider) — mas segue recarregando.
     if (enemy.cloaked) {
+      recharge()
+      continue
+    }
+    if (!attackers.has(enemy)) {
       recharge()
       continue
     }
@@ -720,15 +728,26 @@ function resolveEnemyTurn(
     if (options.redirectDamageToDockedBase && state.dockedBaseId) {
       const base = state.starbases.find((b) => b.id === state.dockedBaseId)
       if (base && !base.destroyed) {
-        base.resourcePool = Math.max(0, base.resourcePool - H)
-        events.push({
-          type: 'shield_absorb',
-          entityId: base.id,
-          amount: H,
-          text: `Base atracada absorveu ${H} de dano inimigo.`,
-        })
-        if (base.resourcePool === 0) {
-          base.destroyed = true
+        // Escudo/hull PRÓPRIOS da base, não o pool de resupply
+        // (`starbase-resilience`). Base atracada nunca soa SOS — `dmg.sos`
+        // sai `false` aqui por construção (ver `applyStarbaseDamage`).
+        const dmg = applyStarbaseDamage(state, base, H)
+        if (dmg.hullLoss > 0) {
+          events.push({
+            type: 'hull_damage',
+            entityId: base.id,
+            amount: dmg.hullLoss,
+            text: `Base atracada: escudo saturado — estrutura perdeu ${dmg.hullLoss.toFixed(1)} de integridade.`,
+          })
+        } else {
+          events.push({
+            type: 'shield_absorb',
+            entityId: base.id,
+            amount: dmg.shieldAbsorbed,
+            text: `Base atracada absorveu ${dmg.shieldAbsorbed} de dano inimigo.`,
+          })
+        }
+        if (dmg.destroyed) {
           dockedBaseDestroyed = true
           events.push({
             type: 'hull_damage',
@@ -945,11 +964,18 @@ export function resolvePlayerTurn(
   events.push(...stamp(5, combatRes.events))
 
   const autoLoaded = autoLoadTubes(state, rng)
-  for (const { tubeId } of autoLoaded) {
+  const autoLoadedIds = new Set(autoLoaded.map((a) => a.tubeId))
+  // Completa todo pedido pendente: os que `autoLoadTubes` acabou de marcar
+  // (autoload, completa na hora, sem atraso) e os que já estavam pendentes de
+  // uma requisição livre feita antes desta resolução (pronto a partir de
+  // agora, pro turno seguinte — `combat-pressure`).
+  for (const { tubeId } of resolvePendingTubeLoads(state)) {
     events.push({
       step: 5,
       type: 'tube_ops',
-      text: `Tubo ${tubeId}: autoload carregou torpedo.`,
+      text: autoLoadedIds.has(tubeId)
+        ? `Tubo ${tubeId}: autoload carregou torpedo.`
+        : `Tubo ${tubeId}: carregamento concluído — pronto para disparo.`,
     })
   }
 

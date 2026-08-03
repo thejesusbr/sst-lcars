@@ -219,14 +219,21 @@ const cycleTubeTarget = (tubeId: number) => {
   gameState.cycleTubeTarget(tubeId);
 };
 
-/** Carregar/descarregar custam 1 turno cada (decisao #31). */
-const toggleTubeLoad = (tubeId: number) =>
-  withTurn(async () => {
-    const tube = tubes.value.find((t) => t.id === tubeId);
-    if (!tube) return;
-    if (tube.loaded) await gameState.unloadTube(tubeId);
-    else await gameState.loadTube(tubeId);
-  });
+/**
+ * Descarregar ainda custa 1 turno (decisao #31); carregar virou livre, pronto
+ * no turno seguinte, sem gastar a acao do jogador (`combat-pressure`).
+ */
+const toggleTubeLoad = (tubeId: number) => {
+  const tube = tubes.value.find((t) => t.id === tubeId);
+  if (!tube) return;
+  if (tube.loaded) {
+    withTurn(async () => {
+      await gameState.unloadTube(tubeId);
+    });
+  } else {
+    gameState.loadTube(tubeId);
+  }
+};
 
 const toggleAutoLoad = (tubeId: number) => {
   gameState.toggleTubeAutoLoad(tubeId);
@@ -555,8 +562,15 @@ const togglePhotons = () => {
         <LcarsButton
           color="tertiary-interactive"
           version="round-left"
-          :label="tube.loaded ? `Unload ${tube.id}` : `Load ${tube.id}`"
+          :label="
+            tube.loaded
+              ? `Unload ${tube.id}`
+              : tube.loadPending
+                ? `Loading ${tube.id}...`
+                : `Load ${tube.id}`
+          "
           :disabled="
+            tube.loadPending ||
             (!tube.loaded && torpedoStock === 0) ||
             photonsCritical ||
             busy ||
@@ -570,8 +584,14 @@ const togglePhotons = () => {
           @update:model-value="toggleAutoLoad(tube.id)"
         />
         <LcarsBlock
-          :label="tube.loaded ? 'Loaded' : 'Empty'"
-          :version="tube.loaded ? 'highlight-interactive' : 'red-dark-light'"
+          :label="tube.loaded ? 'Loaded' : tube.loadPending ? 'Loading' : 'Empty'"
+          :version="
+            tube.loaded
+              ? 'highlight-interactive'
+              : tube.loadPending
+                ? 'secondary-interactive'
+                : 'red-dark-light'
+          "
           :style="{ flex: '1' }"
         />
       </LcarsRow>

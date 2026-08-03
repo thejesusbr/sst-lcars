@@ -28,7 +28,11 @@ import {
   ENEMY_SHIELD_BAND,
   ENEMY_TYPE_WEIGHTS,
   missionDurationFor,
+  STARBASE_HULL_MAX,
   STARBASE_POOL_CAPACITY,
+  STARBASE_SHIELD_INITIAL,
+  STARBASE_TORPEDO_BASE,
+  STARBASE_TORPEDO_RANGE,
   STARDATE_INITIAL,
 } from './constants'
 import { mulberry32 } from './prng'
@@ -167,7 +171,7 @@ export function generateWorld(seed: number): GeneratedWorld {
       galaxy[`${row},${col}`] = content
 
       if (hasBase) {
-        placeBase(galaxy, starbases, { row, col }, randomBaseType(rng))
+        placeBase(galaxy, starbases, { row, col }, randomBaseType(rng), rng)
       }
     }
   }
@@ -201,18 +205,36 @@ function randomBaseType(rng: () => number): StarbaseType {
   return STARBASE_TYPES[Math.floor(rng() * STARBASE_TYPES.length)]
 }
 
+/**
+ * Estoque de torpedo inicial da base: `STARBASE_TORPEDO_BASE + rng(min-max)`
+ * do próprio tipo, ou 0 pra tipo sem faixa (Science — mesma exclusão do
+ * resupply de torpedo pra nave, `starbase-resilience`).
+ */
+function rollTorpedoCapacity(type: StarbaseType, rng: () => number): number {
+  const range = STARBASE_TORPEDO_RANGE[type]
+  if (!range) return 0
+  const [lo, hi] = range
+  return STARBASE_TORPEDO_BASE + Math.floor(lo + rng() * (hi - lo + 1))
+}
+
 function placeBase(
   galaxy: GalaxyMap,
   starbases: Starbase[],
   quadrant: GridCoord,
   type: StarbaseType,
+  rng: () => number,
 ): void {
+  const torpedoCapacity = rollTorpedoCapacity(type, rng)
   const base: Starbase = {
     id: `base-${starbases.length + 1}`,
     type,
     quadrant,
     sector: { row: 0, col: 0 }, // definido na materialização do setor
     resourcePool: STARBASE_POOL_CAPACITY,
+    hullIntegrity: STARBASE_HULL_MAX,
+    shieldPoints: STARBASE_SHIELD_INITIAL,
+    torpedoStock: torpedoCapacity,
+    torpedoCapacity,
     destroyed: false,
   }
   starbases.push(base)
@@ -230,15 +252,21 @@ function placeGuaranteedBase(
   if (free.length === 0) return
   const key = free[Math.floor(rng() * free.length)]
   const [row, col] = key.split(',').map(Number)
-  placeBase(galaxy, starbases, { row, col }, type)
+  placeBase(galaxy, starbases, { row, col }, type, rng)
 }
 
 // ── Posição inicial ─────────────────────────────────────────────────────────
 
 /**
- * Quadrante/setor iniciais sorteados, com a célula garantidamente livre. A
- * posição fixa 4,4/4,4 anterior só era segura porque o mundo era vazio
- * (decisão 5).
+ * Quadrante/setor iniciais sorteados, com a célula garantidamente livre e o
+ * quadrante garantidamente sem hostil. A posição fixa 4,4/4,4 anterior só era
+ * segura porque o mundo era vazio (decisão 5).
+ *
+ * Antes só a CÉLULA era garantida livre — o quadrante em si podia ter 1-3
+ * Klingons, e a partida começava sob ataque por sorte pura (6ª rodada, "Obs.
+ * geral: destruída no turno 1"). Reforçar aqui, não escalonar o combate
+ * (`ENEMY_ATTACKERS_PER_TURN`), porque o problema era 0 turnos de decisão
+ * antes do 1º tiro, não o número de atacantes por turno.
  */
 export function pickStartPosition(
   galaxy: GalaxyMap,
@@ -246,8 +274,13 @@ export function pickStartPosition(
   rng: () => number,
   starbases: Starbase[] = [],
 ): { quadrant: GridCoord; sector: GridCoord } {
-  const quadrant = rollCoord(rng)
-  const content = galaxy[quadrantKey(quadrant)]
+  let quadrant = rollCoord(rng)
+  let content = galaxy[quadrantKey(quadrant)]
+  let guardQ = 0
+  while (content.klingons > 0 && guardQ++ < 256) {
+    quadrant = rollCoord(rng)
+    content = galaxy[quadrantKey(quadrant)]
+  }
   // Prevê o layout REAL do setor — possível porque a materialização é derivada
   // de semente+quadrante, não do stream do chamador.
   const occupied = new Set(

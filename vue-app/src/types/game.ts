@@ -175,8 +175,21 @@ export interface Starbase {
   type: StarbaseType
   quadrant: GridCoord
   sector: GridCoord
-  /** 0-`STARBASE_POOL_CAPACITY`; depleta ao suprir/reparar/absorver ataque. */
+  /**
+   * Moeda de resupply/reparo — o que `dock()` saca pra entregar torpedo/casco
+   * à NAVE. NÃO é mais a vida da base (`starbase-resilience`): antes um pool
+   * só fazia os dois papéis, e uma base atracada morria em 1 turno de combate
+   * (500 = hull E almoxarifado ao mesmo tempo, 6ª rodada item 27.6).
+   */
   resourcePool: number
+  /** Vida estrutural da base, 0-`STARBASE_HULL_MAX` — escala própria, não a da nave. */
+  hullIntegrity: number
+  /** Escudo da base: absorve dano bruto ANTES do hull. Não regenera — mesma assimetria do inimigo. */
+  shieldPoints: number
+  /** Estoque de torpedo PRÓPRIO da base, sacado no resupply e reposto por turno (item 27.6). */
+  torpedoStock: number
+  /** Teto do estoque acima — rolado no nascimento, por tipo (Drydock vs Supply Depot). */
+  torpedoCapacity: number
   destroyed: boolean
 }
 
@@ -327,6 +340,13 @@ export type TurnEventType =
   /** Survey orbital de planeta (`bridge-awareness`). */
   | 'survey'
   | 'rejection'
+  /**
+   * SOS de base sob ataque — fonte confiável, sempre entra no log do
+   * capitão. Ainda sem caminho que a dispare de verdade: a IA não ataca base
+   * independente (`starbase-resilience`) — declarado agora pra quem
+   * implementar isso não precisar inventar o tipo.
+   */
+  | 'sos'
 
 /**
  * Categoria de log por TIPO de evento.
@@ -356,6 +376,7 @@ export const TURN_EVENT_CATEGORY: Record<TurnEventType, LogCategory> = {
   landing_party_report: 'science',
   scan: 'science',
   survey: 'science',
+  sos: 'captain',
 }
 
 /**
@@ -658,4 +679,11 @@ export interface TorpedoTube {
   targetId: string | null
   loaded: boolean
   autoLoad: boolean
+  /**
+   * Requisição de carregamento em curso — ação LIVRE (`requestTubeLoad`),
+   * não custa turno. Completa no fim da resolução em que foi pedida (mesmo
+   * ponto onde o autoload já completava), pronta pro turno seguinte
+   * (`combat-pressure`, decisão 30.1: "como dispatchTeam").
+   */
+  loadPending?: boolean
 }

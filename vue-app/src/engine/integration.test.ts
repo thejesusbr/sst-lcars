@@ -235,7 +235,6 @@ describe('integração: ações declaradas nunca são no-op silencioso', () => {
     const cases: Array<{ action: Parameters<typeof resolvePlayerTurn>[1] }> = [
       { action: { type: 'fire_phasers' } },
       { action: { type: 'fire_torpedoes' } },
-      { action: { type: 'load_tube', tubeId: 1 } },
       { action: { type: 'unload_tube', tubeId: 1 } },
       { action: { type: 'hail', targetId: 'k1' } },
       { action: { type: 'lock_weapons' } },

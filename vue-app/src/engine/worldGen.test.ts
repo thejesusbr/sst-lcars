@@ -344,6 +344,16 @@ describe('posição inicial', () => {
     }
   })
 
+  it('nave nunca nasce em quadrante com hostil (combat-pressure)', () => {
+    // Achado da 6ª rodada: só a CÉLULA era garantida livre, o quadrante podia
+    // ter 1-3 Klingons e a partida começava sob ataque por sorte pura.
+    for (let seed = 1; seed <= 60; seed++) {
+      const w = world(seed)
+      const content = w.galaxy[quadrantKey(w.position.quadrant)]
+      expect(content.klingons).toBe(0)
+    }
+  })
+
   it('posição inicial está dentro do grid', () => {
     const { position } = world(11)
     for (const c of [position.quadrant, position.sector]) {

@@ -4,6 +4,8 @@ import {
   firePhasers,
   fireTorpedoes,
   hailTarget,
+  requestTubeLoad,
+  resolvePendingTubeLoads,
   tickCloakStress,
 } from '@/engine/combat'
 import { getVisibleEnemies } from '@/engine/sector'
@@ -80,6 +82,10 @@ describe('engine/combat', () => {
         quadrant: { row: 4, col: 4 },
         sector: { row: 8, col: 8 },
         resourcePool: 275,
+        hullIntegrity: 100,
+        shieldPoints: 1500,
+        torpedoStock: 12,
+        torpedoCapacity: 12,
         destroyed: false,
       },
     ]
@@ -190,5 +196,39 @@ describe('engine/combat', () => {
     ]
     checkWeaponsLock(state)
     expect(state.weaponsLocked).toBe(true)
+  })
+})
+
+describe('combat-pressure — carregamento de tubo é ação livre (decisão 30.1)', () => {
+  it('requestTubeLoad não carrega na hora — só marca pendente e gasta estoque', () => {
+    const state = createNewGameState(1)
+    const stockBefore = state.torpedoStock
+
+    const res = requestTubeLoad(state, state.tubes[0].id, () => 0.99)
+
+    expect(res.success).toBe(true)
+    expect(state.tubes[0].loaded).toBe(false)
+    expect(state.tubes[0].loadPending).toBe(true)
+    expect(state.torpedoStock).toBe(stockBefore - 1)
+  })
+
+  it('resolvePendingTubeLoads completa a requisição — pronto pro turno seguinte', () => {
+    const state = createNewGameState(1)
+    requestTubeLoad(state, state.tubes[0].id, () => 0.99)
+
+    const completed = resolvePendingTubeLoads(state)
+
+    expect(completed).toEqual([{ tubeId: state.tubes[0].id }])
+    expect(state.tubes[0].loaded).toBe(true)
+    expect(state.tubes[0].loadPending).toBe(false)
+  })
+
+  it('tubo já pendente ou já carregado rejeita nova requisição', () => {
+    const state = createNewGameState(1)
+    requestTubeLoad(state, state.tubes[0].id, () => 0.99)
+    expect(requestTubeLoad(state, state.tubes[0].id, () => 0.99).success).toBe(false)
+
+    resolvePendingTubeLoads(state)
+    expect(requestTubeLoad(state, state.tubes[0].id, () => 0.99).success).toBe(false)
   })
 })

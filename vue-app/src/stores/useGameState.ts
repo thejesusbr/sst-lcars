@@ -44,7 +44,7 @@ import {
   recallTeam as engineRecallTeam,
 } from '@/engine/damageControl'
 import { dock as engineDock, undock as engineUndock, canDock } from '@/engine/docking'
-import { cycleTorpedoTarget } from '@/engine/combat'
+import { cycleTorpedoTarget, requestTubeLoad } from '@/engine/combat'
 import { materializeSector } from '@/engine/worldGen'
 import { lrsNeighborhood, scanConfidence } from '@/engine/navigation'
 import { usePresentation } from '@/stores/usePresentation'
@@ -309,10 +309,6 @@ export const useGameState = defineStore('gameState', {
       return this.dispatchPlayerAction({ type: 'fire_torpedoes' })
     },
 
-    loadTube(tubeId: number) {
-      return this.dispatchPlayerAction({ type: 'load_tube', tubeId })
-    },
-
     unloadTube(tubeId: number) {
       return this.dispatchPlayerAction({ type: 'unload_tube', tubeId })
     },
@@ -525,6 +521,15 @@ export const useGameState = defineStore('gameState', {
     /** Cicla o alvo de um tubo — livre, é só mira. */
     cycleTubeTarget(tubeId: number) {
       cycleTorpedoTarget(this.$state, tubeId)
+    },
+
+    /**
+     * Requisita carregamento — livre, como `dispatchTeam`. Pronto no fim da
+     * resolução do turno seguinte, não custa a ação do jogador
+     * (`combat-pressure`, decisão 30.1).
+     */
+    loadTube(tubeId: number) {
+      return requestTubeLoad(this.$state, tubeId, Math.random)
     },
 
     toggleTubeAutoLoad(tubeId: number) {
